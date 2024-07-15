@@ -8,9 +8,13 @@ u = symfun( transpose( d ) * basis, variate );
 end
 
 function M = AssembleGramMatrix( basis, domain )
-M = int( basis .* transpose( basis ), domain );
+integrand = simplify( basis .* transpose( basis ), Steps=100 );
+M = int( integrand, domain );
+M = simplify( M, Steps=100 );
 end
 
 function F = AssembleForceVector( basis, target_fun, domain )
-F = int( basis * target_fun, domain );
+integrand = simplify( basis * target_fun, Steps=100 );
+F = int( integrand, domain );
+F = simplify( F, Steps=100 );
 end

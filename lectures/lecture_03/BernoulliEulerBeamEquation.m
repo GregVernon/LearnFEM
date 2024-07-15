@@ -7,11 +7,6 @@ d = M \ F;
 u = symfun( transpose( d ) * basis(0), variate );
 end
 
-% function [M, F] = ApplyGoverningEquation( basis, domain, youngs_modulus, moment_inertia, distributed_load )
-% M = int( basis(2) * (youngs_modulus * moment_inertia ) .* transpose( basis(2) ), domain );
-% F = -int( basis(0) * distributed_load, domain );
-% end
-
 function [M, F] = ApplyGoverningEquation( basis, domain, youngs_modulus, moment_inertia, distributed_load )
 M = int( basis(4) * (youngs_modulus * moment_inertia ) .* transpose( basis(4) ), domain );
 F = -int( basis(4) * distributed_load, domain );

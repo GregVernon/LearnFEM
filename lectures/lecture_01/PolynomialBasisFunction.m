@@ -116,7 +116,7 @@ for ii = 0 : degree
         n = ii - 1;
         term1 = ( 2 * n + 1 ) * variate * bFun(n+1);
         term2 = n * bFun(n);
-        bFun(ii+1) = simplify ( ( term1 - term2 ) / ( n + 1 ) );
+        bFun(ii+1) = simplify ( ( term1 - term2 ) / ( n + 1 ), Steps=100 );
     end
 end
 bFun = simplify( bFun, Steps=100 );

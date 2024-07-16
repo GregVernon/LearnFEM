@@ -1,15 +1,15 @@
-function [u, M, F, basis, d] = HeatEquation( basis_family, degree, domain, thermal_conductivity, q, g, h )
-variate = symvar(q);
+function [u, M, F, basis, d] = PoissonEquation( basis_family, degree, domain, f, g, h )
+variate = symvar(f);
 basis = @(deriv) diff( PolynomialBasisFunction( basis_family, degree, variate, domain ), variate, deriv );
-[M, F] = ApplyGoverningEquation( basis, domain, thermal_conductivity, q );
+[M, F] = ApplyGoverningEquation( basis, domain, f );
 [M, F] = ApplyBoundaryConditions( M, F, basis, domain, g, h );
 d = M \ F;
 u = symfun( transpose( d ) * basis(0), variate );
 u = simplify( u, Steps=10 );
 
-    function [M, F] = ApplyGoverningEquation( basis, domain, thermal_conductivity, distributed_load )
-        M = int( ( thermal_conductivity * basis(2) ) .* ( thermal_conductivity * transpose( basis(2) ) ), domain );
-        F = -int( ( thermal_conductivity * basis(2) ) * distributed_load, domain );
+    function [M, F] = ApplyGoverningEquation( basis, domain, distributed_load )
+        M = int( basis(2) .* transpose( basis(2) ), domain );
+        F = -int( basis(2) * distributed_load, domain );
     end
 
     function [M, F] = ApplyBoundaryConditions( M, F, basis, domain, g, h )

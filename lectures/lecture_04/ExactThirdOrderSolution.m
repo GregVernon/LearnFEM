@@ -12,6 +12,6 @@ exactSolution.f = f;
 exactSolution.eqn = eqn;
 exactSolution.cond = cond;
 exactSolution.domain = domain;
-exactSolution.U = U;
+exactSolution.U = simplify( U, Steps=10 );
 
 end

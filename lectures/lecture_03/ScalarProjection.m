@@ -1,22 +1,31 @@
-function [u, M, F, basis, d] = ScalarProjection( basis_family, target_fun, degree, domain, boundary_tol, penalty )
+function [u, M, F, basis, d] = ScalarProjection( basis_family, target_fun, degree, domain )
 variate = symvar( target_fun );
 basis = PolynomialBasisFunction( basis_family, degree, variate, domain );
-M = AssembleGramMatrix( basis, domain, boundary_tol, penalty );
-F = AssembleForceVector( basis, target_fun, domain, boundary_tol, penalty );
+[M, F] = ApplyGoverningEquation( basis, target_fun, domain );
+[M, F] = ApplyBoundaryConditions( M, F, basis, target_fun, domain );
 d = M \ F;
 u = symfun( transpose( d ) * basis, variate );
-end
+u = simplify( u, Steps=10 );
 
-function M = AssembleGramMatrix( basis, domain, boundary_tol, penalty )
-M = int( basis .* transpose( basis ), [domain(1) + boundary_tol, domain(2) - boundary_tol] );
-M = M + penalty * int( basis .* transpose( basis ), [domain(1) - boundary_tol, domain(1) + boundary_tol] );
-M = M + penalty * int( basis .* transpose( basis ), [domain(2) - boundary_tol, domain(2) + boundary_tol] );
-end
+    function [M, F] = ApplyGoverningEquation( basis, target_fun, domain )
+        M = int( basis .* transpose( basis ), domain );
+        F = int( basis * target_fun, domain );
+    end
+    
+    function [M, F] = ApplyBoundaryConditions( M, F, basis, target_fun, domain )
+        [ML, FL] = LeftBoundaryCondition( basis, target_fun, domain );
+        [MR, FR] = RightBoundaryCondition( basis, target_fun, domain );
+        M = M + ML + MR;
+        F = F + FL + FR;
+    end
 
-function F = AssembleForceVector( basis, target_fun, domain, boundary_tol, penalty )
-F = int( basis * target_fun, [domain(1) + boundary_tol, domain(2) - boundary_tol] );
-min_boundary_val = subs( target_fun, symvar( target_fun ), domain(1) );
-max_boundary_val = subs( target_fun, symvar( target_fun ), domain(2) );
-F = F + penalty * int( basis * min_boundary_val, [domain(1) - boundary_tol, domain(1) + boundary_tol] );
-F = F + penalty * int( basis * max_boundary_val, [domain(2) - boundary_tol, domain(2) + boundary_tol] );
+    function [M, F] = LeftBoundaryCondition( basis, target_fun, domain )
+        M = subs( basis .* transpose( basis ), domain(1) );
+        F = subs( basis * boundary_val, symvar( target_fun ), domain(1) );
+    end
+
+    function [M, F] = RightBoundaryCondition( basis, target_fun, domain )
+        M = subs( basis .* transpose( basis ), domain(2) );
+        F = subs( basis * boundary_val, symvar( target_fun ), domain(2) );
+    end
 end

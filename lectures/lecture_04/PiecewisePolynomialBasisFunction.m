@@ -67,7 +67,11 @@ classdef PiecewisePolynomialBasisFunction
                     curr_basis_ids = ( curr_basis_ids(end) : curr_basis_ids(end) + elem_degree );
                     basis( curr_basis_ids(2:end) ) = sym( zeros( elem_degree, 1 ) );
                 end
-                condition = ( obj.Variate >= elem_domain(1) ) & ( obj.Variate < elem_domain(2) );
+                if e == num_elem
+                    condition = ( obj.Variate >= elem_domain(1) ) & ( obj.Variate <= elem_domain(2) );
+                else
+                    condition = ( obj.Variate >= elem_domain(1) ) & ( obj.Variate < elem_domain(2) );
+                end
                 for n = 1 : elem_degree + 1
                     basis(curr_basis_ids(n)) = basis(curr_basis_ids(n)) + piecewise( condition, elem_basis(n), sym(0) );
                 end
@@ -86,7 +90,11 @@ classdef PiecewisePolynomialBasisFunction
                 else
                     curr_basis_ids = ( curr_basis_ids(end) + 1 : curr_basis_ids(end) + elem_degree + 1 );
                 end
-                condition = ( obj.Variate >= elem_domain(1) ) & ( obj.Variate < elem_domain(2) );
+                if e == num_elem
+                    condition = ( obj.Variate >= elem_domain(1) ) & ( obj.Variate <= elem_domain(2) );
+                else
+                    condition = ( obj.Variate >= elem_domain(1) ) & ( obj.Variate < elem_domain(2) );
+                end
                 for n = 1 : elem_degree + 1
                     basis(curr_basis_ids(n)) = basis(curr_basis_ids(n)) + piecewise( condition, elem_basis(n), sym(0) );
                 end
@@ -95,15 +103,17 @@ classdef PiecewisePolynomialBasisFunction
     end
     
     methods
-        function [to_coeffs, R] = SplineChangeOfBasis( obj, to_spline, from_coeffs, domain )
+        function [to_coeffs, R] = SplineChangeOfBasis( obj, to_spline, from_coeffs )
+            domain = obj.splineSpace.getSplineDomain();
             D = int( to_spline.Basis .* transpose( to_spline.Basis ), domain );
             C = int( to_spline.Basis .* transpose( obj.Basis ), domain );
             R = D \ C;
             to_coeffs = R * from_coeffs;
         end
 
-        function R = computePiecewiseExtractionOperators( obj, basis_name )
+        function [to_coeffs, R] = PiecewiseSplinePolynomialChangeOfBasis( obj, basis_name, from_coeffs  )
             num_elem = obj.splineSpace.getNumElements();
+            to_coeffs = cell( num_elem, 1 );
             R = cell( num_elem, 1 );
             for e = 1 : num_elem
                 degree = obj.splineSpace.degree(e);
@@ -113,6 +123,7 @@ classdef PiecewisePolynomialBasisFunction
                 D = int( poly_basis .* transpose( poly_basis ), elem_domain );
                 C = int( poly_basis .* transpose( obj.Basis(spline_basis_ids) ), elem_domain );
                 R{e} = D \ C;
+                to_coeffs{e} = R{e} * from_coeffs(spline_basis_ids);
             end
         end
 

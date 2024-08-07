@@ -1,6 +1,8 @@
-function [u, M, F, basis, d] = BernoulliEulerBeamEquation( basis_family, degree, domain, youngs_modulus, moment_inertia, displacement_constraint, slope_constraint, distributed_load, moment_load, shear_load )
+function [u, M, F, basis, d] = BernoulliEulerBeamEquation( spline_space, youngs_modulus, moment_inertia, displacement_constraint, slope_constraint, distributed_load, moment_load, shear_load )
 variate = symvar( distributed_load );
-basis = @(deriv) diff( PolynomialBasisFunction( basis_family, degree, variate, domain ), variate, deriv );
+SplineBasis = PiecewisePolynomialBasisFunction( spline_space, variate );
+basis =  @(deriv) diff( SplineBasis.Basis, variate, deriv );
+domain = spline_space.getSplineDomain();
 [M, F] = ApplyGoverningEquation( basis, domain, youngs_modulus, moment_inertia, distributed_load );
 [M, F] = ApplyBoundaryConditions( M, F, basis, domain, youngs_modulus, moment_inertia, displacement_constraint, slope_constraint, moment_load, shear_load );
 d = M \ F;
@@ -27,17 +29,17 @@ u = simplify( u, Steps=10 );
     end
 
     function [M, F] = SlopeBoundaryCondition( basis, domain, slope_constraint )
-        M = subs( basis(1) .* transpose( basis(1) ), symvar( basis(0) ), domain(1) );
-        F = subs( basis(1) .* slope_constraint,      symvar( basis(0) ), domain(1) );
+        M = limit( basis(1), variate, domain(1), "right" ) .* transpose( limit( basis(1), variate, domain(1), "right" ) );
+        F = limit( basis(1), variate, domain(1), "right" ) .* slope_constraint;
     end
 
     function [M, F] = MomentBoundaryCondition( basis, domain, youngs_modulus, moment_inertia, moment_load )
-        M = subs( basis(2) * (youngs_modulus * moment_inertia ) .* transpose( basis(2) ), symvar( basis(0) ), domain(2) );
-        F = subs( basis(2) .* moment_load,                                                symvar( basis(0) ), domain(2) );
+        M = ( limit( basis(2), variate, domain(2), "left" ) * (youngs_modulus * moment_inertia ) ) .* transpose( limit( basis(2), variate, domain(2), "left" ) );
+        F = limit( basis(2), variate, domain(2), "left" ) .* moment_load;
     end
 
     function [M, F] = ShearBoundaryCondition( basis, domain, youngs_modulus, moment_inertia, shear_load )
-        M = subs( basis(3) * (youngs_modulus * moment_inertia ) .* transpose( basis(3) ), symvar( basis(3) ), domain(2) );
-        F = -subs( basis(3) .* shear_load,                                                 symvar( basis(3) ), domain(2) );
+        M = ( limit( basis(3), variate, domain(2), "left" ) * (youngs_modulus * moment_inertia ) ) .* transpose( limit( basis(3), variate, domain(2), "left" ) );
+        F = -limit( basis(3), variate, domain(2), "left" ) .* shear_load;
     end
 end

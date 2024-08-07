@@ -37,9 +37,9 @@ classdef SplineSpace
         end
 
         function spline_type = getSplineType( obj )
-            if numel( unique( obj.degree ) ) > 1 && any( obj.continuity > 0 )
+            if    ~isscalar( unique( obj.degree ) ) && any( obj.continuity > 0 )
                 spline_type = "USpline";
-            elseif numel( unique( obj.degree ) ) == 1 && any( obj.continuity > 0 )
+            elseif isscalar( unique( obj.degree ) ) && any( obj.continuity > 0 )
                 spline_type = "BSpline";
             elseif all( obj.continuity == -1 )
                 spline_type = "PiecewiseDiscontinuous";
@@ -52,7 +52,7 @@ classdef SplineSpace
             spline_type = obj.getSplineType();
             switch spline_type    
                 case "USpline"
-                    supported_basis = [ "Lagrage", "Bernstein", ]
+                    supported_basis = [ "Lagrage", "Bernstein", ];
                 case "BSpline"
                 case "PiecewiseContinuous"
                 case "PiecewiseDiscontinuous"

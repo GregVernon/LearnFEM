@@ -1,6 +1,8 @@
-function [u, M, F, basis, d] = PoissonEquation( basis_family, degree, domain, f, g, h )
+function [u, M, F, basis, d] = PoissonEquation( spline_space, f, g, h )
 variate = symvar(f);
-basis = @(deriv) diff( PolynomialBasisFunction( basis_family, degree, variate, domain ), variate, deriv );
+SplineBasis = PiecewisePolynomialBasisFunction( spline_space, variate );
+basis =  @(deriv) diff( SplineBasis.Basis, variate, deriv );
+domain = spline_space.getSplineDomain();
 [M, F] = ApplyGoverningEquation( basis, domain, f );
 [M, F] = ApplyBoundaryConditions( M, F, basis, domain, g, h );
 d = M \ F;
@@ -20,12 +22,12 @@ u = simplify( u, Steps=10 );
     end
 
     function [M, F] = DirichletBoundaryCondition( basis, domain, g )
-        M = subs( basis(0) .* transpose( basis(0) ), symvar( basis(0) ), domain(2) );
-        F = subs( basis(0) * g, symvar( basis(0) ), domain(2) );
+        M = subs( basis(0) .* transpose( basis(0) ), variate, domain(2) );
+        F = subs( basis(0) * g, variate, domain(2) );
     end
 
     function [M, F] = NeumannBoundaryCondition( basis, domain, h )
-        M = subs( basis(1) .* transpose( basis(1) ), symvar( basis(1) ), domain(1) );
-        F = subs( basis(1) * h, symvar( basis(1) ), domain(1) );
+        M = limit( basis(1), variate, domain(1), "right" ) .* transpose( limit( basis(1), variate, domain(1), "right" ) );
+        F = limit( basis(1), variate, domain(1), "right" ) * h;
     end
 end

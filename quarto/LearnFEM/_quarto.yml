@@ -1,0 +1,34 @@
+project:
+  type: book
+
+toc: true
+number-sections: true
+top-level-division: part
+
+bibliography: references.bib
+
+book:
+  title: "Learning FEM the Wrong Way"
+  author: "Gregory Vernon"
+  date: "8/10/2024"
+  page-navigation: true
+  chapters:
+    - index.qmd
+    - part: intro.qmd
+    - part: lecture_00/intro.qmd
+      chapters:
+        - lecture_00/change_of_variable.qmd
+    - summary.qmd
+    - references.qmd
+
+format:
+  html:
+    theme: cosmo
+  pdf:
+    pdf-engine: pdflatex
+    documentclass: scrreprt
+    include-in-header:
+      text: |
+        \usepackage{amsmath}
+
+

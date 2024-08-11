@@ -53,16 +53,12 @@ Noting the similar structure of these two mappings, let's now write a function t
 ```{python}
 #| echo: true
 def ChangeOfVariable( from_value, from_domain, to_domain ):
-    ## SHIFT
-    from_domain_mean = ( from_domain[0] + from_domain[1] ) / 2
-    to_domain_mean = ( to_domain[0] + to_domain[1] ) / 2
-    shift = to_domain_mean - from_domain_mean
-    ## SCALE
-    from_domain_range = from_domain[1] - from_domain[0]
-    to_domain_range = to_domain[1] - to_domain[0]
-    scale = to_domain_range / from_domain_range
-    ## APPLY SHIFT & SCALE
-    to_value = scale * ( shift + from_value )
+    ## SHIFT TO ZERO
+    to_value = from_value - from_domain[0]
+    ## SCALE TO EQUAL RANGE
+    to_value *= ( to_domain[1] - to_domain[0] ) / ( from_domain[1] - from_domain[0] )
+    ## APPLY TO DOMAIN
+    to_value += to_domain[0]
     return to_value
 ```
 
@@ -77,4 +73,61 @@ from_values = [-1, -0.5, 0, 0.5, 1]
 for from_value in from_values:
     to_value = ChangeOfVariable( from_value, from_domain, to_domain )
     print( f"x({from_value}) = {to_value}" )
+```
+
+Now let's see what happens when we use the change of variable in an actual function.  
+First let's choose a function defined over $x$ and map it to $\xi$.
+
+```{python}
+#| echo: false
+from IPython.display import Markdown
+import sympy
+import spb
+sympy.init_printing( use_latex='mathjax', use_unicode=False )
+```
+
+```{python}
+x_domain = sympy.Array( [2, 7] )
+xi_domain = sympy.Array( [-1, 1] )
+
+x = sympy.Symbol( 'x' )
+xi = ChangeOfVariable( x, from_domain=xi_domain, to_domain=x_domain )
+f = sympy.exp( x ) * sympy.cos( sympy.pi * x )
+g = f.subs( x, xi )
+```
+
+```{python}
+#| echo: false
+Markdown( f"$$ f(x) = {sympy.latex( f )}, \\quad x \\in {x_domain}$$\n" + \
+          f"$$ \\xi(x) = {sympy.latex( xi )}, \\quad \\xi \\in {xi_domain}$$\n" + \
+          f"$$ g(\\xi(x)) = {sympy.latex( g )}$$\n" )
+```
+
+```{python}
+#| echo: false
+p1 = spb.plot( f, ( x, x_domain[0], x_domain[1] ), xlim=[-1, 7], ylabel="$f(x)$", show=False )
+p2 = spb.plot( g, ( x, xi_domain[0], xi_domain[1] ), xlim=[-1, 7], ylabel="$g(\\xi(x))$", show=False )
+sp1 = spb.plotgrid( p1, p2 )
+```
+
+And again on another function, this time using the mapping $x(\xi)$:
+```{python}
+xi = sympy.Symbol( '\\xi', real = True )
+x = ChangeOfVariable( xi, from_domain=x_domain, to_domain=xi_domain )
+g = sympy.re( xi**xi ) 
+f = g.subs( xi, x )
+```
+
+```{python}
+#| echo: false
+Markdown( f"$$ g(\\xi) = {sympy.latex( g )}, \\quad \\xi \\in {xi_domain}$$\n" + \
+          f"$$ x(\\xi) = {sympy.latex( x )}, \\quad x \\in {x_domain}$$\n" + \
+          f"$$ f(x(\\xi)) = {sympy.latex( f )}$$\n" )
+```
+
+```{python}
+#| echo: false
+p3 = spb.plot( g, ( xi, xi_domain[0], xi_domain[1] ), xlim=[-1, 7], ylabel="$g(\\xi)$", show=False )
+p4 = spb.plot( f, ( xi, x_domain[0], x_domain[1] ), xlim=[-1, 7], ylabel="$f(x(\\xi))$", show=False )
+sp2 = spb.plotgrid( p3, p4 )
 ```

@@ -1,0 +1,80 @@
+# Change of Variable
+
+A core concept in finite elements is that of change of variable.
+Immediately, we will use this concept to simplify numerical integration (quadrature), though later this will lead to the idea of parent elements and mapping to/from various configurations utilized within finite element implemntations, for example: *parametric*, *reference*, *current* configurations.
+
+As a simple example of this, let us imagine that we have some function, $f(x)$, that we wish to integrate over the domain $[2, 7]$.
+Let us further imagine that we have inherited some code that only supports integration over the domain $[-1, 1]$.
+How can we proceed?
+
+Let's imagine that we could define some function, $g(\xi), \xi \in [-1, 1]$, such that $f(x) = g(\xi)$.
+That is, when we evaluate $g(\xi)$ at some value in the domain $[-1, 1]$, it evaluates to its "equivalent" value in the function $f(x)$ in the domain $[2, 7]$.
+By "equivalent" we mean that if we evaluate $g(\xi)$ at its left boundary, it should be equivalent to evaluating $f(x)$ at its left boundary: $f(2) = g(-1)$.
+Similarly evaluating at the right boundaries should be equivalent, $f(7) = g(1)$; evaluating each at their midpoint should be equivalent, $f(4.5) = g(0)$, and so on.
+
+We can do this if we allow for $x$ to be a function (a *mapping*) that allows us to convert some value of $\xi$ into a value for $x$.
+We can write this mapping as $x(\xi)$, and the inverse of this mapping as $\xi(x)$.
+So how can we write a function that maps between the two domains?  
+Let's step through this logically, choosing to modify the domain of $\xi$ so that we determine $x$.
+
+1. Scale $[-1, 1]$ so that it has the same have the same range ("length") as $[2, 7]$.
+   - $\left( \frac{7 - 2}{ 1 - ^{-}1} \right) \cdot [-1, 1]$
+   - $2.5 \cdot [-1, 1]$
+   - $[-1 \cdot 2.5, 1 \cdot 2.5]$
+   - $[-2.5, 2.5]$ 
+2. Shift the modified domain so that its lower bound equals the other
+   - $(2 - ^{-}2.5) + [-2.5, 2.5]$
+   - $4.5 + [-2.5, 2.5]$
+   - $[-2.5 + 4.5, 2.5 + 4.5]$
+   - $[2, 7]$
+
+Ok, so that seems to work! 
+But we used words to describe what we wanted to do, and then showed with actual numbers, making it a bit hard to see the algebra that's occurring -- which we want to know so that we can write code to implement the operation.
+To help us see the structure, lets replace the numbers with variables:
+
+1. Scale $[\xi_0, \xi_1]$ so that it has the same have the same range ("length") as $[x_0, x_1]$.
+   - $\left( \frac{x_1 - x_0}{\xi_1 - \xi_0} \right) \cdot [\xi_0, \xi_1]$
+2. Shift the modified domain so that its lower bound equals the other
+   - $\left(x_0 - \xi_0\right) + \left( \left( \frac{x_1 - x_0}{\xi_1 - \xi_0} \right) \cdot [\xi_0, \xi_1] \right )$
+
+Now, recognizing that $[\xi_0, \xi_1]$ simply represents two possible values of $\xi$, let's replace the array with $\xi$ and rewrite as a function
+$$
+x(\xi) = \left(x_0 - \xi_0\right) + \left( \frac{x_1 - x_0}{\xi_1 - \xi_0} \right) \xi
+$$
+
+Similarly we can find the inverse function
+
+$$
+\xi(x) = \left(\xi_0 - x_0\right) + \left( \frac{\xi_1 - \xi_0}{x_1 - x_0} \right) x
+$$
+
+Noting the similar structure of these two mappings, let's now write a function that simply maps from some domain to some other domain using change of variable.
+
+```{python}
+#| echo: true
+def ChangeOfVariable( from_value, from_domain, to_domain ):
+    ## SHIFT
+    from_domain_mean = ( from_domain[0] + from_domain[1] ) / 2
+    to_domain_mean = ( to_domain[0] + to_domain[1] ) / 2
+    shift = to_domain_mean - from_domain_mean
+    ## SCALE
+    from_domain_range = from_domain[1] - from_domain[0]
+    to_domain_range = to_domain[1] - to_domain[0]
+    scale = to_domain_range / from_domain_range
+    ## APPLY SHIFT & SCALE
+    to_value = scale * ( shift + from_value )
+    return to_value
+```
+
+Let's see this function in action!
+
+```{python}
+#| echo: true
+from_domain = [-1, 1]
+to_domain = [2, 7]
+from_values = [-1, -0.5, 0, 0.5, 1]
+
+for from_value in from_values:
+    to_value = ChangeOfVariable( from_value, from_domain, to_domain )
+    print( f"x({from_value}) = {to_value}" )
+```

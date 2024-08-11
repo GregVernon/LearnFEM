@@ -3,7 +3,7 @@ project:
 
 toc: true
 number-sections: true
-top-level-division: part
+top-level-division: chapter
 
 bibliography: references.bib
 
@@ -18,6 +18,7 @@ book:
     - part: lecture_00/intro.qmd
       chapters:
         - lecture_00/change_of_variable.qmd
+        - lecture_00/polynomial_roots.qmd
     - summary.qmd
     - references.qmd
 

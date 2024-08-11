@@ -1,0 +1,125 @@
+# Finding Polynomial Roots using Linear Algebra
+A common problem in mathematics is finding the roots (zeros) of a function.
+As we will see shortly, we will want to find roots of *polynomial* functions to aid us in constructing polynomial basis and quadrature schemes.
+A common approach to finding roots of functions is to use bracketing methods (e.g., bisection method) or iterative methods based on derivatives (e.g., secant method, Newton's method).
+However these methods face many challenges such as how to choose a reasonable starting location, initial bracket bounds, avoiding stagnation, finding multiple roots, duplicate roots, etc.
+So how might we avoid these challenges with polynomials?
+
+You may recall from your early linear algebra courses the idea of the *characteristic polynomial* for a matrix.
+In short, any square matrix has a characteristic polynomial whose roots are the *eigenvalues* of the matrix.
+So what we want to do is to construct a matrix whose characteristic polynomial is the polynomial we want to find the roots of, and then compute the eigenvalues.
+For any characteristic polynomial, there are an infinite number of matrices that share the characteristic polynomial (i.e., matrix similarity), however one approach results in constructing what is called the *companion matrix*.
+
+For a *monic polynomial*, that is, a polynomial of the form
+$$
+p(x) = c_0 x^0 + c_1 x^1 + \cdots c_{n-1} x^{n-1} + c_n x^n \quad \mathrm{where} \ c_n = 1,
+$$
+
+the companion matrix is defined as:
+
+$$
+C =
+\begin{bmatrix}
+    0      & 0      & \cdots & 0      & -c_0     \\
+    1      & 0      & \cdots & 0      & -c_1     \\
+    0      & 1      & \cdots & 0      & -c_2     \\
+    \vdots & \vdots & \ddots & \vdots & \vdots   \\
+    0      & 0      & \cdots & 1      & -c_{n-1} \\
+\end{bmatrix}
+$$
+
+Recall that for a given polynomial we can convert it to a monic polynomial by simply dividing by the leading coefficient.
+Let's work through an example:
+
+```{python}
+#| echo: false
+from IPython.display import Markdown
+import sympy
+from sympy.matrices.expressions import CompanionMatrix
+import spb
+sympy.init_printing( use_latex='mathjax', use_unicode=False )
+
+x = sympy.Symbol( "x" )
+polynomial = sympy.poly( (1/2)*x**4 + (1/2)*x**3 - 6*x**2 - 2*x**1 + 6*x**0 )
+polynomial_coeffs = polynomial.all_coeffs()
+
+monic_polynomial = sympy.poly( polynomial / polynomial_coeffs[0] )
+monic_polynomial_coeffs = monic_polynomial.all_coeffs()
+companion_matrix = sympy.Matrix( CompanionMatrix( monic_polynomial ) )
+eigenvalues = list( companion_matrix.eigenvals().keys() )
+```
+
+For the polynomial
+```{python}
+#| echo: false
+Markdown( f"$$ p(x) = {sympy.latex( polynomial.as_expr() )}$$" )
+```
+we have the monic polynomial
+```{python}
+#| echo: false
+Markdown( f"$$ p_m(x) = {sympy.latex( monic_polynomial.as_expr() )}$$" )
+```
+
+and thus assemble the companion matrix as
+```{python}
+#| echo: false
+Markdown( f"$$ C = {sympy.latex( companion_matrix )}$$\n")
+```
+
+having the eigenvalues
+```{python}
+#| echo: false
+#| warning: false
+Markdown( f"$$ \lambda = {sympy.latex( sorted( eigenvalues ) )}$$\n")
+```
+
+which are the roots of the polynomial.
+We can plot the polynomial and its roots to visually confirm that this approach has, in fact, found the polynomial's roots.
+
+```{python}
+#| echo: false
+import matplotlib
+import numpy
+p1 = spb.plot( polynomial, (x, -5, 5), show=False )
+p2 = spb.plot_list( eigenvalues, numpy.zeros( len( eigenvalues ) ), is_point=True, show=False )
+spb.plotgrid( p1 + p2 )
+```
+
+Let's put this together as a method so that we can easily compute polynomial roots later.
+
+
+```{python}
+import sympy
+from sympy.matrices.expressions import CompanionMatrix
+
+def PolynomialRoots( poly: sympy.Poly ):
+    polynomial_coeffs = polynomial.all_coeffs()
+    monic_polynomial = sympy.poly( polynomial / polynomial_coeffs[0] )
+    companion_matrix = sympy.Matrix( CompanionMatrix( monic_polynomial ) )
+    eigenvalues = sorted( list( companion_matrix.eigenvals().keys() ) )
+    return eigenvalues
+```
+
+And verify that it works:
+```{python}
+x = sympy.Symbol( "x" )
+polynomial = sympy.poly( (1/2)*x**4 + (1/2)*x**3 - 6*x**2 - 2*x**1 + 6*x**0 )
+roots = PolynomialRoots( polynomial )
+```
+
+```{python}
+#| echo: False
+#| warning: False
+Markdown( f"$$ \lambda = {sympy.latex( roots )}$$\n")
+```
+
+## A Footnote
+
+Finally, let's take a moment to make a quick observation and comment.
+You may be aware that there are no closed-form equations, using only elementary arithmetic operations and fractional powers, for computing the roots of polynomials greater than degree-4[^1].
+Consider that, if there existed an algorithm for computing exact eigenvalues in a finite number of steps for matrices of size $5\times5$ (corresponding to characteristic polynomials of degree-5) or larger, that then we would have an equation for finding roots of polynomials greater than degree-4.
+This is why, in practical finite element codes, eigenvalue extraction methods are all approximate iterative methods[^2].
+
+[^1]: This is the [Abel-Ruffini theorem](https://en.wikipedia.org/wiki/Abel%E2%80%93Ruffini_theorem).
+Of course, for some polynomials of degree greater than four we can write such equations, such as $x^{100}$ , but this is not possible *in general*.
+[^2]:  Such as the power method, Arnoldi method, Lancoz method, QR algorithm, LOBPCG

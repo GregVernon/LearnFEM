@@ -1,5 +1,8 @@
 /.quarto/
 
+__pycache__/
+_book/
 /env/
 /lecture_00/change_of_variable_files/
 /lecture_00/polynomial_roots_files/
+/lecture_00/polynomial_basis_files/

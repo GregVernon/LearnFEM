@@ -92,7 +92,7 @@ Let's put this together as a method so that we can easily compute polynomial roo
 import sympy
 from sympy.matrices.expressions import CompanionMatrix
 
-def PolynomialRoots( poly: sympy.Poly ):
+def PolynomialRoots( polynomial: sympy.Poly ):
     polynomial_coeffs = polynomial.all_coeffs()
     monic_polynomial = sympy.poly( polynomial / polynomial_coeffs[0] )
     companion_matrix = sympy.Matrix( CompanionMatrix( monic_polynomial ) )

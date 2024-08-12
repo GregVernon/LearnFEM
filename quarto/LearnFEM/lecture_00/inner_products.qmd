@@ -1,0 +1,74 @@
+# Inner Products
+
+Just as measuring quanitities is critical in engineering and science, so to is it important in mathematics.
+For example, when working with vectors one often wishes to know "how similar are these two vectors?" --- a question that every STEM practitioner knows to solve via the *dot product*.  
+It is perhaps unfortunate, however, that far fewer STEM practitioners understand the dot product as an *inner product*. 
+In fact, I would posit that very few engineers even know what the inner product is and how incredibly useful it is to engineering.
+It is my belief that this lack of understanding might come from simply a disconnect between the theory and application, one that I hope to at least partially correct.
+
+As an engineer myself, I like to think of *tools* that I can use to solve problems --- we often give tools names that describe what they do: hammer, screwdriver, pliers, vice grip, drill, etc.
+While I'm not going to rename the inner product, let me at least provide a simplified description of what this tool does:
+
+Inner Product
+: a tool that allows us to compare two objects of similar type, thus allowing us to measure them.
+
+There is obviously a more rigorous definition of an inner product, similar to how there's a more rigorous definition of "hammer" than 
+
+Hammer
+: a tool that allows us to drive a nail into solid material, thus allowing us to join two objects.
+
+You could use a book, a shoe, a smartphone, or a gold bar to drive a nail in this manner but if you bought a hammer online and what arrived was a hardcover book you'd, understandably, be upset. 
+At the end of this chapter I'll provide a wrote description of the inner product that will allow you to recognize an operation "in the wild" as an inner product (or not).
+But for now, let me just show you how my simplified description of the inner product works.
+
+## Notation
+
+Before we do that though, let me define the notation that I will use to represent the inner product between two objects:
+
+$$
+\inner{\cdot}{\cdot}
+$$
+
+where each "$\cdot$" is a placeholder for one of the two objects.
+
+## The Inner Product on the Real Numbers
+
+Overly simplified, the real numbers, represented by $\Real$, are the types of numbers you use 99.999% in everyday life.
+Numbers like 0, or 1, or 147... but also numbers like 1.4 and -0.9, and $\sqrt{2}$ and $\pi$.
+
+$$
+\inner{a}{b} := ab, \quad a,b \in \Real
+$$
+
+This is simply *scalar multiplication* between two numbers, how does this let us compare two objects and make measurements?
+We can compare $\inner{a}{b}$ against $\inner{a}{a}$ by dividing the former by the latter:
+
+$$
+\frac{\inner{a}{b}}{\inner{a}{a}}
+$$
+
+Which gives us the comparisons:
+
+- $\frac{\inner{a}{b}}{\inner{a}{a}} = 1$
+  - This tells us that $b$ is equal to $a$
+- $\frac{\inner{a}{b}}{\inner{a}{a}} = ^{-}1$
+  - This tells us that $b$ is the additive inverse of $a$.
+- $\frac{\inner{a}{b}}{\inner{a}{a}} > 1$
+  - This tells us that the magnitude of $b$ is larger than the magnitude of $a$, i.e., $\|b\| > \|a\|$.
+- $\frac{\inner{a}{b}}{\inner{a}{a}} < 1$
+  - This tells us that the magnitude of $b$ is smaller than the magnitude of $a$, i.e., $\|b\| < \|a\|$.
+
+Furthermore, if we simplify the expression comparing the two inner products, $\frac{\inner{a}{b}}{\inner{a}{a}}$, we find $\frac{a \cdot b}{a \cdot a} = \frac{b}{a}$ --- the inner product is providing us a *ratio* between the two numbers.
+So how is this useful?
+I'll admit this seems a bit contrived but consider this example:
+
+Imagine that you have two unknown values.
+You are able to compare them against each other using the inner product, but do not yet actually know the value of either.
+You compare the two inner products and find $\frac{\inner{a}{b}}{\inner{a}{a}} = -\frac{1}{16}$.
+Now, sometime later you are able to compare $a$ against the number $2.5$ and find $\frac{\inner{2.5}{a}}{\inner{2.5}{2.5}} = -1.6$.
+We now *instantly* know that $a = -4$ and $b = 0.25$.
+The inner product allowed us to compare two objects, and when you can compare two objects *you can measure them*.
+But perhaps this was too simple to be convincing, afterall it is, as we said, simply scalar multiplication and division.
+Let's look at a slightly more difficult use-case:
+
+## The Inner Product of Real Vectors

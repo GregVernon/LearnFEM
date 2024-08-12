@@ -20,17 +20,30 @@ book:
         - lecture_00/change_of_variable.qmd
         - lecture_00/polynomial_roots.qmd
         - lecture_00/polynomial_basis.qmd
+        - lecture_00/inner_products.qmd
     - summary.qmd
     - references.qmd
 
 format:
   html:
     theme: darkly
+    include-in-header:
+      text: |
+        <script>
+        window.MathJax = {
+          tex: {
+            macros: {
+              Real: "{\\mathbb R}",
+              inner: ["\\langle #1, #2 \\rangle", 2]
+            }
+          }
+        };
+        </script>
   pdf:
     pdf-engine: pdflatex
     documentclass: scrreprt
     include-in-header:
       text: |
         \usepackage{amsmath}
-
-
+        \newcommand{\Real}{\mathbb{R}}
+        \newcommand{\inner}[2]{\langle #1, #2 \rangle}

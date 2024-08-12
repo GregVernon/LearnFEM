@@ -19,6 +19,7 @@ book:
       chapters:
         - lecture_00/change_of_variable.qmd
         - lecture_00/polynomial_roots.qmd
+        - lecture_00/polynomial_basis.qmd
     - summary.qmd
     - references.qmd
 

@@ -1,0 +1,224 @@
+```{python}
+#| include: false
+import sympy
+import numpy
+import spb
+from IPython.display import Markdown
+from lecture_00 import ChangeOfVariable, BasisToLatexString, PlotPolynomialBasis
+sympy.init_printing( use_latex='mathjax', use_unicode=False )
+```
+
+# Polynomial Basis
+What is a polynomial?
+Chances are that you have a pretty good basic understanding of polynomials, you know a polynomial when you see it.
+But you may not have considered polynomials as being a vector space, of each polynomial function being describable as a linear combination of coefficients and a polynomial basis.
+Let's investigate.
+
+## The Monomial Basis
+The polynomial basis probably most familiar to the reader is the *monomial basis*, sometimes called the *power basis*.
+
+```{python}
+def MonomialBasis( degree, variate, domain ):
+    variate = ChangeOfVariable( variate, domain, [0, 1] )
+    basis = []
+    for n in range( 0, degree + 1 ):
+        basis.append( sympy.poly( variate ** ( n ), variate ) )
+    return basis
+```
+
+These basis polynomials are, as the name suggests, the familiar monomials and, as such, is normally defined over the unit domain $[0,1]$.
+
+```{python}
+import sympy
+degree = 4
+x = sympy.Symbol( "x" )
+domain = sympy.Array( [sympy.Rational( 0 ), sympy.Rational( 1 )] )
+monomial_basis = MonomialBasis( degree, x, domain )
+```
+
+```{python}
+#| echo: false
+Markdown( f"$${BasisToLatexString( monomial_basis, "M" )}$$" )
+```
+
+```{python}
+#| echo: false
+PlotPolynomialBasis( "Monomial", degree, x, domain )
+```
+
+However, including the change of variable operator in its construction allows for defining the monomial basis over any domain, such as the bi-unit domain $[-1,1]$
+
+```{python}
+domain = sympy.Array( [sympy.Rational( -1 ), sympy.Rational( 1 )] )
+monomial_basis = MonomialBasis( degree, x, domain )
+```
+
+```{python}
+#| echo: false
+Markdown( f"$${BasisToLatexString( monomial_basis, "M" )}$$" )
+```
+
+```{python}
+#| echo: false
+PlotPolynomialBasis( "Monomial", degree, x, domain )
+```
+
+## The Lagrange Basis
+
+The Lagrange basis is a so-called *interpolatory basis* and has wide applications in interpolation and approximation.
+In fact, because of its interpolation properties it is the *de facto* standard basis used in traditional finite element codes.
+It also gives rise to the Lagrange interpolating polynomial.
+
+```{python}
+def LagrangeBasis( degree, variate, domain ):
+    step = ( domain[1] - domain[0] ) / ( degree )
+    node = [ domain[0] + i*step for i in range( degree + 1 ) ]
+    basis = []
+    for i in range( 0, degree + 1 ):
+        basis.append( sympy.poly( variate ** 0, variate ) )
+        for j in range( 0, degree + 1 ):
+            if i != j:
+                basis[i] *= ( ( variate - node[j] ) / ( node[i] - node[j] ) )
+    return basis
+```
+
+Note that the Lagrange basis is usually defined over the bi-unit domain $[-1, 1]$.
+
+```{python}
+degree = 4
+x = sympy.Symbol( "x" )
+domain = sympy.Array( [sympy.Rational( -1 ), sympy.Rational( 1 )] )
+lagrange_basis = LagrangeBasis( degree, x, domain )
+```
+
+```{python}
+#| echo: false
+PlotPolynomialBasis( "Lagrange", degree, x, domain )
+```
+
+## The Bernstein Basis
+
+The Bernstein basis is both a historically significant basis and currently a vital basis in the fields of approximation, computer-aided design, computer graphics, and even computer font design.
+It forms the foundation for such things as Bezier curves, B-splines, NURBS, and isogeometric analysis.
+We will talk more about these later.
+
+Note that the Bernstein basis is usually defined over the unit domain $[0,1]$.
+
+```{python}
+def BernsteinBasis( degree, variate, domain ):
+    variate = ChangeOfVariable( variate, domain, [0, 1] )
+    basis = []
+    for i in range( 0, degree + 1 ):
+        bin_coeff = sympy.binomial( degree, i )
+        monomial = sympy.poly( variate ** i, variate )
+        polynomial = sympy.poly( ( ( 1 - variate ) ** ( degree - i ) ), variate )
+        basis.append(  bin_coeff * monomial * polynomial )
+    return basis
+```
+
+```{python}
+degree = 4
+x = sympy.Symbol( "x" )
+domain = sympy.Array( [sympy.Rational( 0 ), sympy.Rational( 1 )] )
+bernstein_basis = BernsteinBasis( degree, x, domain )
+```
+
+```{python}
+#| echo: false
+PlotPolynomialBasis( "Bernstein", degree, x, domain )
+```
+
+## The Legendre basis
+
+The Legendre basis is the first of the orthogonal basis, so-called each basis polynomial is orthogonal in the $L^2$-norm to every other polynomial in the basis --- we'll define what this means later.
+For now, it's enough to know that this orthogonality property provides a number of desirable numerical properties, even at high polynomial degree (especially in contrast to the Lagrange basis), and will prove especially useful when we later develop numerical quadrature schemes.
+
+```{python}
+def LegendreBasis( degree, variate, domain ):
+    variate = ChangeOfVariable( variate, domain, [-1, 1] )
+    basis = []
+    for i in range( 0, degree + 1 ):
+        if i == 0:
+            basis.append( sympy.poly( variate ** 0, variate ) )
+        elif i == 1:
+            basis.append( sympy.poly( variate ** 1, variate ) )
+        else:
+            n = i - 1
+            term_1 = ( 2 * n + 1 ) * variate * basis[n]
+            term_2 = n * basis[n-1]
+            basis.append( ( term_1 - term_2 ) / ( n + 1 ) )
+    return basis
+```
+
+```{python}
+degree = 4
+x = sympy.Symbol( "x" )
+domain = sympy.Array( [sympy.Rational( 0 ), sympy.Rational( 1 )] )
+legendre_basis = LegendreBasis( degree, x, domain )
+```
+
+```{python}
+#| echo: false
+PlotPolynomialBasis( "Legendre", degree, x, domain )
+```
+
+## The Chebyshev basis
+
+The Chebyshev basis is another orthogonal basis, however its orthogonality is defined slighlty differently than the Legendre basis.
+We will discuss this nuance later, but it is sufficient to say that it too has many beneficial numerical properties stemming from its orthogonality and is incredibly important in modern approximation theory.
+Due to various transliterations of its namesake, [Pafnuty Chebyshev](https://en.wikipedia.org/wiki/Pafnuty_Chebyshev), it is sometimes written as *Tchebycheff*, *Tchebyshev* (French), or *Tschebyschow* (German).
+
+```{python}
+def ChebyshevBasis( degree, variate, domain ):
+    variate = ChangeOfVariable( variate, domain, [-1, 1] )
+    basis = []
+    for i in range( 0, degree + 1 ):
+        if i == 0:
+            basis.append( sympy.poly( variate ** 0, variate ) )
+        elif i == 1:
+            basis.append( sympy.poly( variate ** 1, variate ) )
+        else:
+            basis.append( ( 2 * variate * basis[i-1] ) - basis[i-2] )
+    return basis
+```
+
+```{python}
+degree = 4
+x = sympy.Symbol( "x" )
+domain = sympy.Array( [sympy.Rational( 0 ), sympy.Rational( 1 )] )
+chebyshev_basis = ChebyshevBasis( degree, x, domain )
+```
+
+```{python}
+#| echo: false
+PlotPolynomialBasis( "Chebyshev", degree, x, domain )
+```
+
+## Other Basis Polynomials
+
+There are a multitude of other basis polynomials which we will not show here.
+Several of these basis that are commonly used are variations of the Lagrange basis, where the roots of the Legendre and Chebyshev basis are used as the nodes (roots) of the Lagrange basis.
+The resulting basis, while perhaps not as commonly used as the aforementioned basis, inherit some of the beneficial numerical properties of their orthogonal progenitors.[^1]
+Also included are various other orthogonal polynomials such as the Leguerre, Lobatto, Hermite, and Jacobi polynomials, to name a few.
+
+[^1]: Such as minimizing the deleterious Runge phenomenon observed with high-order polynomial interpolants.
+
+## A Polynomial Basis Interface
+
+To simplify accessing the various basis polynomials later in this text, let's define an interface method:
+
+```{python}
+def PolynomialBasisFunction( basis_name, degree, variate, domain ):
+    match basis_name:
+        case "Bernstein":
+            basis = BernsteinBasis( degree, variate, domain )
+        case "Chebyshev":
+            basis = ChebyshevBasis( degree, variate, domain )
+        case "Lagrange":
+            basis = LagrangeBasis( degree, variate, domain )
+        case "Legendre":
+            basis = LegendreBasis( degree, variate, domain )
+        case "Monomial":
+            basis = MonomialBasis( degree, variate, domain )
+    return basis
+```

@@ -1,0 +1,56 @@
+```{python}
+#| include: false
+import sympy
+import numpy
+import spb
+from IPython.display import Markdown
+from lecture_00 import ChangeOfVariable, BasisToLatexString, PlotPolynomialBasis
+sympy.init_printing( use_latex='mathjax', use_unicode=False )
+```
+
+# Change of Basis
+
+We previously presented various different basis polynomials.  
+Recall that an object within a given vector space is represented as a linear combination of basis vectors
+
+$$
+\vec{u} = \sum_{A}^{n}{c_A N_A} = c_1 N_1 + c_2 N_2 + \cdots + c_{n-1} N_{n-1} + c_n N_n
+$$
+
+Sometimes, however, we may wish to represent this same object, exactly, in another basis:
+
+$$
+\vec{u} = \vec{v} = \sum_{B}^{n}{d_B M_B} = d_1 M_1 + d_2 M_2 + \cdots + d_{n-1} M_{n-1} + d_n M_n
+$$
+
+Leveraging the properties of the inner product we can solve for $d_B$, the unknown coefficients in this other basis:
+
+$$
+\begin{aligned}
+    \inner{M_A}{\vec{v}} &= \inner{M_A}{\vec{u}} \\
+    %
+    \inner{M_A}{\sum_{B}^{n}{d_B M_B}} &= \inner{M_A}{\sum_{B}^{n}{c_B N_B}} \\
+    %
+    \sum_{A,B}^{n}d_B\inner{M_A}{M_B} &= \sum_{A,B}^{n}c_B\inner{M_A}{N_B} \\
+\end{aligned}
+$$
+
+Which we can write in matrix-vector format as
+
+$$
+\begin{bmatrix}
+    \inner{M_1}{M_1} & \cdots & \inner{M_1}{M_n} \\
+    \vdots & \ddots & \vdots \\
+    \inner{M_n}{M_1} & \cdots & \inner{M_m}{M_n}
+\end{bmatrix}
+%
+\begin{bmatrix} d_1 \\ \vdots \\ d_n \end{bmatrix}
+=
+\begin{bmatrix}
+    \inner{M_1}{N_1} & \cdots & \inner{M_1}{N_n} \\
+    \vdots & \ddots & \vdots \\
+    \inner{M_n}{N_1} & \cdots & \inner{M_m}{N_n}
+\end{bmatrix}
+%
+\begin{bmatrix} c_1 \\ \vdots \\ c_n \end{bmatrix}
+$$

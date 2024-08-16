@@ -112,7 +112,3 @@ def BasisToLatexString( basis_array, basis_id_string ):
         latex_string += f"{sympy.latex( sympy.simplify( basis.as_expr() ) )} \\\\"
     latex_string += "\\end{bmatrix}"
     return latex_string
-
-def BasisIDString( basis_name ):
-    
-    return basis_id_strings[basis_name]

@@ -1,3 +1,13 @@
+```{python}
+#| include: false
+import sympy
+import numpy
+import spb
+from IPython.display import Markdown
+from lecture_00 import ChangeOfVariable, BasisToLatexString, PlotPolynomialBasis
+sympy.init_printing( use_latex='mathjax', use_unicode=False )
+```
+
 # Inner Products
 
 Just as measuring quanitities is critical in engineering and science, so to is it important in mathematics.
@@ -10,12 +20,12 @@ As an engineer myself, I like to think of *tools* that I can use to solve proble
 While I'm not going to rename the inner product, let me at least provide a simplified description of what this tool does:
 
 Inner Product
-: a tool that allows us to compare two objects of similar type, thus allowing us to measure them.
+: a tool that allows us to compare two objects of similar type, allowing us to measure them.
 
 There is obviously a more rigorous definition of an inner product, similar to how there's a more rigorous definition of "hammer" than 
 
 Hammer
-: a tool that allows us to drive a nail into solid material, thus allowing us to join two objects.
+: a tool that allows us to drive a nail into solid material, allowing us to join objects.
 
 You could use a book, a shoe, a smartphone, or a gold bar to drive a nail in this manner but if you bought a hammer online and what arrived was a hardcover book you'd, understandably, be upset. 
 At the end of this chapter I'll provide a wrote description of the inner product that will allow you to recognize an operation "in the wild" as an inner product (or not).
@@ -40,35 +50,211 @@ $$
 \inner{a}{b} := ab, \quad a,b \in \Real
 $$
 
-This is simply *scalar multiplication* between two numbers, how does this let us compare two objects and make measurements?
-We can compare $\inner{a}{b}$ against $\inner{a}{a}$ by dividing the former by the latter:
+This is simply *scalar multiplication* between two numbers, how does this let us compare two objects?
+We can compare $\inner{a}{b}$ against $\inner{b}{b}$ by dividing the former by the latter:
 
 $$
-\frac{\inner{a}{b}}{\inner{a}{a}}
+\frac{\inner{a}{b}}{\inner{b}{b}}
 $$
 
 Which gives us the comparisons:
 
-- $\frac{\inner{a}{b}}{\inner{a}{a}} = 1$
-  - This tells us that $b$ is equal to $a$
-- $\frac{\inner{a}{b}}{\inner{a}{a}} = ^{-}1$
-  - This tells us that $b$ is the additive inverse of $a$.
-- $\frac{\inner{a}{b}}{\inner{a}{a}} > 1$
-  - This tells us that the magnitude of $b$ is larger than the magnitude of $a$, i.e., $\|b\| > \|a\|$.
-- $\frac{\inner{a}{b}}{\inner{a}{a}} < 1$
-  - This tells us that the magnitude of $b$ is smaller than the magnitude of $a$, i.e., $\|b\| < \|a\|$.
+- $\frac{\inner{a}{b}}{\inner{b}{b}} = 1$
+  - This tells us that $a$ is equal to $b$
+- $\frac{\inner{a}{b}}{\inner{b}{b}} = ^{-}1$
+  - This tells us that $a$ is the additive inverse of $b$.
+- $\frac{\inner{a}{b}}{\inner{b}{b}} > 1$
+  - This tells us that the magnitude of $a$ is larger than the magnitude of $b$, i.e., $\|a\| > \|b\|$.
+- $\frac{\inner{a}{b}}{\inner{b}{b}} < 1$
+  - This tells us that the magnitude of $a$ is smaller than the magnitude of $b$, i.e., $\|a\| < \|b\|$.
 
-Furthermore, if we simplify the expression comparing the two inner products, $\frac{\inner{a}{b}}{\inner{a}{a}}$, we find $\frac{a \cdot b}{a \cdot a} = \frac{b}{a}$ --- the inner product is providing us a *ratio* between the two numbers.
+Furthermore, if we simplify the expression comparing the two inner products, $\frac{\inner{a}{b}}{\inner{b}{b}}$, we find $\frac{a \cdot b}{b \cdot b} = \frac{a}{b}$ --- the inner product is providing us a *ratio* between the two numbers.
 So how is this useful?
 I'll admit this seems a bit contrived but consider this example:
 
 Imagine that you have two unknown values.
 You are able to compare them against each other using the inner product, but do not yet actually know the value of either.
-You compare the two inner products and find $\frac{\inner{a}{b}}{\inner{a}{a}} = -\frac{1}{16}$.
+You compare the two inner products and find $\frac{\inner{a}{b}}{\inner{b}{b}} = -\frac{1}{16}$.
 Now, sometime later you are able to compare $a$ against the number $2.5$ and find $\frac{\inner{2.5}{a}}{\inner{2.5}{2.5}} = -1.6$.
-We now *instantly* know that $a = -4$ and $b = 0.25$.
+We now *instantly* know that $a = -.25$ and $b = 4$.
 The inner product allowed us to compare two objects, and when you can compare two objects *you can measure them*.
 But perhaps this was too simple to be convincing, afterall it is, as we said, simply scalar multiplication and division.
 Let's look at a slightly more difficult use-case:
 
 ## The Inner Product of Real Vectors
+
+If we have two vectors consisting of real numbers
+
+$$
+\begin{aligned}
+  \vec{x} = [ x_0, \cdots, x_n ]^T, &\quad i \in 0:n \\
+  \vec{y} = [ y_0, \cdots, y_n ]^T, &\quad i \in 0:n \\
+\end{aligned}
+$$
+
+the inner product, which we previously stated is also known as the "dot product", is defined as
+
+$$
+\inner{\vec{x}}{\vec{y}} = \vec{x}^T \vec{y} \sum_{i=0}^{n-1} x_i y_i = x_0 y_0 + \cdots + x_{n-1} y_{n-1}
+$$
+
+And again, we ask the question "how does the inner product allow us to compare and/or measure vectors?"
+And again, we answer with an example.
+As before we can compare the vectors against each other via
+$$
+\frac{\inner{\vec{x}}{\vec{y}}}{\inner{\vec{y}}{\vec{y}}}
+$$
+
+Which gives us the comparisons:
+
+- $\frac{\inner{\vec{x}}{\vec{y}}}{\inner{\vec{y}}{\vec{y}}} = 1$
+  - This tells us that $\vec{x}$ is equivalent to $\vec{y}$, having the same magnitude and direction.
+- $\frac{\inner{\vec{x}}{\vec{y}}}{\inner{\vec{y}}{\vec{y}}} = ^{-}1$
+  - This tells us that $\vec{x}$ is has equivalent magnitude to $\vec{y}$, but in the opposite direction.
+- $\frac{\inner{\vec{x}}{\vec{y}}}{\inner{\vec{y}}{\vec{y}}} > 1$
+  - This tells us that the magnitude of $\vec{x}$ is larger than the magnitude of $a$, i.e., $\|b\| > \|a\|$.
+- $\frac{\inner{\vec{x}}{\vec{y}}}{\inner{\vec{y}}{\vec{y}}} < 1$
+  - This tells us that the magnitude of $b$ is smaller than the magnitude of $a$, i.e., $\|b\| < \|a\|$.
+
+## The Inner Product of Real Functions
+Given two real functions[^1], $f$ and $g$, the inner product is
+
+$$
+\inner{f}{g}_{L^2} \coloneqq \int_{\Omega}{ f g } \ d\Omega
+$$
+
+which is also known as the $L^2$ inner product.
+The norm induced by the $L^2$ inner product is the $L^2$-norm
+$$
+\| f \|_{L^2} \coloneqq \sqrt{ \inner{f}{f} }
+$$
+
+Since we'll be dealing with the $L^2$ inner product quite a bit, let's consider some examples
+
+### Example 4.4.1
+
+```{python}
+import sympy
+x = sympy.Symbol( "x" )
+f = sympy.sin( x )
+g = sympy.sin( x )
+L2 = sympy.integrate( f * g, x )
+```
+
+```{python}
+#| echo: false
+p1 = spb.plot( f, (x, 0, 2*sympy.pi ), label="f", show=False )
+p1 += spb.plot( g, (x, 0, 2*sympy.pi ), label="g", show=False )
+p2 = spb.plot( L2, (x, 0, 2*sympy.pi ), show=False )
+sp1 = spb.plotgrid( p1, p2 )
+```
+
+Where evaluating the inner product provides us with a function of the domain:
+
+```{python}
+#| echo: false
+Markdown( "$$\\inner{f}{g}_{L^2} = " + f"{sympy.latex( L2 )}$$" )
+```
+
+And, for example, the inner product on the domain $[0,2\pi]$ is then
+
+```{python}
+#| echo: false
+L2 = sympy.integrate( f * g, ( x, 0, 2*sympy.pi ) )
+Markdown( "$$\\inner{f}{g}_{L^2_{[0,2\\pi]}} = " + f"{sympy.latex( L2 )}$$" )
+```
+
+### Example 4.4.2
+
+```{python}
+f = sympy.sin( x )
+g = -1*sympy.sin( x )
+L2 = sympy.integrate( f * g, x )
+```
+
+```{python}
+#| echo: false
+p1 = spb.plot( f, (x, 0, 2*sympy.pi ), label="f", show=False )
+p1 += spb.plot( g, (x, 0, 2*sympy.pi ), label="g", show=False )
+p2 = spb.plot( L2, (x, 0, 2*sympy.pi ), show=False )
+sp1 = spb.plotgrid( p1, p2 )
+```
+
+Where evaluating the inner product provides us with a function of the domain:
+
+```{python}
+#| echo: false
+Markdown( "$$\\inner{f}{g}_{L^2} = " + f"{sympy.latex( L2 )}$$" )
+```
+
+And, for example, the inner product on the domain $[0,2\pi]$ is then
+
+```{python}
+#| echo: false
+L2 = sympy.integrate( f * g, ( x, 0, 2*sympy.pi ) )
+Markdown( "$$\\inner{f}{g}_{L^2_{[0,2\\pi]}} = " + f"{sympy.latex( L2 )}$$" )
+```
+
+### Example 4.4.3
+
+```{python}
+f = sympy.sin( x )
+g = sympy.cos( x )
+L2 = sympy.integrate( f * g, x )
+```
+
+```{python}
+#| echo: false
+p1 = spb.plot( f, (x, 0, 2*sympy.pi ), label="f", show=False )
+p1 += spb.plot( g, (x, 0, 2*sympy.pi ), label="g", show=False )
+p2 = spb.plot( L2, (x, 0, 2*sympy.pi ), show=False )
+sp1 = spb.plotgrid( p1, p2 )
+```
+
+Where evaluating the inner product provides us with a function of the domain:
+
+```{python}
+#| echo: false
+Markdown( "$$\\inner{f}{g}_{L^2} = " + f"{sympy.latex( L2 )}$$" )
+```
+
+And, for example, the inner product on the domain $[0,2\pi]$ is then
+
+```{python}
+#| echo: false
+L2 = sympy.integrate( f * g, ( x, 0, 2*sympy.pi ) )
+Markdown( "$$\\inner{f}{g}_{L^2_{[0,2\\pi]}} = " + f"{sympy.latex( L2 )}$$" )
+```
+
+### Example 4.4.4
+
+```{python}
+f = sympy.sin( x )
+g = sympy.sin( 2*x )
+L2 = sympy.integrate( f * g, x )
+```
+
+```{python}
+#| echo: false
+p1 = spb.plot( f, (x, 0, 2*sympy.pi ), label="f", show=False )
+p1 += spb.plot( g, (x, 0, 2*sympy.pi ), label="g", show=False )
+p2 = spb.plot( L2, (x, 0, 2*sympy.pi ), show=False )
+sp1 = spb.plotgrid( p1, p2 )
+```
+
+Where evaluating the inner product provides us with a function of the domain:
+
+```{python}
+#| echo: false
+Markdown( "$$\\inner{f}{g}_{L^2} = " + f"{sympy.latex( L2 )}$$" )
+```
+
+And, for example, the inner product on the domain $[0,2\pi]$ is then
+
+```{python}
+#| echo: false
+L2 = sympy.integrate( f * g, ( x, 0, 2*sympy.pi ) )
+Markdown( "$$\\inner{f}{g}_{L^2_{[0,2\\pi]}} = " + f"{sympy.latex( L2 )}$$" )
+```
+
+[^1]: Functions whose range is in the real numbers

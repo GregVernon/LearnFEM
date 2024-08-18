@@ -2,55 +2,359 @@
 #| include: false
 import sympy
 import numpy
+import matplotlib.pyplot
 import spb
 from IPython.display import Markdown
-from lecture_00 import ChangeOfVariable, BasisToLatexString, PlotPolynomialBasis
+from lecture_00 import ChangeOfVariable, BasisToLatexString, PolynomialBasisFunction, PlotPolynomialBasis
+matplotlib.pyplot.rcParams['figure.constrained_layout.use'] = False
+matplotlib.pyplot.rcParams['axes.axisbelow'] = True
 sympy.init_printing( use_latex='mathjax', use_unicode=False )
 ```
 
 # Change of Basis
 
-We previously presented various different basis polynomials.  
+We previously presented various different basis polynomials.
 Recall that an object within a given vector space is represented as a linear combination of basis vectors
 
-$$
-\vec{u} = \sum_{A}^{n}{c_A N_A} = c_1 N_1 + c_2 N_2 + \cdots + c_{n-1} N_{n-1} + c_n N_n
-$$
+```{=latex}
+\begin{equation}
+    \Vector{u} = \sum_{A}^{n}{\Vector{c_A} \Matrix{N}_A} = \Vector{c}_1 \Matrix{N}_1 + \Vector{c}_2 \Matrix{N}_2 + \cdots + \Vector{c}_{n-1} \Matrix{N}_{n-1} + \Vector{c}_n \Matrix{N}_n
+\end{equation}
+```
 
 Sometimes, however, we may wish to represent this same object, exactly, in another basis:
 
-$$
-\vec{u} = \vec{v} = \sum_{B}^{n}{d_B M_B} = d_1 M_1 + d_2 M_2 + \cdots + d_{n-1} M_{n-1} + d_n M_n
-$$
+```{=latex}
+\begin{equation}
+    \Vector{u} = \Vector{v} = \sum_{B}^{n}{\Vector{d}_B \Matrix{M}_B} = \Vector{d}_1 \Matrix{M}_1 + \Vector{d}_2 \Matrix{M}_2 + \cdots + \Vector{d}_{n-1} \Matrix{M}_{n-1} + \Vector{d}_n \Matrix{M}_n
+\end{equation}
+```
 
-Leveraging the properties of the inner product we can solve for $d_B$, the unknown coefficients in this other basis:
+Leveraging the properties of the inner product we can solve for $\Vector{d}_B$, the unknown coefficients in this other basis:
 
-$$
-\begin{aligned}
-    \inner{M_A}{\vec{v}} &= \inner{M_A}{\vec{u}} \\
+```{=latex}
+\begin{align}
+    \Inner{\Matrix{M}_A}{\Vector{v}} &= \Inner{\Matrix{M}_A}{\Vector{u}} \\
     %
-    \inner{M_A}{\sum_{B}^{n}{d_B M_B}} &= \inner{M_A}{\sum_{B}^{n}{c_B N_B}} \\
+    \Inner{\Matrix{M}_A}{\sum_{B}^{n}{\Vector{d}_B \Matrix{M}_B}} &= \Inner{\Matrix{M}_A}{\sum_{B}^{n}{\Vector{c}_B \Matrix{M}_B}} \\
     %
-    \sum_{A,B}^{n}d_B\inner{M_A}{M_B} &= \sum_{A,B}^{n}c_B\inner{M_A}{N_B} \\
-\end{aligned}
-$$
+    \sum_{A,B}^{n}\Vector{d}_B\Inner{\Matrix{M}_A}{\Matrix{M}_B} &= \sum_{A,B}^{n}\Vector{c}_B\Inner{\Matrix{M}_A}{\Matrix{M}_B} \\
+\end{align}
+```
 
 Which we can write in matrix-vector format as
 
-$$
-\begin{bmatrix}
-    \inner{M_1}{M_1} & \cdots & \inner{M_1}{M_n} \\
-    \vdots & \ddots & \vdots \\
-    \inner{M_n}{M_1} & \cdots & \inner{M_m}{M_n}
-\end{bmatrix}
-%
-\begin{bmatrix} d_1 \\ \vdots \\ d_n \end{bmatrix}
-=
-\begin{bmatrix}
-    \inner{M_1}{N_1} & \cdots & \inner{M_1}{N_n} \\
-    \vdots & \ddots & \vdots \\
-    \inner{M_n}{N_1} & \cdots & \inner{M_m}{N_n}
-\end{bmatrix}
-%
-\begin{bmatrix} c_1 \\ \vdots \\ c_n \end{bmatrix}
-$$
+```{=latex}
+\begin{equation}
+    \begin{bmatrix}
+        \Inner{\Matrix{M}_1}{\Matrix{M}_1} & \cdots & \Inner{\Matrix{M}_1}{\Matrix{M}_n} \\
+        \vdots & \ddots & \vdots \\
+        \Inner{\Matrix{M}_n}{\Matrix{M}_1} & \cdots & \Inner{\Matrix{M}_m}{\Matrix{M}_n}
+    \end{bmatrix}
+    %
+    \begin{bmatrix} \Vector{d}_1 \\ \vdots \\ \Vector{d}_n \end{bmatrix}
+    =
+    \begin{bmatrix}
+        \Inner{\Matrix{M}_1}{\Matrix{N}_1} & \cdots & \Inner{\Matrix{M}_1}{\Matrix{N}_n} \\
+        \vdots & \ddots & \vdots \\
+        \Inner{\Matrix{M}_n}{\Matrix{N}_1} & \cdots & \Inner{\Matrix{M}_m}{\Matrix{N}_n}
+    \end{bmatrix}
+    %
+    \begin{bmatrix} \Vector{c}_1 \\ \vdots \\ \Vector{c}_n \end{bmatrix}
+\end{equation}
+```
+
+Or, more compactly, as:
+
+```{=latex}
+\begin{align}
+    \Matrix{D}\Vector{d} &= \Matrix{C}\Vector{c} \\
+    \Vector{d} &= \Matrix{D}^{-1}\Matrix{C}\Vector{c}
+\end{align}
+```
+
+Note that since the matrix-vector product $\Vector{d}=\Matrix{C}\Vector{c}$ is a vector we can recognize this as a linear system of equations, that is, it can be written as $\Matrix{A}\Vector{x}=\Vector{b}$, as $\Vector{x}=\Matrix{A}^{-1}\Vector{b}$, or $\Vector{d}=\Matrix{D}^{-1}\left(\Matrix{C}\Vector{c}\right)$.
+Alternatively, we can evaluate the matrix-matrix product $\ChangeBasisOp{C}{D} = \Matrix{D}^{-1} \Matrix{C}$, which we call the *change of basis operator*, that we can store for reuse on multiple changes of basis
+
+```{=latex}
+\begin{equation}
+    \Vector{d} = \ChangeBasisOp{C}{D} \Vector{c}
+\end{equation}
+```
+
+## A useful mnemonic device
+
+The mixing of different bases can be a bit confusing, so let's introduce a mnemonic that may help with remembering how to construct the change of basis system.
+Recall that we want to change ***F***rom one basis ***T***o another basis.
+Then we represent the above matrix-vector system in condensed form: the mnemonic device that we can more easily remember
+
+```{=latex}
+\begin{equation}
+    \Inner{\Matrix{T}}{\Matrix{T}} \Vector{t} = \Inner{\Matrix{T}}{\Matrix{F}} \Vector{f}
+\end{equation}
+```
+
+Which is read: 
+```{=latex}
+\begin{equation*}
+    \mathit{To \ \mbox{-} \ To \ \mbox{-} \ to, \ equals, \ To \ \mbox{-} \ From \ \mbox{-} \ from}
+\end{equation*}
+```
+
+And expands to:
+
+```{=latex}
+\begin{equation}
+    \begin{bmatrix}
+        \Inner{\Matrix{T}_1}{\Matrix{T}_1} & \cdots & \Inner{\Matrix{T}_1}{\Matrix{T}_n} \\
+        \vdots & \ddots & \vdots \\
+        \Inner{\Matrix{T}_n}{\Matrix{T}_1} & \cdots & \Inner{\Matrix{T}_m}{\Matrix{T}_n}
+    \end{bmatrix}
+    %
+    \begin{bmatrix} \Vector{t}_1 \\ \vdots \\ \Vector{t}_n \end{bmatrix}
+    =
+    \begin{bmatrix}
+        \Inner{\Matrix{T}_1}{\Matrix{F}_1} & \cdots & \Inner{\Matrix{T}_1}{\Matrix{F}_n} \\
+        \vdots & \ddots & \vdots \\
+        \Inner{\Matrix{T}_n}{\Matrix{F}_1} & \cdots & \Inner{\Matrix{T}_m}{\Matrix{F}_n}
+    \end{bmatrix}
+    %
+    \begin{bmatrix} \Vector{f}_1 \\ \vdots \\ \Vector{f}_n \end{bmatrix}
+\end{equation}
+```
+
+Let's now demonstrate on a few examples
+
+## Example: Vector Change of Basis
+Consider the vector $\vec{u} = (2, 1)$ in the standard basis $\Matrix{U} = [ (1, 0)^T, (0, 1)^T]$, and the target basis of $\Matrix{V} =[(1, 1)^T, (-1, 1)^T]$.
+What is the representation of $\vec{u}$ in $\Matrix{V}$?
+
+Within our mnemonic, $\Matrix{T} \equiv \Matrix{V}$, $\Matrix{F} \equiv \Matrix{U}$, $\Vector{f} \equiv \vec{u}$, and the representation we wish to find is $\Vector{t} \equiv \vec{v}$.
+
+```{=latex}
+\begin{align}
+    %%%%%%%%%%%%%
+    %%% EQN 1 %%%
+    %%%%%%%%%%%%%
+    \Inner{\Matrix{V}}{\Matrix{V}} \vec{v} &= \Inner{\Matrix{V}}{\Matrix{U}} \vec{u} \\
+    %%%%%%%%%%%%%
+    %%% EQN 2 %%%
+    %%%%%%%%%%%%%
+    \begin{bmatrix}
+        \Inner{\Matrix{V}_1}{\Matrix{V}_1} & \Inner{\Matrix{V}_1}{\Matrix{V}_2} \\
+        \Inner{\Matrix{V}_2}{\Matrix{V}_1} & \Inner{\Matrix{V}_2}{\Matrix{V}_2}
+    \end{bmatrix}
+    %
+    \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
+    &=
+    \begin{bmatrix}
+        \Inner{\Matrix{V}_1}{\Matrix{U}_1} & \Inner{\Matrix{V}_1}{\Matrix{U}_2} \\
+        \Inner{\Matrix{V}_2}{\Matrix{U}_1} & \Inner{\Matrix{V}_2}{\Matrix{U}_2}
+    \end{bmatrix}
+    %
+    \begin{bmatrix} \Vector{u}_1 \\ \Vector{u}_2 \end{bmatrix} \\
+    %%%%%%%%%%%%%
+    %%% EQN 3 %%%
+    %%%%%%%%%%%%%
+    \begin{bmatrix}
+        \Inner{\begin{pmatrix}  1 \\ 1 \end{pmatrix}}{\begin{pmatrix} 1 \\ 1 \end{pmatrix}} & \Inner{\begin{pmatrix}  1 \\ 1 \end{pmatrix}}{\begin{pmatrix} -1 \\ 1 \end{pmatrix}} \\
+        \Inner{\begin{pmatrix} -1 \\ 1 \end{pmatrix}}{\begin{pmatrix} 1 \\ 1 \end{pmatrix}} & \Inner{\begin{pmatrix} -1 \\ 1 \end{pmatrix}}{\begin{pmatrix} -1 \\ 1 \end{pmatrix}}
+    \end{bmatrix}
+    %
+    \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
+    &=
+    \begin{bmatrix}
+        \Inner{\begin{pmatrix}  1 \\ 1 \end{pmatrix}}{\begin{pmatrix} 1 \\ 0 \end{pmatrix}} & \Inner{\begin{pmatrix}  1 \\ 1 \end{pmatrix}}{\begin{pmatrix} 0 \\ 1 \end{pmatrix}} \\
+        \Inner{\begin{pmatrix} -1 \\ 1 \end{pmatrix}}{\begin{pmatrix} 1 \\ 0 \end{pmatrix}} & \Inner{\begin{pmatrix} -1 \\ 1 \end{pmatrix}}{\begin{pmatrix} 0 \\ 1 \end{pmatrix}}
+    \end{bmatrix}
+    %
+    \begin{bmatrix} 2 \\ 1 \end{bmatrix} \\
+    %%%%%%%%%%%%%
+    %%% EQN 4 %%%
+    %%%%%%%%%%%%%
+    \begin{bmatrix}
+        2 & 0 \\
+        0 & 2
+    \end{bmatrix}
+    %
+    \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
+    &=
+    \begin{bmatrix}
+        1  & 1 \\
+        -1 & 1
+    \end{bmatrix}
+    %
+    \begin{bmatrix} 2 \\ 1 \end{bmatrix} \\
+    %%%%%%%%%%%%%
+    %%% EQN 5 %%%
+    %%%%%%%%%%%%%
+    \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
+    &=
+    \left( \begin{bmatrix}
+                2 & 0 \\
+                0 & 2
+            \end{bmatrix}
+    \right)^{-1}
+    %
+    \begin{bmatrix}
+        1  & 1 \\
+        -1 & 1
+    \end{bmatrix}
+    %
+    \begin{bmatrix} 2 \\ 1 \end{bmatrix} \\
+    %%%%%%%%%%%%%
+    %%% EQN 6 %%%
+    %%%%%%%%%%%%%
+    \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
+    &=
+    \begin{bmatrix}
+        \frac{1}{2} & 0           \\
+        0           & \frac{1}{2} \\
+    \end{bmatrix}
+    %
+    \begin{bmatrix}
+        1  & 1 \\
+        -1 & 1
+    \end{bmatrix}
+    %
+    \begin{bmatrix} 2 \\ 1 \end{bmatrix} \\
+    %%%%%%%%%%%%%
+    %%% EQN 7 %%%
+    %%%%%%%%%%%%%
+    \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
+    &=
+    \begin{bmatrix}
+        \frac{1}{2} & \frac{1}{2} \\
+        -\frac{1}{2} & \frac{1}{2} \\
+    \end{bmatrix}
+    %
+    \begin{bmatrix} 2 \\ 1 \end{bmatrix} \\
+    %%%%%%%%%%%%%
+    %%% EQN 8 %%%
+    %%%%%%%%%%%%%
+    \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
+    &=
+    %
+    \begin{bmatrix} \frac{3}{2} \\ -\frac{1}{2} \end{bmatrix} \\
+\end{align}
+```
+
+We can write a routine for computing the change of basis between two vectors
+
+```{python}
+def VectorChangeOfBasis( from_basis, to_basis, from_coeffs ):
+    basis_dimension = len( from_coeffs )
+    D = sympy.zeros( basis_dimension, basis_dimension )
+    C = sympy.zeros( basis_dimension, basis_dimension )
+    for i in range( 0, basis_dimension ):
+        for j in range( 0, basis_dimension ):
+            D[i,j] = to_basis[:,i].dot( to_basis[:, j] )
+            C[i,j] = to_basis[:,i].dot( from_basis[:,j] )
+    R = D.solve( C )
+    to_coeffs = R.multiply( from_coeffs )
+    return to_coeffs, R
+```
+Which we can use to evaluate the example in this section
+```{python}
+U = sympy.Matrix( [[1, 0], [0, 1]] ).T
+Rat = sympy.Rational
+V = sympy.Matrix( [[Rat(1/2), Rat(1/2)], [Rat(-1/2), Rat(1/2)]] ).T
+u = sympy.Matrix( [2, 1] )
+v, R = VectorChangeOfBasis( from_basis=U, to_basis=V, from_coeffs=u )
+```
+
+```{python}
+#| echo: false
+print( f"R: {R}" )
+print( f"v: {v}" )
+```
+
+```{python}
+#| echo: false
+ax = matplotlib.pyplot.axes()
+ax.grid()
+ax.axis( 'equal' )
+
+arrow_props_1 = dict( facecolor='tab:blue', edgecolor='tab:blue', headlength=15, headwidth=10, width=4.0 )
+arrow_props_2 = dict( facecolor='tab:blue', edgecolor='tab:blue', headlength=15, headwidth=10, width=3.0, alpha=0.5 )
+arrow_props_3 = dict( facecolor='tab:blue', edgecolor='tab:blue', headlength=15, headwidth=10, width=2.0 )
+
+ax.annotate( '', xy=( float( U[0,0] ),        float( U[1,0] ) ),        xytext=(0,0), arrowprops=arrow_props_1)
+ax.annotate( '', xy=( float( U[0,1] ),        float( U[1,1] ) ),        xytext=(0,0), arrowprops=arrow_props_1)
+ax.annotate( '', xy=( float( U[0,0] * u[0] ), float( U[1,0] * u[0] ) ), xytext=(0,0), arrowprops=arrow_props_2)
+ax.annotate( '', xy=( float( U[0,1] * u[1] ), float( U[1,1] * u[1] ) ), xytext=(0,0), arrowprops=arrow_props_2)
+ax.annotate( '', xy=( float( u[0] ),          float( u[1] ) ),          xytext=(0,0), arrowprops=arrow_props_3)
+
+arrow_props_1 = dict( facecolor='tab:orange', edgecolor='tab:orange', headlength=15, headwidth=10, width=4.0 )
+arrow_props_2 = dict( facecolor='tab:orange', edgecolor='tab:orange', headlength=15, headwidth=10, width=3.0, alpha=0.5 )
+arrow_props_3 = dict( facecolor='tab:orange', edgecolor='tab:orange', headlength=15, headwidth=10, width=1.0 )
+v_vec = V.multiply( v )
+ax.annotate( '', xy = ( float( V[0,0] ),        float( V[1,0] ) ),        xytext=(0,0), arrowprops=arrow_props_1 )
+ax.annotate( '', xy = ( float( V[0,1] ),        float( V[1,1] ) ),        xytext=(0,0), arrowprops=arrow_props_1 )
+ax.annotate( '', xy = ( float( V[0,0] * v[0] ), float( V[1,0] * v[0] ) ), xytext=(0,0), arrowprops=arrow_props_2 )
+ax.annotate( '', xy = ( float( V[0,1] * v[1] ), float( V[1,1] * v[1] ) ), xytext=(0,0), arrowprops=arrow_props_2 )
+ax.annotate( '', xy = ( float( v_vec[0] ),      float( v_vec[1] ) ),      xytext=(0,0), arrowprops=arrow_props_3 )
+
+# Guidelines for u-vector
+x0 = float( U[:,0].multiply( u[0] )[0] )
+x1 = float( u[0] )
+y0 = float( U[:,0].multiply( u[1] )[1] )
+y1 = float( u[1] )
+ax.plot( [ x0, x1 ], [y0, y1], color="tab:blue", linestyle=":" )
+
+x0 = float( U[:,1].multiply( u[0] )[0] )
+x1 = float( u[0] )
+y0 = float( U[:,1].multiply( u[1] )[1] )
+y1 = float( u[1] )
+ax.plot( [ x0, x1 ], [y0, y1], color="tab:blue", linestyle=":" )
+
+# Guidelines for v-vector
+x0 = float( V[0,0] * v[0] )
+x1 = float( v_vec[0] )
+y0 = float( V[1,0] * v[0] )
+y1 = float( v_vec[1] )
+ax.plot( [ x0, x1 ], [y0, y1], color="tab:orange", linestyle=":" )
+
+x0 = float( V[0,1] * v[1] )
+x1 = float( v_vec[0] )
+y0 = float( V[1,1] * v[1] )
+y1 = float( v_vec[1] )
+ax.plot( [ x0, x1 ], [y0, y1], color="tab:orange", linestyle=":" )
+
+matplotlib.pyplot.show()
+```
+
+## Example: Polynomial Change of Basis
+
+Consider the polynomial $p(x) = -x^4 + 4x^2 + x - 1$.
+Recognize it can be equivalently written in the monomial basis as $p(x) = -1M_0 + 1M_1 + 4M_2 + 0M_3 - 1M_4$.
+We wish to represent this polynomial in the Lagrange basis.
+
+Within our mnemonic, $\Matrix{T} \equiv \Matrix{M}$, $\Matrix{F} \equiv \Matrix{L}$, $\Vector{f} \equiv \Vector{m}$, and the representation we wish to find is $\Vector{t} \equiv \Vector{\ell}$.
+
+
+```{python}
+from sympy.integrals import integrate
+def PolynomialChangeOfBasis( from_basis, to_basis, from_coeffs, domain ):
+    basis_dim = len( from_coeffs )
+    D = sympy.zeros( basis_dim )
+    C = sympy.zeros( basis_dim )
+    variate = list( from_basis[0].atoms( sympy.Symbol ) )[0]
+    for i in range( 0, basis_dim ):
+        for j in range( 0, basis_dim ):
+            integrand = to_basis[i].as_expr() * to_basis[j].as_expr()
+            D[i,j] = integrate( integrand, ( variate, domain[0], domain[1] ) )
+            integrand = to_basis[i].as_expr() * from_basis[j].as_expr()
+            C[i,j] = integrate( integrand, ( variate, domain[0], domain[1] ) )
+    R = D.solve( C )
+    to_coeffs = R.multiply( from_coeffs )
+```
+
+```{python}
+x = sympy.Symbol( "x" )
+domain = [Rat(0), Rat(1)]
+m_coeffs = sympy.Matrix( [Rat(-1), Rat(1), Rat(4), Rat(0), Rat(-1)] )
+M = PolynomialBasisFunction( "Monomial", 4, x, domain )
+L = PolynomialBasisFunction( "Lagrange", 4, x, domain )
+l_coeffs = PolynomialChangeOfBasis( M, L, m_coeffs, domain )
+```

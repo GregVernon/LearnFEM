@@ -35,7 +35,10 @@ format:
           tex: {
             macros: {
               Real: "{\\mathbb R}",
-              inner: ["\\langle #1, #2 \\rangle", 2]
+              Inner: ["\\left\\langle #1, #2 \\right\\rangle", 2],
+              Vector: ["\\boldsymbol{\\mathit{#1}}", 1],
+              Matrix: ["\\boldsymbol{\\mathrm{#1}}", 1],
+              ChangeBasisOp: ["\\Matrix{R}_{\\tiny{\\Matrix{#1} \\rightarrow \\Matrix{#2}}}", 2],
             }
           }
         };
@@ -47,5 +50,9 @@ format:
       text: |
         \usepackage{amsmath}
         \usepackage{mathtools}
+        \usepackage{bm}
         \newcommand{\Real}{\mathbb{R}}
-        \newcommand{\inner}[2]{\langle #1, #2 \rangle}
+        \newcommand{\Inner}[2]{\left\langle #1, #2 \right\rangle}
+        \newcommand{\Vector}[1]{\mathbf{\mathit{#1}}}
+        \newcommand{\Matrix}[1]{\boldsymbol{\mathrm{#1}}}
+        \newcommand{\ChangeBasisOp}[2]{\Matrix{R}_{\tiny{\Matrix{#1} \rightarrow \Matrix{#2}}}}

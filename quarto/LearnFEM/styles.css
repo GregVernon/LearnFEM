@@ -1,0 +1,4 @@
+.cell-output {
+    overflow: visible !important;
+    max-height: none !important;
+}

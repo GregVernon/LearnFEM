@@ -1,0 +1,235 @@
+```{python}
+#| include: false
+import sympy
+import numpy
+import matplotlib.pyplot
+import spb
+from sympy import integrate
+from lecture_01 import PolynomialBasisFunction, BasisToLatexString, PlotPolynomialBasis, BasisPolynomialListToExprMatrix, ScalarProjection
+from IPython.display import Markdown, Latex
+matplotlib.pyplot.rcParams['figure.constrained_layout.use'] = False
+matplotlib.pyplot.rcParams['axes.axisbelow'] = True
+sympy.init_printing( use_latex='mathjax', use_unicode=False )
+```
+
+# Galerkin's Method for Function Approximation
+
+Let's suppose that we have some function that we wish to approximate as a polynomial. 
+Specifically, we want to find the polynomial function that most closely represents the function over a finite domain, in the $L^2$ sense.
+The function we wish to approximate, over the domain $[0,1]$ is
+
+```{python}
+#| echo: false
+x = sympy.Symbol( "x" )
+domain = [sympy.Rational(0), sympy.Rational(1)]
+target_fun = sympy.sin( sympy.pi * x )**2 + sympy.cos( x ) - 1
+Markdown( f"$$f(x) = {sympy.latex( target_fun )}$$" )
+```
+
+And let's further suppose that we wish to approximate this function with a quadratic polynomial, let's use the monomial basis
+
+```{python}
+import sympy
+x = sympy.Symbol( "x" )
+domain = [sympy.Rational(0), sympy.Rational(1)]
+degree = 2
+basis_name="Monomial"
+monomial_basis = PolynomialBasisFunction( basis_name, degree, x, domain )
+```
+
+```{python}
+#| echo: false
+Markdown( f"$${BasisToLatexString( monomial_basis, "M" )}$$" )
+```
+
+```{python}
+PlotPolynomialBasis( basis_name, degree, x, domain )
+```
+
+Using the change of basis mnemonic, $\Matrix{T} \equiv \Matrix{M}$, however we need to do something different with the "from basis" and "from_coefficient" ( $\Matrix{F}$ and $\Vector{f}$, respectively).
+Let's consider the right-hand side of the change of basis
+
+```{=latex}
+\begin{align}
+    %%%%%%%%%%%%%
+    %%% EQN 1 %%%
+    %%%%%%%%%%%%%
+    \Inner{\Matrix{T}}{\Matrix{F}} \Vector{f} 
+    &\equiv 
+    \begin{bmatrix}
+        \Inner{\Matrix{T}_1}{\Matrix{F}_1} & \cdots & \Inner{\Matrix{T}_1}{\Matrix{F}_n} \\
+        \vdots & \ddots & \vdots \\
+        \Inner{\Matrix{T}_n}{\Matrix{F}_1} & \cdots & \Inner{\Matrix{T}_m}{\Matrix{F}_n}
+    \end{bmatrix}
+    %
+    \begin{bmatrix} \Vector{f}_1 \\ \vdots \\ \Vector{f}_n \end{bmatrix} \\
+    %%%%%%%%%%%%%
+    %%% EQN 2 %%%
+    %%%%%%%%%%%%%
+    &\equiv
+    \begin{bmatrix}
+        \Inner{\Matrix{T}_1}{\Matrix{F}_1} \Vector{f}_1 + \cdots + \Inner{\Matrix{T}_1}{\Matrix{F}_n} \Vector{f}_n \\
+        \vdots \\
+        \Inner{\Matrix{T}_m}{\Matrix{F}_n} \Vector{f}_1 + \cdots + \Inner{\Matrix{T}_1}{\Matrix{F}_n} \Vector{f}_n \\
+    \end{bmatrix}
+\end{align}
+```
+
+Since each $\Vector{f}_j$ is a scalar, recalling the properties that comprise the definition of the inner product for real vector spaces we can rewrite each term of the form $\Inner{\Matrix{T}_i}{\Matrix{F}_j}\Vector{f_j}$ as
+
+```{=latex}
+\begin{align}
+    \Inner{\Matrix{T}_i}{\Matrix{F}_j} \Vector{f}_j \equiv \Inner{\Matrix{T}_i}{\Vector{f}_j \Matrix{F}_j} 
+\end{align}
+```
+
+thus each row-entry of the right-hand side above can be rewritten as
+
+```{=latex}
+\begin{align}
+    \Inner{\Matrix{T}_i}{\Matrix{F}_1} \Vector{f}_1 + \cdots + \Inner{\Matrix{T}_i}{\Matrix{F}_n} \Vector{f}_n &\equiv \Inner{\Matrix{T}_i}{\Vector{f}_1 \Matrix{F}_1} + \cdots + \Inner{\Matrix{T}_i}{\Vector{f}_n \Matrix{F}_n} \\
+    %
+    &\equiv \Inner{\Matrix{T}_i}{\Vector{f}_1 \Matrix{F}_1 + \cdots + \Vector{f}_n \Matrix{F}_n} \\
+\end{align}
+```
+
+and since our target function is "defined" as
+
+```{=latex}
+\begin{equation}
+    f(x) = \sum_{i=0}^{n} \Vector{f}_i \Matrix{F}_i
+\end{equation}
+```
+ this further reduces each term to
+
+ ```{=latex}
+ \begin{equation}
+     \Inner{\Matrix{T}_i}{f(x)}
+ \end{equation}
+ ```
+
+ Meaning that the right hand side can be written as
+
+ ```{=latex}
+ \begin{equation}
+    \Inner{\Matrix{T}}{\Matrix{F}} \Vector{f} 
+    \equiv 
+    \begin{bmatrix}
+        \Inner{\Matrix{T}_1}{f(x)} \\
+        \vdots \\
+        \Inner{\Matrix{T}_m}{f(x)}
+    \end{bmatrix}
+ \end{equation}
+ ```
+
+ and our "change of basis" as
+
+ ```{=latex}
+ \begin{align}
+    %%%%%%%%%%%%%
+    %%% EQN 1 %%%
+    %%%%%%%%%%%%%
+    \Inner{\Matrix{T}}{\Matrix{T}} \Vector{t} &= \Inner{\Matrix{T}}{\Matrix{F}} \Vector{f} \\
+    %%%%%%%%%%%%%
+    %%% EQN 2 %%%
+    %%%%%%%%%%%%%
+    \begin{bmatrix}
+        \Inner{\Matrix{T}_1}{\Matrix{T}_1} & \cdots & \Inner{\Matrix{T}_1}{\Matrix{T}_n} \\
+        \vdots & \ddots & \vdots \\
+        \Inner{\Matrix{T}_n}{\Matrix{T}_1} & \cdots & \Inner{\Matrix{T}_m}{\Matrix{T}_n}
+    \end{bmatrix}
+    &= 
+    \begin{bmatrix}
+        \Inner{\Matrix{T}_1}{f(x)} \\
+        \vdots \\
+        \Inner{\Matrix{T}_m}{f(x)}
+    \end{bmatrix}
+ \end{align}
+ ```
+
+Proceeding with assembly of the left-hand side, which is often referred to as the *Gram matrix*
+
+```{python}
+#| eval: true
+basis = BasisPolynomialListToExprMatrix( monomial_basis )
+ScalarProjection()( target_fun, "Monomial", 2, domain )
+D = ScalarProjection.AssembleGramMatrix( basis, domain, x )
+```
+
+```{=latex}
+\begin{equation}
+    \Matrix{D} = \Inner{\Matrix{M}}{\Matrix{M}}
+\end{equation}
+```
+
+```{python}
+#| echo: false
+Markdown( "$$\\Matrix{D}=" + f"{sympy.latex( D )}$$" )
+```
+
+And the right-hand side, often referred to as the *force vector*
+
+```{python}
+#| eval: true
+basis = BasisPolynomialListToExprMatrix( monomial_basis )
+ScalarProjection()( target_fun, "Monomial", 2, domain )
+f = ScalarProjection.AssembleForceVector( target_fun, basis, domain, x )
+```
+
+```{=latex}
+\begin{equation}
+    \Matrix{C}\Vector{c} = \Vector{f} = \Inner{\Matrix{M}}{f(x)}
+\end{equation}
+```
+
+```{python}
+#| echo: false
+Markdown( "$$\\Vector{f}=" + f"{sympy.latex( f )}$$" )
+```
+
+Resulting in the linear system of equations
+
+```{python}
+#| echo: false
+Markdown( f"$${sympy.latex( D )}" + "\\Vector{d} = " + f"{sympy.latex( f )}$$" )
+```
+
+```{python}
+#| echo: false
+Markdown( "$$\\Vector{d} = " + f"{sympy.latex( D )}" + "^{-1}" + f"{sympy.latex( f )}$$" )
+```
+
+```{python}
+#| echo: false
+d = D.solve( f )
+Markdown( "$$\\Vector{d} = " + f"{sympy.latex( D.solve( f ) )}$$" )
+```
+
+Finally, we construct our polynomial approximation
+
+```{=latex}
+\begin{equation}
+    \tilde{u}(x) = \Vector{d}^T \Matrix{M}
+\end{equation}
+```
+
+```{python}
+#| echo: false
+u = ( d.T * basis )[0]
+# Markdown( "$$\\tilde{u}(x) = " + f"{sympy.latex( u )}$$" )
+Latex( "\\begin{dmath} \\tilde{u}(x) = " + f"{sympy.latex( u )}" + "\\end{dmath}" )
+```
+
+```{python}
+#| echo: false
+Markdown( "$$\\tilde{u}(x) \\approx " + f"{sympy.latex( u.n(4) )}$$" )
+```
+
+```{python}
+#| echo: false
+#| warning: false
+#| error: false
+plt  = spb.plot( target_fun, (x, domain[0], domain[1] ), label=f"${sympy.latex( target_fun )}$", show=False )
+plt += spb.plot( u,          (x, domain[0], domain[1] ), label=f"$\\tilde{u}(x)$", show=False )
+plt.show()
+```

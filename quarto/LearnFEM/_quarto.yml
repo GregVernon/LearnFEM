@@ -22,17 +22,23 @@ book:
         - lecture_00/polynomial_basis.qmd
         - lecture_00/inner_products.qmd
         - lecture_00/change_of_basis.qmd
+    - part: lecture_01/intro.qmd
+      chapters:
+        - lecture_01/galerkin_function_approximation.qmd
     - summary.qmd
-    - references.qmd
+    # - references.qmd
 
 format:
   html:
     theme: darkly
+    css: styles.css
     include-in-header:
       text: |
         <script>
         window.MathJax = {
+          packages: {'[+]', '[tex]/breqn'}
           tex: {
+            packages: {'[+]': ['breqn']}
             macros: {
               Real: "{\\mathbb R}",
               Inner: ["\\left\\langle #1, #2 \\right\\rangle", 2],
@@ -51,6 +57,7 @@ format:
         \usepackage{amsmath}
         \usepackage{mathtools}
         \usepackage{bm}
+        \usepackage{breqn}
         \newcommand{\Real}{\mathbb{R}}
         \newcommand{\Inner}[2]{\left\langle #1, #2 \right\rangle}
         \newcommand{\Vector}[1]{\mathbf{\mathit{#1}}}

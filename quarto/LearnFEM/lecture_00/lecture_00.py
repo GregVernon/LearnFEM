@@ -1,6 +1,7 @@
 import sympy
 import spb
 from sympy.matrices.expressions import CompanionMatrix
+from sympy.integrals import integrate
 
 ## GLOBALS
 BASIS_ID_STRINGS = { "Bernstein": "B",
@@ -95,6 +96,34 @@ def PolynomialBasisFunction( basis_name, degree, variate, domain ):
             basis = MonomialBasis( degree, variate, domain )
     return basis
 
+## Change of Basis
+def VectorChangeOfBasis( from_basis, to_basis, from_coeffs ):
+    basis_dimension = len( from_coeffs )
+    D = sympy.zeros( basis_dimension, basis_dimension )
+    C = sympy.zeros( basis_dimension, basis_dimension )
+    for i in range( 0, basis_dimension ):
+        for j in range( 0, basis_dimension ):
+            D[i,j] = to_basis[:,i].dot( to_basis[:, j] )
+            C[i,j] = to_basis[:,i].dot( from_basis[:,j] )
+    R = D.solve( C )
+    to_coeffs = R.multiply( from_coeffs )
+    return to_coeffs, R
+
+def PolynomialChangeOfBasis( from_basis, to_basis, from_coeffs, domain ):
+    basis_dim = len( from_coeffs )
+    D = sympy.zeros( basis_dim )
+    C = sympy.zeros( basis_dim )
+    variate = list( from_basis[0].atoms( sympy.Symbol ) )[0]
+    for i in range( 0, basis_dim ):
+        for j in range( 0, basis_dim ):
+            integrand = to_basis[i].as_expr() * to_basis[j].as_expr()
+            D[i,j] = integrate( integrand, ( variate, domain[0], domain[1] ) )
+            integrand = to_basis[i].as_expr() * from_basis[j].as_expr()
+            C[i,j] = integrate( integrand, ( variate, domain[0], domain[1] ) )
+    R = D.solve( C )
+    to_coeffs = R.multiply( from_coeffs )
+
+## Plotting
 def PlotPolynomialBasis( basis_name, degree, variate, domain ):
     basis = PolynomialBasisFunction( basis_name, degree, variate, domain )
     basis_id_string = BASIS_ID_STRINGS[basis_name]

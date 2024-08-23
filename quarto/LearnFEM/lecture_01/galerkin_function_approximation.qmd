@@ -2,10 +2,13 @@
 #| include: false
 import sympy
 import numpy
+import scipy.integrate
+import scipy.sparse.linalg
+import functools
 import matplotlib.pyplot
 import spb
 from sympy import integrate
-from lecture_01 import PolynomialBasisFunction, BasisToLatexString, PlotPolynomialBasis, BasisPolynomialListToExprMatrix, ScalarProjection
+from lecture_01 import PolynomialBasisFunction, BasisToLatexString, PlotPolynomialBasis, BasisPolynomialListToExprMatrix, BasisPolynomialListToLambdaArray, ScalarProjection, ScalarProjectionFast, ComputeL2Error, ComputeL2ErrorFast
 from IPython.display import Markdown, Latex
 matplotlib.pyplot.rcParams['figure.constrained_layout.use'] = False
 matplotlib.pyplot.rcParams['axes.axisbelow'] = True
@@ -14,7 +17,7 @@ sympy.init_printing( use_latex='mathjax', use_unicode=False )
 
 # Galerkin's Method for Function Approximation
 
-Let's suppose that we have some function that we wish to approximate as a polynomial. 
+Let's suppose that we have some function that we wish to approximate as a polynomial.
 Specifically, we want to find the polynomial function that most closely represents the function over a finite domain, in the $L^2$ sense.
 The function we wish to approximate, over the domain $[0,1]$ is
 
@@ -23,10 +26,10 @@ The function we wish to approximate, over the domain $[0,1]$ is
 x = sympy.Symbol( "x" )
 domain = [sympy.Rational(0), sympy.Rational(1)]
 target_fun = sympy.sin( sympy.pi * x )**2 + sympy.cos( x ) - 1
-Markdown( f"$$f(x) = {sympy.latex( target_fun )}$$" )
+Markdown( f"$$g(x) = {sympy.latex( target_fun )}$$" )
 ```
 
-And let's further suppose that we wish to approximate this function with a quadratic polynomial, let's use the monomial basis
+And let's further suppose that we wish to approximate this function with a quartic polynomial, let's use the monomial basis
 
 ```{python}
 import sympy
@@ -54,8 +57,8 @@ Let's consider the right-hand side of the change of basis
     %%%%%%%%%%%%%
     %%% EQN 1 %%%
     %%%%%%%%%%%%%
-    \Inner{\Matrix{T}}{\Matrix{F}} \Vector{f} 
-    &\equiv 
+    \Inner{\Matrix{T}}{\Matrix{F}} \Vector{f}
+    &\equiv
     \begin{bmatrix}
         \Inner{\Matrix{T}_1}{\Matrix{F}_1} & \cdots & \Inner{\Matrix{T}_1}{\Matrix{F}_n} \\
         \vdots & \ddots & \vdots \\
@@ -79,7 +82,7 @@ Since each $\Vector{f}_j$ is a scalar, recalling the properties that comprise th
 
 ```{=latex}
 \begin{align}
-    \Inner{\Matrix{T}_i}{\Matrix{F}_j} \Vector{f}_j \equiv \Inner{\Matrix{T}_i}{\Vector{f}_j \Matrix{F}_j} 
+    \Inner{\Matrix{T}_i}{\Matrix{F}_j} \Vector{f}_j \equiv \Inner{\Matrix{T}_i}{\Vector{f}_j \Matrix{F}_j}
 \end{align}
 ```
 
@@ -97,14 +100,14 @@ and since our target function is "defined" as
 
 ```{=latex}
 \begin{equation}
-    f(x) = \sum_{i=0}^{n} \Vector{f}_i \Matrix{F}_i
+    g(x) = \sum_{i=0}^{n} \Vector{f}_i \Matrix{F}_i
 \end{equation}
 ```
  this further reduces each term to
 
  ```{=latex}
  \begin{equation}
-     \Inner{\Matrix{T}_i}{f(x)}
+     \Inner{\Matrix{T}_i}{g(x)}
  \end{equation}
  ```
 
@@ -112,12 +115,12 @@ and since our target function is "defined" as
 
  ```{=latex}
  \begin{equation}
-    \Inner{\Matrix{T}}{\Matrix{F}} \Vector{f} 
-    \equiv 
+    \Inner{\Matrix{T}}{\Matrix{F}} \Vector{f}
+    \equiv
     \begin{bmatrix}
-        \Inner{\Matrix{T}_1}{f(x)} \\
+        \Inner{\Matrix{T}_1}{g(x)} \\
         \vdots \\
-        \Inner{\Matrix{T}_m}{f(x)}
+        \Inner{\Matrix{T}_m}{g(x)}
     \end{bmatrix}
  \end{equation}
  ```
@@ -138,11 +141,11 @@ and since our target function is "defined" as
         \vdots & \ddots & \vdots \\
         \Inner{\Matrix{T}_n}{\Matrix{T}_1} & \cdots & \Inner{\Matrix{T}_m}{\Matrix{T}_n}
     \end{bmatrix}
-    &= 
+    &=
     \begin{bmatrix}
-        \Inner{\Matrix{T}_1}{f(x)} \\
+        \Inner{\Matrix{T}_1}{g(x)} \\
         \vdots \\
-        \Inner{\Matrix{T}_m}{f(x)}
+        \Inner{\Matrix{T}_m}{g(x)}
     \end{bmatrix}
  \end{align}
  ```
@@ -151,8 +154,9 @@ Proceeding with assembly of the left-hand side, which is often referred to as th
 
 ```{python}
 #| eval: true
+#| echo: false
 basis = BasisPolynomialListToExprMatrix( monomial_basis )
-ScalarProjection()( target_fun, "Monomial", 2, domain )
+ScalarProjection()( target_fun, basis_name, degree, domain )
 D = ScalarProjection.AssembleGramMatrix( basis, domain, x )
 ```
 
@@ -164,72 +168,202 @@ D = ScalarProjection.AssembleGramMatrix( basis, domain, x )
 
 ```{python}
 #| echo: false
-Markdown( "$$\\Matrix{D}=" + f"{sympy.latex( D )}$$" )
+Markdown( r"$$\Matrix{D}=" + f"{sympy.latex( D )}$$" )
 ```
 
 And the right-hand side, often referred to as the *force vector*
 
 ```{python}
 #| eval: true
+#| echo: false
 basis = BasisPolynomialListToExprMatrix( monomial_basis )
-ScalarProjection()( target_fun, "Monomial", 2, domain )
+ScalarProjection()( target_fun, basis_name, degree, domain )
 f = ScalarProjection.AssembleForceVector( target_fun, basis, domain, x )
 ```
 
 ```{=latex}
 \begin{equation}
-    \Matrix{C}\Vector{c} = \Vector{f} = \Inner{\Matrix{M}}{f(x)}
+    \Matrix{C}\Vector{c} = \Vector{f} = \Inner{\Matrix{M}}{g(x)}
 \end{equation}
 ```
 
 ```{python}
 #| echo: false
-Markdown( "$$\\Vector{f}=" + f"{sympy.latex( f )}$$" )
+Markdown( r"$$\Vector{f}=" + f"{sympy.latex( f )}$$" )
 ```
 
 Resulting in the linear system of equations
 
 ```{python}
 #| echo: false
-Markdown( f"$${sympy.latex( D )}" + "\\Vector{d} = " + f"{sympy.latex( f )}$$" )
+Markdown( f"$${sympy.latex( D )}" + r"\Vector{d} = " + f"{sympy.latex( f )}$$" )
 ```
 
 ```{python}
 #| echo: false
-Markdown( "$$\\Vector{d} = " + f"{sympy.latex( D )}" + "^{-1}" + f"{sympy.latex( f )}$$" )
+Markdown( r"$$\Vector{d} = " + f"{sympy.latex( D )}" + "^{-1}" + f"{sympy.latex( f )}$$" )
 ```
 
 ```{python}
 #| echo: false
 d = D.solve( f )
-Markdown( "$$\\Vector{d} = " + f"{sympy.latex( D.solve( f ) )}$$" )
+Markdown( r"$$\Vector{d} = " + f"{sympy.latex( D.solve( f ) )}$$" )
 ```
 
 Finally, we construct our polynomial approximation
 
 ```{=latex}
 \begin{equation}
-    \tilde{u}(x) = \Vector{d}^T \Matrix{M}
+    \tilde{g}(x) = \Vector{d}^T \Matrix{M}
 \end{equation}
 ```
 
 ```{python}
 #| echo: false
 u = ( d.T * basis )[0]
-# Markdown( "$$\\tilde{u}(x) = " + f"{sympy.latex( u )}$$" )
-Latex( "\\begin{dmath} \\tilde{u}(x) = " + f"{sympy.latex( u )}" + "\\end{dmath}" )
-```
-
-```{python}
-#| echo: false
-Markdown( "$$\\tilde{u}(x) \\approx " + f"{sympy.latex( u.n(4) )}$$" )
+Markdown( r"$$\tilde{g}(x) \approx " + f"{sympy.latex( u.n(4) )}$$" )
 ```
 
 ```{python}
 #| echo: false
 #| warning: false
 #| error: false
-plt  = spb.plot( target_fun, (x, domain[0], domain[1] ), label=f"${sympy.latex( target_fun )}$", show=False )
-plt += spb.plot( u,          (x, domain[0], domain[1] ), label=f"$\\tilde{u}(x)$", show=False )
+plt  = spb.plot( target_fun, (x, domain[0], domain[1] ), label=f"$g(x)$", show=False )
+plt += spb.plot( u,          (x, domain[0], domain[1] ), label=r"$\tilde{g}(x)$", show=False )
 plt.show()
+```
+
+Now, that doesn't appear to be a particularly good fit, but let's look at what happens if we use a higher-order polynomial function in our approximation.
+But first, let's collect our work above to write a simple class that performs the scalar projection:
+
+```{python}
+#| eval: false
+class ScalarProjection:
+    def __call__(self, target_fun, basis_name, degree, domain ):
+        variate = list( target_fun.atoms( sympy.Symbol ) )[0]
+        basis = PolynomialBasisFunction( basis_name, degree, variate, domain )
+        basis = BasisPolynomialListToExprMatrix( basis )
+        M = self.AssembleGramMatrix( basis, domain, variate )
+        F = self.AssembleForceVector( target_fun, basis, domain, variate )
+        d = M.solve( F )
+        u = ( d.T * basis )[0]
+        return u, M, F, basis, d
+
+    @staticmethod
+    def AssembleGramMatrix( basis, domain, variate ):
+        basis_dim = len( basis )
+        var = ( variate, domain[0], domain[1] )
+        M = sympy.zeros( basis_dim )
+        for i in range( 0, basis_dim ):
+            for j in range( 0, basis_dim ):
+                M[i,j] = integrate( basis[i] * basis[j], var )
+        return M
+
+    @staticmethod
+    def AssembleForceVector( target_fun, basis, domain, variate ):
+        basis_dim = len( basis )
+        var = ( variate, domain[0], domain[1] )
+        F = sympy.zeros( rows=basis_dim, cols=1 )
+        for i in range( 0, basis_dim ):
+            F[i] = integrate( basis[i] * target_fun, var )
+        return F
+```
+
+Now lets see what happens if we use a high-order polynomial for our approximation -- this time a quartic polynomial
+
+```{python}
+#| echo: false
+degree = 4
+monomial_basis = PolynomialBasisFunction( basis_name, degree, x, domain )
+```
+
+```{python}
+#| echo: false
+Markdown( f"$${BasisToLatexString( monomial_basis, "M" )}$$" )
+```
+
+```{python}
+#| echo: false
+PlotPolynomialBasis( basis_name, degree, x, domain )
+```
+
+```{python}
+#| echo: false
+u = ScalarProjection()( target_fun, basis_name, degree, domain )[0]
+```
+
+```{python}
+#| echo: false
+Markdown( r"$$\tilde{g}(x) \approx " + f"{sympy.latex( u.n(4) )}$$" )
+```
+
+```{python}
+#| echo: false
+#| warning: false
+#| error: false
+plt  = spb.plot( target_fun, (x, domain[0], domain[1] ), label=f"$g(x)$", show=False )
+plt += spb.plot( u,          (x, domain[0], domain[1] ), label=r"$\tilde{g}(x)$", show=False )
+plt.show()
+```
+
+As we can clearly see, the higher-order polynomial is a much better approximation of the function.
+We can perform a "degree-refinement study" to explore and quantify the improvement of approximation as we increase the polynomial degree of the approximation.
+
+## Convergence of the Galerkin method under degree refinement
+
+```{python}
+#| echo: false
+l2_error = []
+degree = [ i for i in range( 0, 13 ) ]
+for p in degree:
+    u = ScalarProjectionFast()( target_fun, basis_name, p, domain )[0]
+    l2_error.append( ComputeL2ErrorFast( sympy.lambdify( x, target_fun ), u, domain ) )
+```
+
+```{python}
+#| echo: false
+#| warning: false
+#| error: false
+
+plt = matplotlib.pyplot.plot( degree, l2_error )
+matplotlib.pyplot.xlabel( "Degree" )
+matplotlib.pyplot.ylabel( "$L^2 Error$" )
+matplotlib.pyplot.yscale( "log" )
+matplotlib.pyplot.show()
+```
+
+## Conditioning
+
+```{python}
+#| echo: false
+#| warning: false
+#| error: false
+
+cond = { "Monomial": [], "Bernstein": [], "Lagrange": [], "Legendre": [], "Chebyshev": [] }
+for basis_name in list( cond.keys() ):
+    for i in range( 0, len( degree ) ):
+        p = degree[i]
+        basis = PolynomialBasisFunction( basis_name, p, x, domain )
+        basis = BasisPolynomialListToLambdaArray( basis, x )
+        D = ScalarProjectionFast().AssembleGramMatrix( basis, domain )
+        cond[basis_name].append( numpy.linalg.cond( D ) )
+    matplotlib.pyplot.plot( degree, cond[basis_name], label=basis_name )
+matplotlib.pyplot.xlabel( "Degree" )
+matplotlib.pyplot.ylabel( "$L^2 Error$" )
+matplotlib.pyplot.yscale( "log" )
+matplotlib.pyplot.legend()
+matplotlib.pyplot.show()
+```
+
+```{python}
+#| echo: false
+u, D, F, _, _ = ScalarProjectionFast()( target_fun, "Monomial", 12, domain )
+xd = numpy.linspace( float( domain[0] ), float( domain[1] ), 1000 )
+target_fun_lambda = sympy.lambdify( x, target_fun )
+target_fun_d = numpy.array( [target_fun_lambda( xd[i] ) for i in range( 0, len( xd ) )] )
+ud = numpy.array( [u( xd[i] ) for i in range( 0, len( xd ) )] )
+
+matplotlib.pyplot.plot( xd, target_fun_d )
+matplotlib.pyplot.plot( xd, ud )
+matplotlib.pyplot.show()
 ```

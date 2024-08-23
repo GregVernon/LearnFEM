@@ -7,6 +7,9 @@ top-level-division: chapter
 
 bibliography: references.bib
 
+execute:
+  timeout: -1 # No timeout for the entire document
+
 book:
   title: "Learning FEM the Wrong Way"
   author: "Gregory Vernon"
@@ -28,17 +31,25 @@ book:
     - summary.qmd
     # - references.qmd
 
+# loader: {
+#           load: ['[tex]/breqn']
+# },
+# packages: {'[+]': ['breqn']},
+
 format:
   html:
     theme: darkly
+    # html-math-method: mathjax
     css: styles.css
     include-in-header:
       text: |
         <script>
         window.MathJax = {
-          packages: {'[+]', '[tex]/breqn'}
+          loader: {
+            load: ['[tex]/mathtools']
+          },
           tex: {
-            packages: {'[+]': ['breqn']}
+            packages: {'[+]': ['mathtools']},
             macros: {
               Real: "{\\mathbb R}",
               Inner: ["\\left\\langle #1, #2 \\right\\rangle", 2],

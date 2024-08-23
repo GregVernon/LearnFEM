@@ -1,3 +1,5 @@
+import numpy
+import scipy
 import sympy
 import spb
 from sympy.matrices.expressions import CompanionMatrix
@@ -126,6 +128,9 @@ def PolynomialChangeOfBasis( from_basis, to_basis, from_coeffs, domain ):
 def BasisPolynomialListToExprMatrix( basis ):
     return sympy.Matrix( [ basis_fun.as_expr() for basis_fun in basis ] )
 
+def BasisPolynomialListToLambdaArray( basis, variate ):
+    return [ sympy.lambdify( variate, bfun.as_expr() ) for bfun in basis ]
+
 ## Scalar Projection
 class ScalarProjection:
     def __call__(self, target_fun, basis_name, degree, domain ):
@@ -135,7 +140,7 @@ class ScalarProjection:
         M = self.AssembleGramMatrix( basis, domain, variate )
         F = self.AssembleForceVector( target_fun, basis, domain, variate )
         d = M.solve( F )
-        u = d.T * basis
+        u = ( d.T * basis )[0]
         return u, M, F, basis, d
         
     @staticmethod
@@ -154,7 +159,36 @@ class ScalarProjection:
         for i in range( 0, basis_dim ):
             F[i] = integrate( basis[i] * target_fun, ( variate, domain[0], domain[1] ) )
         return F
+
+class ScalarProjectionFast:
+    def __call__(self, target_fun, basis_name, degree, domain ):
+        variate = list( target_fun.atoms( sympy.Symbol ) )[0]
+        target_fun = sympy.lambdify( variate, target_fun )
+        basis = PolynomialBasisFunction( basis_name, degree, variate, domain )
+        basis = BasisPolynomialListToLambdaArray( basis, variate )
+        M = self.AssembleGramMatrix( basis, domain )
+        F = self.AssembleForceVector( target_fun, basis, domain )
+        d = numpy.linalg.inv( M ) @ F
+        u = lambda x: numpy.sum( [ d[i] * basis[i](x) for i in range( 0, len( basis ) ) ] )
+        return u, M, F, basis, d
+        
+    @staticmethod
+    def AssembleGramMatrix( basis, domain ):
+        basis_dim = len( basis )
+        M = numpy.zeros( shape=( basis_dim, basis_dim ) )
+        for i in range( 0, basis_dim ):
+            for j in range( 0, basis_dim ):
+                M[i,j] = scipy.integrate.quad( lambda x: basis[i](x) * basis[j](x), domain[0], domain[1], limit=1000, epsrel=1e-12 )[0]
+        return M
     
+    @staticmethod
+    def AssembleForceVector( target_fun, basis, domain ):
+        basis_dim = len( basis )
+        F = numpy.zeros( basis_dim )
+        for i in range( 0, basis_dim ):
+            F[i] = scipy.integrate.quad( lambda x: basis[i](x) * target_fun(x), domain[0], domain[1], limit=1000, epsrel=1e-12 )[0]
+        return F
+
 ## Plotting
 def PlotPolynomialBasis( basis_name, degree, variate, domain ):
     basis = PolynomialBasisFunction( basis_name, degree, variate, domain )
@@ -165,6 +199,20 @@ def PlotPolynomialBasis( basis_name, degree, variate, domain ):
         else:
             plt += spb.plot( basis[n].as_expr(), (variate, domain[0], domain[1] ), label=f"${basis_id_string}_{n}(x)$", show=False )
     plt.show()
+
+## L2 Error
+def ComputeL2Error( fun1, fun2, domain ):
+    variate = list( fun1.atoms( sympy.Symbol ) )[0]
+    integrand = sympy.lambdify( variate, ( fun1 - fun2 )**2.0 )
+    integral = scipy.integrate.quad( integrand, domain[0], domain[1] )
+    l2_error = numpy.sqrt( integral )
+    return l2_error
+
+def ComputeL2ErrorFast( fun1, fun2, domain ):
+    integrand = lambda x: ( fun1(x) - fun2(x) )**2.0
+    integral = scipy.integrate.quad( integrand, domain[0], domain[1], limit=1000, epsrel=1e-12 )
+    l2_error = numpy.sqrt( integral[0] )
+    return l2_error
 
 ## UTILITIES
 def BasisToLatexString( basis_array, basis_id_string ):

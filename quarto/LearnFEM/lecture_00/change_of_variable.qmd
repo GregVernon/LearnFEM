@@ -1,3 +1,15 @@
+---
+engine: julia
+---
+
+```{julia}
+#| include: false
+import Pkg
+Pkg.activate( "../LearnFEM" )
+import Symbolics, Latexify, SymbolicUtils, LaTeXStrings
+import Plots
+```
+
 # Change of Variable
 
 A core concept in finite elements is that of change of variable.
@@ -18,15 +30,23 @@ So how can we write a function that maps between the two domains?
 Let's step through this logically, choosing to modify the domain of $\xi$ so that we determine $x$.
 
 1. Scale $[-1, 1]$ so that it has the same have the same range ("length") as $[2, 7]$.
-   - $\left( \frac{7 - 2}{ 1 - ^{-}1} \right) \cdot [-1, 1]$
-   - $2.5 \cdot [-1, 1]$
-   - $[-1 \cdot 2.5, 1 \cdot 2.5]$
-   - $[-2.5, 2.5]$ 
+   ```{=latex}
+   \begin{align*}
+      \left( \frac{7 - 2}{ 1 - ^{-}1} \right) \cdot [-1, 1] \\
+      2.5 \cdot [-1, 1] \\
+      [-1 \cdot 2.5, 1 \cdot 2.5] \\
+      [-2.5, 2.5]
+   \end{align*}
+   ```
 2. Shift the modified domain so that its lower bound equals the other
-   - $(2 - ^{-}2.5) + [-2.5, 2.5]$
-   - $4.5 + [-2.5, 2.5]$
-   - $[-2.5 + 4.5, 2.5 + 4.5]$
-   - $[2, 7]$
+   ```{=latex}
+   \begin{align*}
+      (2 - ^{-}2.5) + [-2.5, 2.5] \\
+      4.5 + [-2.5, 2.5] \\
+      [-2.5 + 4.5, 2.5 + 4.5] \\
+      [2, 7]
+   \end{align*}
+   ```
 
 Ok, so that seems to work! 
 But we used words to describe what we wanted to do, and then showed with actual numbers, making it a bit hard to see the algebra that's occurring -- which we want to know so that we can write code to implement the operation.
@@ -50,84 +70,104 @@ $$
 
 Noting the similar structure of these two mappings, let's now write a function that simply maps from some domain to some other domain using change of variable.
 
-```{python}
+```{julia}
 #| echo: true
-def ChangeOfVariable( from_value, from_domain, to_domain ):
+#| output: false
+function ChangeOfVariable( from_value, from_domain, to_domain )
     ## SHIFT TO ZERO
-    to_value = from_value - from_domain[0]
+    to_value = from_value - from_domain[1]
     ## SCALE TO EQUAL RANGE
-    to_value *= ( to_domain[1] - to_domain[0] ) / ( from_domain[1] - from_domain[0] )
+    to_value *= ( to_domain[2] - to_domain[1] ) / ( from_domain[2] - from_domain[1] )
     ## APPLY TO DOMAIN
-    to_value += to_domain[0]
+    to_value += to_domain[1]
     return to_value
+end
 ```
 
 Let's see this function in action!
 
-```{python}
+```{julia}
 #| echo: true
 from_domain = [-1, 1]
 to_domain = [2, 7]
 from_values = [-1, -0.5, 0, 0.5, 1]
 
-for from_value in from_values:
+for from_value in from_values
     to_value = ChangeOfVariable( from_value, from_domain, to_domain )
-    print( f"x({from_value}) = {to_value}" )
+    println( "x($from_value) = $to_value" )
+end
 ```
 
 Now let's see what happens when we use the change of variable in an actual function.  
-First let's choose a function defined over $x$ and map it to $\xi$.
+First let's choose a function defined over $x$ and map it to $\xi$, using the mapping $x(\xi)$.
 
-```{python}
+```{julia}
+#| output: false
+x_domain = [2, 7]
+xi_domain = [-1, 1]
+
+Symbolics.@variables x, xi
+f = exp( x ) * cos( Symbolics.pi * x )
+x_xi = ChangeOfVariable( xi, xi_domain, x_domain )
+g = SymbolicUtils.substitute( f, Dict( [ x => x_xi] ), fold=false )
+```
+
+```{julia}
+#| include: false
+# latex_f = print( Symbolics.Latexify.latexify( f ) )
+# latex_xi = print( Symbolics.Latexify.latexify( x_xi ) )
+# latex_g = print( Symbolics.Latexify.latexify( g ) )
+```
+
+```{=latex}
+\begin{align*}
+   f(x) &= \cos( \pi x ) \exp{x} \\
+   x(\xi) &= 2.5 \xi + 4.5 \\
+   g( x(\xi) ) &= \cos( \pi x(\xi) ) \exp(x(\xi))  \\ &= \cos( \pi ( 2.5 \xi + 4.5 ) ) \exp( 2.5 \xi + 4.5 )
+\end{align*}
+```
+
+```{julia}
 #| echo: false
-from IPython.display import Markdown
-import sympy
-import spb
-sympy.init_printing( use_latex='mathjax', use_unicode=False )
+let
+   p1 = Plots.plot( f,  x_domain[1], x_domain[2] )
+   p2 = Plots.plot( g, xi_domain[1], xi_domain[2] )
+   Plots.plot( p1, p2, layout=Plots.@layout([a;b]), link=:x, fmt=:png )
+end
 ```
 
-```{python}
-x_domain = sympy.Array( [2, 7] )
-xi_domain = sympy.Array( [-1, 1] )
+And again on another function, this time using the mapping $\xi(x)$:
 
-x = sympy.Symbol( 'x' )
-xi = ChangeOfVariable( x, from_domain=xi_domain, to_domain=x_domain )
-f = sympy.exp( x ) * sympy.cos( sympy.pi * x )
-g = f.subs( x, xi )
+```{julia}
+#| output: false
+x_domain = [-1, 1]
+xi_domain = [0, 4*pi]
+Symbolics.@variables x, xi
+f = xi^cos(xi)
+xi_x = ChangeOfVariable( x, x_domain, xi_domain )
+g = SymbolicUtils.substitute( f, Dict( [ xi => xi_x] ), fold=false )
 ```
 
-```{python}
+```{julia}
+#| include: false
+latex_f = print( Symbolics.Latexify.latexify( f ) )
+latex_xi = print( Symbolics.Latexify.latexify( xi_x ) )
+latex_g = print( Symbolics.Latexify.latexify( g ) )
+```
+
+```{=latex}
+\begin{align*}
+   f(x) &= \xi^{\cos( \xi )} \\
+   x(\xi) &= 2 \pi ( 1 + x )\\
+   g( x(\xi) ) &= \xi(x)^{\cos( \xi(x) )} \\ &= ( 2 \pi ( 1 + x ) )^{\cos( 2 \pi ( 1 + x ) )}
+\end{align*}
+```
+
+```{julia}
 #| echo: false
-Markdown( f"$$ f(x) = {sympy.latex( f )}, \\quad x \\in {x_domain}$$\n" + \
-          f"$$ \\xi(x) = {sympy.latex( xi )}, \\quad \\xi \\in {xi_domain}$$\n" + \
-          f"$$ g(\\xi(x)) = {sympy.latex( g )}$$\n" )
-```
-
-```{python}
-#| echo: false
-p1 = spb.plot( f, ( x, x_domain[0], x_domain[1] ), xlim=[-1, 7], ylabel="$f(x)$", show=False )
-p2 = spb.plot( g, ( x, xi_domain[0], xi_domain[1] ), xlim=[-1, 7], ylabel="$g(\\xi(x))$", show=False )
-sp1 = spb.plotgrid( p1, p2 )
-```
-
-And again on another function, this time using the mapping $x(\xi)$:
-```{python}
-xi = sympy.Symbol( '\\xi', real = True )
-x = ChangeOfVariable( xi, from_domain=x_domain, to_domain=xi_domain )
-g = sympy.re( xi**xi ) 
-f = g.subs( xi, x )
-```
-
-```{python}
-#| echo: false
-Markdown( f"$$ g(\\xi) = {sympy.latex( g )}, \\quad \\xi \\in {xi_domain}$$\n" + \
-          f"$$ x(\\xi) = {sympy.latex( x )}, \\quad x \\in {x_domain}$$\n" + \
-          f"$$ f(x(\\xi)) = {sympy.latex( f )}$$\n" )
-```
-
-```{python}
-#| echo: false
-p3 = spb.plot( g, ( xi, xi_domain[0], xi_domain[1] ), xlim=[-1, 7], ylabel="$g(\\xi)$", show=False )
-p4 = spb.plot( f, ( xi, x_domain[0], x_domain[1] ), xlim=[-1, 7], ylabel="$f(x(\\xi))$", show=False )
-sp2 = spb.plotgrid( p3, p4 )
+let
+   p1 = Plots.plot( f, xi_domain[1], xi_domain[2] )
+   p2 = Plots.plot( g,  x_domain[1],  x_domain[2] )
+   Plots.plot( p1, p2, layout=Plots.@layout([a;b]), link=:x, fmt=:png )
+end
 ```

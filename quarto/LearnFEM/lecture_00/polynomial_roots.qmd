@@ -1,3 +1,17 @@
+---
+engine: julia
+---
+```{julia}
+#| include: false
+import Pkg
+Pkg.activate( "../LearnFEM" )
+import Symbolics, Latexify, SymbolicUtils, LaTeXStrings, Nemo
+import LinearAlgebra
+import Plots
+include( "lecture_00_utils.jl" )
+using .lecture_00_utils
+```
+
 # Finding Polynomial Roots using Linear Algebra
 A common problem in mathematics is finding the roots (zeros) of a function.
 As we will see shortly, we will want to find roots of *polynomial* functions to aid us in constructing polynomial basis and quadrature schemes.
@@ -18,7 +32,7 @@ $$
 the companion matrix is defined as:
 
 $$
-C =
+\Matrix{C} =
 \begin{bmatrix}
     0      & 0      & \cdots & 0      & -c_0     \\
     1      & 0      & \cdots & 0      & -c_1     \\
@@ -29,88 +43,69 @@ C =
 $$
 
 Recall that for a given polynomial we can convert it to a monic polynomial by simply dividing by the leading coefficient.
-Let's work through an example:
+Let's work through an example.
 
-```{python}
-#| echo: false
-from IPython.display import Markdown
-import sympy
-from sympy.matrices.expressions import CompanionMatrix
-import spb
-sympy.init_printing( use_latex='mathjax', use_unicode=False )
-
-x = sympy.Symbol( "x" )
-polynomial = sympy.poly( (1/2)*x**4 + (1/2)*x**3 - 6*x**2 - 2*x**1 + 6*x**0 )
-polynomial_coeffs = polynomial.all_coeffs()
-
-monic_polynomial = sympy.poly( polynomial / polynomial_coeffs[0] )
-monic_polynomial_coeffs = monic_polynomial.all_coeffs()
-companion_matrix = sympy.Matrix( CompanionMatrix( monic_polynomial ) )
-eigenvalues = list( companion_matrix.eigenvals().keys() )
+Consider the polynomial
+```{=latex}
+\begin{equation}
+    p(x) = \frac{x^4}{2} + \frac{x^3}{2} - 6x^2 - 2x + 6
+\end{equation}
 ```
 
-For the polynomial
-```{python}
-#| echo: false
-Markdown( f"$$ p(x) = {sympy.latex( polynomial.as_expr() )}$$" )
-```
-we have the monic polynomial
-```{python}
-#| echo: false
-Markdown( f"$$ p_m(x) = {sympy.latex( monic_polynomial.as_expr() )}$$" )
+which can also be written in the following form, which makes the coefficients a bit more obvious
+
+```{=latex}
+\begin{equation}
+    p(x) = \frac{1}{2}x^4 + \frac{1}{2}x^3 - 6x^2 - 2x^1 + 6x^0
+\end{equation}
 ```
 
-and thus assemble the companion matrix as
-```{python}
-#| echo: false
-Markdown( f"$$ C = {sympy.latex( companion_matrix )}$$\n")
+The monic polynomial associated with this polynomial is
+
+```{=latex}
+\begin{equation}
+    p(x) = 1x^4 + 1x^3 - 12x^2 - 4x^1 + 12x^0
+\end{equation}
 ```
 
-having the eigenvalues
-```{python}
-#| echo: false
-#| warning: false
-Markdown( f"$$ \lambda = {sympy.latex( sorted( eigenvalues ) )}$$\n")
+and the companion matrix is then
+
+```{=latex}
+\begin{equation}
+    \Matrix{C} =
+    \begin{bmatrix}
+        0 & 0 & 0 & -12 \\
+        1 & 0 & 0 &   4 \\
+        0 & 1 & 0 &  12 \\
+        0 & 0 & 1 &  -1 \\
+    \end{bmatrix}
+\end{equation}
 ```
 
-which are the roots of the polynomial.
+Finally, we compute the eigenvalues of the companion matrix to recover the (approximate) roots of the polynomial:
+
+```{=latex}
+\begin{equation*}
+    \lambda( \Matrix{C} ) \approx [ -3.70928, -1.19394, 0.903212, 3]
+\end{equation*}
+```
+
+```{julia}
+#| include: false
+
+Symbolics.@variables x
+polynomial = (1/2)*x^4 + (1/2)*x^3 - 6*x^2 - 2*x^1 + 6*x^0
+monic_polynomial = polynomial_to_monic( polynomial )
+C = companion_matrix( monic_polynomial )
+λ, r = eigvals( C )
+```
+
 We can plot the polynomial and its roots to visually confirm that this approach has, in fact, found the polynomial's roots.
 
-```{python}
+```{julia}
 #| echo: false
-import matplotlib
-import numpy
-p1 = spb.plot( polynomial, (x, -5, 5), show=False )
-p2 = spb.plot_list( eigenvalues, numpy.zeros( len( eigenvalues ) ), is_point=True, show=False )
-spb.plotgrid( p1 + p2 )
-```
-
-Let's put this together as a method so that we can easily compute polynomial roots later.
-
-
-```{python}
-import sympy
-from sympy.matrices.expressions import CompanionMatrix
-
-def PolynomialRoots( polynomial: sympy.Poly ):
-    polynomial_coeffs = polynomial.all_coeffs()
-    monic_polynomial = sympy.poly( polynomial / polynomial_coeffs[0] )
-    companion_matrix = sympy.Matrix( CompanionMatrix( monic_polynomial ) )
-    eigenvalues = sorted( list( companion_matrix.eigenvals().keys() ) )
-    return eigenvalues
-```
-
-And verify that it works:
-```{python}
-x = sympy.Symbol( "x" )
-polynomial = sympy.poly( (1/2)*x**4 + (1/2)*x**3 - 6*x**2 - 2*x**1 + 6*x**0 )
-roots = PolynomialRoots( polynomial )
-```
-
-```{python}
-#| echo: False
-#| warning: False
-Markdown( f"$$ \lambda = {sympy.latex( roots )}$$\n")
+Plots.plot( x, polynomial, -4, 4, linewidth=4, label="\$p(x)\$" )
+Plots.scatter!( λ, zeros( size( λ ) ), markersize=6, markercolor=:black, label="\$\\lambda(\\mathbf{C})\$" )
 ```
 
 ## A Footnote
@@ -119,6 +114,77 @@ Finally, let's take a moment to make a quick observation and comment.
 You may be aware that there are no closed-form equations, using only elementary arithmetic operations and fractional powers, for computing the roots of polynomials greater than degree-4[^1].
 Consider that, if there existed an algorithm for computing exact eigenvalues in a finite number of steps for matrices of size $5\times5$ (corresponding to characteristic polynomials of degree-5) or larger, that then we would have an equation for finding roots of polynomials greater than degree-4.
 This is why, in practical finite element codes, eigenvalue extraction methods are all approximate iterative methods[^2].
+In this demonstration we used an iterative method based on QR factorization.
+
+```pseudocode
+#| html-indent-size: "1.2em"
+#| html-comment-delimiter: "//"
+#| html-line-number: true
+#| html-line-number-punc: ":"
+#| html-no-end: false
+#| pdf-placement: "htb!"
+#| pdf-line-number: true
+
+\begin{algorithm}
+  \caption{Computing Eigenvalues via $\Matrix{QR}$ Factorization }
+  \begin{algorithmic}
+    \Procedure{ComputeEigenvalues}{$\Matrix{A}^{n \times n}$, tol, maxit}
+      \State $\tilde{\lambda}_0 = \Vector{0}^{n,1}$
+      \For{ $i \in \{1, \dots, \mathrm{maxit}\}$ }
+        \State $\Matrix{Q}, \Matrix{R} = $ \Call{Factorize}{$\Matrix{A}$, method='qr'}
+        \State $\Matrix{A} = \Matrix{Q} \Matrix{R}$
+        \State $\tilde{\lambda}_{i} = \mathrm{diag}(\Matrix{A})$
+        \If{$\| \tilde{\lambda}_{i} - \tilde{\lambda}_{i-1} \|_{\infty} \leq \mathrm{tol}$}
+          \State \textbf{break}
+        \EndIf
+      \EndFor
+      \State \Return{$\tilde{\lambda}_{i}$}
+    \EndProcedure
+  \end{algorithmic}
+\end{algorithm}
+```
+
+Note that, in this algorithm, we use the notation $\tilde{\lambda}$ to denote that the values are only an approximation of the true eigenvalues, $\lambda$.
+These converging approximations are often called *Ritz values*.
+We can plot the convergence of the Ritz values towards the true eigenvalues:
+
+```{julia}
+#| echo: false
+#| output: false
+roots = Symbolics.simplify( Symbolics.symbolic_solve( polynomial ) )
+# println( Symbolics.substitute( roots[1], Dict() ) )
+```
+
+<!-- ```{=latex}
+\begin{align*}
+  \lambda_1 &= - \frac{4}{3} 
+               - \frac{1}{2} \sqrt[3]{-\frac{10}{27} - \frac{2}{3}i \sqrt{\frac{37}{3}}} 
+               - \frac{1}{2} \sqrt[3]{-\frac{10}{27} + \frac{2}{3}i \sqrt{\frac{37}{3}}} 
+               - \frac{\sqrt{3}}{2}i \sqrt[3]{-\frac{10}{27} - \frac{2}{3}i \sqrt{\frac{37}{3}}} 
+               + \frac{\sqrt{3}}{2}i \sqrt[3]{-\frac{10}{27} + \frac{2}{3}i \sqrt{\frac{37}{3}}} \\
+  \lambda_2 &= - \frac{4}{3} 
+               - \frac{1}{2} \sqrt[3]{-\frac{10}{27} - \frac{2}{3}i \sqrt{\frac{37}{3}}} 
+               - \frac{1}{2} \sqrt[3]{-\frac{10}{27} + \frac{2}{3}i \sqrt{\frac{37}{3}}} 
+               + \frac{\sqrt{3}}{2}i \sqrt[3]{-\frac{10}{27} - \frac{2}{3}i \sqrt{\frac{37}{3}}} 
+               - \frac{\sqrt{3}}{2}i \sqrt[3]{-\frac{10}{27} + \frac{2}{3}i \sqrt{\frac{37}{3}}} \\
+  %
+  \lambda_3 &= - \frac{4}{3} 
+               + \sqrt[3]{\left( \frac{-10}{27} - \frac{2}{3}i \sqrt{\left( \frac{37}{3} \right)} \right)}
+               + \sqrt[3]{\left( \frac{-10}{27} + \frac{2}{3}i \sqrt{\left( \frac{37}{3} \right)} \right)} \\
+  %
+  \lambda_4 &= 3\\
+\end{align*}
+``` -->
+
+```{julia}
+#| echo: false
+r = reduce( vcat, transpose.( r ) )
+Plots.plot(  r[:,1], linewidth=2, label="\$\\tilde{\\lambda}_1\$" )
+Plots.plot!( r[:,2], linewidth=2, label="\$\\tilde{\\lambda}_2\$" )
+Plots.plot!( r[:,3], linewidth=2, label="\$\\tilde{\\lambda}_3\$" )
+Plots.plot!( r[:,4], linewidth=2, label="\$\\tilde{\\lambda}_4\$" )
+Plots.xlabel!( "Iteration" )
+```
 
 [^1]: This is the [Abel-Ruffini theorem](https://en.wikipedia.org/wiki/Abel%E2%80%93Ruffini_theorem).
 Of course, for some polynomials of degree greater than four we can write such equations, such as $x^{100}$ , but this is not possible *in general*.

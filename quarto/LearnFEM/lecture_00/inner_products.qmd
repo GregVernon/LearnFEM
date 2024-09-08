@@ -1,11 +1,15 @@
-```{python}
+---
+engine: julia
+---
+```{julia}
 #| include: false
-import sympy
-import numpy
-import spb
-from IPython.display import Markdown
-from lecture_00 import ChangeOfVariable, BasisToLatexString, PlotPolynomialBasis
-sympy.init_printing( use_latex='mathjax', use_unicode=False )
+import Pkg
+Pkg.activate( "../LearnFEM" )
+import Symbolics, SymbolicNumericIntegration, Latexify, SymbolicUtils, LaTeXStrings, Nemo
+import LinearAlgebra
+import Plots
+include( "lecture_00.jl" )
+using .lecture_00: ChangeOfVariable, PlotPolynomialBasis, PolynomialBasisFunctions
 ```
 
 # Inner Products
@@ -133,36 +137,56 @@ Since we'll be dealing with the $L^2$ inner product quite a bit, let's consider 
 
 ### Example 4.4.1
 
-```{python}
-import sympy
-x = sympy.Symbol( "x" )
-f = sympy.sin( x )
-g = sympy.sin( x )
-L2 = sympy.integrate( f * g, x )
+```{julia}
+import Symbolics
+import SymbolicNumericIntegration
+using SymbolicNumericIntegration: integrate
+x = Symbolics.variable( :x )
+f = sin( x )
+g = sin( x )
+L2 = SymbolicNumericIntegration.integrate( f * g, x )[1]
 ```
 
-```{python}
-#| echo: false
-p1 = spb.plot( f, (x, 0, 2*sympy.pi ), label="f", show=False )
-p1 += spb.plot( g, (x, 0, 2*sympy.pi ), label="g", show=False )
-p2 = spb.plot( L2, (x, 0, 2*sympy.pi ), show=False )
-sp1 = spb.plotgrid( p1, p2 )
+```{=latex}
+\begin{align*}
+  f(x) &= \sin(x) \\
+  g(x) &= \sin(x) \\
+  \Inner{f(x)}{g(x)} &= \frac{1}{2} ( x - \sin(x) \cos(x) ) \\
+\end{align*}
 ```
+
+<!-- ```{julia}
+#| echo: false
+let
+  p1 = Plots.plot( f, 0, 2π, label="\$f(x)\$" )
+  p2 = Plots.plot( g, 0, 2π, label="\$g(x)\$" )
+  p3 = Plots.plot( L2, 0, 2π, label="\$\\| f, g \\|_2 \$" )
+  # Plots.plot( p1, p2, p3, layout=Plots.@layout([a;b;c]), link=:x, fmt=:png )
+end
+``` -->
 
 Where evaluating the inner product provides us with a function of the domain:
 
-```{python}
-#| echo: false
-Markdown( "$$\\Inner{f}{g}_{L^2} = " + f"{sympy.latex( L2 )}$$" )
-```
-
 And, for example, the inner product on the domain $[0,2\pi]$ is then
 
-```{python}
+```{julia}
 #| echo: false
-L2 = sympy.integrate( f * g, ( x, 0, 2*sympy.pi ) )
-Markdown( "$$\\Inner{f}{g}_{L^2_{[0,2\\pi]}} = " + f"{sympy.latex( L2 )}$$" )
+import SymbolicNumericIntegration
+using SymbolicNumericIntegration: integrate
+x = Symbolics.variable( :x )
+f = sin( x )
+g = sin( x )
+L2 = SymbolicNumericIntegration.integrate( f * g, ( x, 0 // 1, 2π ); symbolic = true, detailed = false )
 ```
+
+```{=latex}
+\begin{equation}
+  %\sideset{_{[0, \pi]}}{}{\Inner{\sin(x)}{\sin(x)}}
+  %\prescript{\pi}{0}{\Inner{\sin(x)}{\sin(x)}}
+  \Inner{\sin(x)}{\sin(x)}_{[0, \pi]}
+\end{equation}
+```
+
 
 ### Example 4.4.2
 

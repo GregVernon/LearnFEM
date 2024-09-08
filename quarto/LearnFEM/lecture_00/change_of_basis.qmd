@@ -1,14 +1,15 @@
-```{python}
+---
+engine: julia
+---
+```{julia}
 #| include: false
-import sympy
-import numpy
-import matplotlib.pyplot
-import spb
-from IPython.display import Markdown
-from lecture_00 import ChangeOfVariable, BasisToLatexString, PolynomialBasisFunction, PlotPolynomialBasis
-matplotlib.pyplot.rcParams['figure.constrained_layout.use'] = False
-matplotlib.pyplot.rcParams['axes.axisbelow'] = True
-sympy.init_printing( use_latex='mathjax', use_unicode=False )
+import Pkg
+Pkg.activate( "../LearnFEM" )
+import Symbolics, Latexify, SymbolicUtils, LaTeXStrings, Nemo
+import LinearAlgebra
+import Plots
+include( "lecture_00.jl" )
+using .lecture_00: ChangeOfVariable, PlotPolynomialBasis, PolynomialBasisFunctions
 ```
 
 # Change of Basis

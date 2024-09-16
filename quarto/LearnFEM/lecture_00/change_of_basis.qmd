@@ -8,6 +8,8 @@ Pkg.activate( "../LearnFEM" )
 import Symbolics, Latexify, SymbolicUtils, LaTeXStrings, Nemo
 import LinearAlgebra
 import Plots
+include( "lecture_00_utils.jl" )
+using .lecture_00_utils: to_numeric
 include( "lecture_00.jl" )
 using .lecture_00: ChangeOfVariable, PlotPolynomialBasis, PolynomialBasisFunctions
 ```
@@ -127,7 +129,7 @@ And expands to:
 Let's now demonstrate on a few examples
 
 ## Example: Vector Change of Basis
-Consider the vector $\vec{u} = (2, 1)$ in the standard basis $\Matrix{U} = [ (1, 0)^T, (0, 1)^T]$, and the target basis of $\Matrix{V} =[(1, 1)^T, (-1, 1)^T]$.
+Consider the vector $\vec{u} = (\frac{3}{2}, \frac{5}{4})$ in the standard basis $\Matrix{U} = [ (1, 0)^T, (0, 1)^T]$, and the target basis of $\Matrix{V} =[(1, 1/5)^T, (1/5, 4/5)^T]$.
 What is the representation of $\vec{u}$ in $\Matrix{V}$?
 
 Within our mnemonic, $\Matrix{T} \equiv \Matrix{V}$, $\Matrix{F} \equiv \Matrix{U}$, $\Vector{f} \equiv \vec{u}$, and the representation we wish to find is $\Vector{t} \equiv \vec{v}$.
@@ -158,171 +160,163 @@ Within our mnemonic, $\Matrix{T} \equiv \Matrix{V}$, $\Matrix{F} \equiv \Matrix{
     %%% EQN 3 %%%
     %%%%%%%%%%%%%
     \begin{bmatrix}
-        \Inner{\begin{pmatrix}  1 \\ 1 \end{pmatrix}}{\begin{pmatrix} 1 \\ 1 \end{pmatrix}} & \Inner{\begin{pmatrix}  1 \\ 1 \end{pmatrix}}{\begin{pmatrix} -1 \\ 1 \end{pmatrix}} \\
-        \Inner{\begin{pmatrix} -1 \\ 1 \end{pmatrix}}{\begin{pmatrix} 1 \\ 1 \end{pmatrix}} & \Inner{\begin{pmatrix} -1 \\ 1 \end{pmatrix}}{\begin{pmatrix} -1 \\ 1 \end{pmatrix}}
+        \Inner{\begin{pmatrix}  1 \\ \frac{1}{5} \end{pmatrix}}{\begin{pmatrix} 1 \\ \frac{1}{5} \end{pmatrix}} & \Inner{\begin{pmatrix}  1 \\ \frac{1}{5} \end{pmatrix}}{\begin{pmatrix} \frac{1}{5} \\ \frac{4}{5} \end{pmatrix}} \\
+        \Inner{\begin{pmatrix} \frac{1}{5} \\ \frac{4}{5} \end{pmatrix}}{\begin{pmatrix} 1 \\ \frac{1}{5} \end{pmatrix}} & \Inner{\begin{pmatrix} \frac{1}{5} \\ \frac{4}{5} \end{pmatrix}}{\begin{pmatrix} \frac{1}{5} \\ \frac{4}{5} \end{pmatrix}}
     \end{bmatrix}
     %
     \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
     &=
     \begin{bmatrix}
-        \Inner{\begin{pmatrix}  1 \\ 1 \end{pmatrix}}{\begin{pmatrix} 1 \\ 0 \end{pmatrix}} & \Inner{\begin{pmatrix}  1 \\ 1 \end{pmatrix}}{\begin{pmatrix} 0 \\ 1 \end{pmatrix}} \\
-        \Inner{\begin{pmatrix} -1 \\ 1 \end{pmatrix}}{\begin{pmatrix} 1 \\ 0 \end{pmatrix}} & \Inner{\begin{pmatrix} -1 \\ 1 \end{pmatrix}}{\begin{pmatrix} 0 \\ 1 \end{pmatrix}}
+        \Inner{\begin{pmatrix}  1 \\ \frac{1}{5} \end{pmatrix}}{\begin{pmatrix} 1 \\ 0 \end{pmatrix}} & \Inner{\begin{pmatrix}  1 \\ \frac{1}{5} \end{pmatrix}}{\begin{pmatrix} 0 \\ 1 \end{pmatrix}} \\
+        \Inner{\begin{pmatrix} \frac{1}{5} \\ \frac{4}{5} \end{pmatrix}}{\begin{pmatrix} 1 \\ 0 \end{pmatrix}} & \Inner{\begin{pmatrix} \frac{1}{5} \\ \frac{4}{5} \end{pmatrix}}{\begin{pmatrix} 0 \\ 1 \end{pmatrix}}
     \end{bmatrix}
     %
-    \begin{bmatrix} 2 \\ 1 \end{bmatrix} \\
+    \begin{bmatrix} \frac{3}{2} \\ \frac{5}{4} \end{bmatrix} \\
     %%%%%%%%%%%%%
     %%% EQN 4 %%%
     %%%%%%%%%%%%%
     \begin{bmatrix}
-        2 & 0 \\
-        0 & 2
+        \frac{26}{25} & \frac{9}{25} \\
+        \frac{9}{25}  & \frac{17}{25}
     \end{bmatrix}
     %
     \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
     &=
     \begin{bmatrix}
-        1  & 1 \\
-        -1 & 1
+        1           & \frac{1}{5} \\
+        \frac{1}{5} & \frac{4}{5}
     \end{bmatrix}
     %
-    \begin{bmatrix} 2 \\ 1 \end{bmatrix} \\
+    \begin{bmatrix} \frac{3}{2} \\ \frac{5}{4} \end{bmatrix} \\
     %%%%%%%%%%%%%
     %%% EQN 5 %%%
     %%%%%%%%%%%%%
     \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
     &=
     \left( \begin{bmatrix}
-                2 & 0 \\
-                0 & 2
-            \end{bmatrix}
+               \frac{26}{25} & \frac{9}{25} \\
+               \frac{9}{25}  & \frac{17}{25}
+           \end{bmatrix}
     \right)^{-1}
     %
     \begin{bmatrix}
-        1  & 1 \\
-        -1 & 1
+        1           & \frac{1}{5} \\
+        \frac{1}{5} & \frac{4}{5}
     \end{bmatrix}
     %
-    \begin{bmatrix} 2 \\ 1 \end{bmatrix} \\
+    \begin{bmatrix} \frac{3}{2} \\ \frac{5}{4} \end{bmatrix} \\
     %%%%%%%%%%%%%
     %%% EQN 6 %%%
     %%%%%%%%%%%%%
     \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
     &=
     \begin{bmatrix}
-        \frac{1}{2} & 0           \\
-        0           & \frac{1}{2} \\
+        \frac{425}{361}  & \frac{-225}{361} \\
+        \frac{-225}{361} & \frac{650}{361}  \\
     \end{bmatrix}
     %
     \begin{bmatrix}
-        1  & 1 \\
-        -1 & 1
+        1           & \frac{1}{5} \\
+        \frac{1}{5} & \frac{4}{5}
     \end{bmatrix}
     %
-    \begin{bmatrix} 2 \\ 1 \end{bmatrix} \\
+    \begin{bmatrix} \frac{3}{2} \\ \frac{5}{4} \end{bmatrix} \\
     %%%%%%%%%%%%%
     %%% EQN 7 %%%
     %%%%%%%%%%%%%
     \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
     &=
     \begin{bmatrix}
-        \frac{1}{2} & \frac{1}{2} \\
-        -\frac{1}{2} & \frac{1}{2} \\
+        \frac{20}{19} & \frac{-5}{19} \\
+        \frac{5}{19} & \frac{25}{19} \\
     \end{bmatrix}
     %
-    \begin{bmatrix} 2 \\ 1 \end{bmatrix} \\
+    \begin{bmatrix} \frac{3}{2} \\ \frac{5}{4} \end{bmatrix} \\
     %%%%%%%%%%%%%
     %%% EQN 8 %%%
     %%%%%%%%%%%%%
     \begin{bmatrix} \Vector{v}_1 \\ \Vector{v}_2 \end{bmatrix}
     &=
     %
-    \begin{bmatrix} \frac{3}{2} \\ -\frac{1}{2} \end{bmatrix} \\
+    \begin{bmatrix} \frac{5}{4} \\ \frac{5}{4} \end{bmatrix} \\
 \end{align}
 ```
 
 We can write a routine for computing the change of basis between two vectors
 
-```{python}
-def VectorChangeOfBasis( from_basis, to_basis, from_coeffs ):
-    basis_dimension = len( from_coeffs )
-    D = sympy.zeros( basis_dimension, basis_dimension )
-    C = sympy.zeros( basis_dimension, basis_dimension )
-    for i in range( 0, basis_dimension ):
-        for j in range( 0, basis_dimension ):
-            D[i,j] = to_basis[:,i].dot( to_basis[:, j] )
-            C[i,j] = to_basis[:,i].dot( from_basis[:,j] )
-    R = D.solve( C )
-    to_coeffs = R.multiply( from_coeffs )
+```{julia}
+#| output: false
+function VectorChangeOfBasis( from_basis, to_basis, from_coeffs )
+    basis_dimension = length( from_coeffs )
+    D = fill( Symbolics.zero( Symbolics.Num ), basis_dimension, basis_dimension )
+    C = fill( Symbolics.zero( Symbolics.Num ), basis_dimension, basis_dimension )
+    for i = 1 : basis_dimension
+        for j = 1 : basis_dimension
+            D[i,j] = LinearAlgebra.dot( to_basis[:,i], to_basis[:, j] )
+            C[i,j] = LinearAlgebra.dot( to_basis[:,i], from_basis[:,j] )
+        end
+    end
+    R = D \ C
+    to_coeffs = R * from_coeffs
     return to_coeffs, R
+end
 ```
 Which we can use to evaluate the example in this section
-```{python}
-U = sympy.Matrix( [[1, 0], [0, 1]] ).T
-Rat = sympy.Rational
-V = sympy.Matrix( [[Rat(1/2), Rat(1/2)], [Rat(-1/2), Rat(1/2)]] ).T
-u = sympy.Matrix( [2, 1] )
-v, R = VectorChangeOfBasis( from_basis=U, to_basis=V, from_coeffs=u )
+```{julia}
+#| output: false
+U = Symbolics.Num.( [ [1//1, 0//1] [0//1, 1//1] ] )
+V = Symbolics.Num.( [ [1//1, 1//5] [1//5, 4//5] ] )
+u = Symbolics.Num.( [3//2, 5//4] )
+v, R = VectorChangeOfBasis( U, V, u )
 ```
 
-```{python}
-#| echo: false
-print( f"R: {R}" )
-print( f"v: {v}" )
+```{=latex}
+\begin{equation*}
+    \Matrix{R} = 
+    \begin{bmatrix}
+        \frac{20}{19} & \frac{-5}{19} \\
+        \frac{-5}{19} & \frac{25}{19}
+    \end{bmatrix}
+\end{equation*}
 ```
 
-```{python}
+```{=latex}
+\begin{equation*}
+    v = 
+    \begin{bmatrix}
+        \frac{5}{4} \\
+        \frac{5}{4}
+    \end{bmatrix}
+\end{equation*}
+```
+
+```{julia}
 #| echo: false
-ax = matplotlib.pyplot.axes()
-ax.grid()
-ax.axis( 'equal' )
+U = to_numeric( Float64, U )
+u = to_numeric( Float64, u )
+u_vec = U * u
+V = to_numeric( Float64, V )
+v = to_numeric( Float64, v )
+R = to_numeric( Float64, R )
+v_vec = V * v
 
-arrow_props_1 = dict( facecolor='tab:blue', edgecolor='tab:blue', headlength=15, headwidth=10, width=4.0 )
-arrow_props_2 = dict( facecolor='tab:blue', edgecolor='tab:blue', headlength=15, headwidth=10, width=3.0, alpha=0.5 )
-arrow_props_3 = dict( facecolor='tab:blue', edgecolor='tab:blue', headlength=15, headwidth=10, width=2.0 )
+# PLOT "FROM"
+Plots.plot(  [ 0, U[1,1] * u[1] ],    [0, U[2,1] * u[1] ],            label="", linewidth=4, arrow=true,  linecolor=:dodgerblue1, aspect_ratio=:equal, linealpha=0.5 )
+Plots.plot!( [ 0, U[1,2] * u[2] ],    [0, U[2,2] * u[2] ],            label="", linewidth=4, arrow=true,  linecolor=:dodgerblue1, aspect_ratio=:equal, linealpha=0.5 )
+Plots.plot!( [ U[1,1] * u[1], u_vec[1] ], [U[2,1] * u[1], u_vec[2] ], label="", linewidth=4, arrow=false, linecolor=:dodgerblue2, aspect_ratio=:equal, linealpha=0.5, linestyle=:dot )
+Plots.plot!( [ U[1,2] * u[2], u_vec[1] ], [U[2,2] * u[2], u_vec[2] ], label="", linewidth=4, arrow=false, linecolor=:dodgerblue2, aspect_ratio=:equal, linealpha=0.5, linestyle=:dot )
+Plots.plot!( [ 0, u_vec[1] ],   [0, u_vec[2] ],                       label="", linewidth=6, arrow=true,  linecolor=:dodgerblue1, aspect_ratio=:equal )
+Plots.plot!( [ 0, U[1,1] ], [0, U[2,1] ],                             label="", linewidth=8, arrow=true,  linecolor=:dodgerblue,  aspect_ratio=:equal )
+Plots.plot!( [ 0, U[1,2] ], [0, U[2,2] ],                             label="", linewidth=8, arrow=true,  linecolor=:dodgerblue,  aspect_ratio=:equal )
 
-ax.annotate( '', xy=( float( U[0,0] ),        float( U[1,0] ) ),        xytext=(0,0), arrowprops=arrow_props_1)
-ax.annotate( '', xy=( float( U[0,1] ),        float( U[1,1] ) ),        xytext=(0,0), arrowprops=arrow_props_1)
-ax.annotate( '', xy=( float( U[0,0] * u[0] ), float( U[1,0] * u[0] ) ), xytext=(0,0), arrowprops=arrow_props_2)
-ax.annotate( '', xy=( float( U[0,1] * u[1] ), float( U[1,1] * u[1] ) ), xytext=(0,0), arrowprops=arrow_props_2)
-ax.annotate( '', xy=( float( u[0] ),          float( u[1] ) ),          xytext=(0,0), arrowprops=arrow_props_3)
-
-arrow_props_1 = dict( facecolor='tab:orange', edgecolor='tab:orange', headlength=15, headwidth=10, width=4.0 )
-arrow_props_2 = dict( facecolor='tab:orange', edgecolor='tab:orange', headlength=15, headwidth=10, width=3.0, alpha=0.5 )
-arrow_props_3 = dict( facecolor='tab:orange', edgecolor='tab:orange', headlength=15, headwidth=10, width=1.0 )
-v_vec = V.multiply( v )
-ax.annotate( '', xy = ( float( V[0,0] ),        float( V[1,0] ) ),        xytext=(0,0), arrowprops=arrow_props_1 )
-ax.annotate( '', xy = ( float( V[0,1] ),        float( V[1,1] ) ),        xytext=(0,0), arrowprops=arrow_props_1 )
-ax.annotate( '', xy = ( float( V[0,0] * v[0] ), float( V[1,0] * v[0] ) ), xytext=(0,0), arrowprops=arrow_props_2 )
-ax.annotate( '', xy = ( float( V[0,1] * v[1] ), float( V[1,1] * v[1] ) ), xytext=(0,0), arrowprops=arrow_props_2 )
-ax.annotate( '', xy = ( float( v_vec[0] ),      float( v_vec[1] ) ),      xytext=(0,0), arrowprops=arrow_props_3 )
-
-# Guidelines for u-vector
-x0 = float( U[:,0].multiply( u[0] )[0] )
-x1 = float( u[0] )
-y0 = float( U[:,0].multiply( u[1] )[1] )
-y1 = float( u[1] )
-ax.plot( [ x0, x1 ], [y0, y1], color="tab:blue", linestyle=":" )
-
-x0 = float( U[:,1].multiply( u[0] )[0] )
-x1 = float( u[0] )
-y0 = float( U[:,1].multiply( u[1] )[1] )
-y1 = float( u[1] )
-ax.plot( [ x0, x1 ], [y0, y1], color="tab:blue", linestyle=":" )
-
-# Guidelines for v-vector
-x0 = float( V[0,0] * v[0] )
-x1 = float( v_vec[0] )
-y0 = float( V[1,0] * v[0] )
-y1 = float( v_vec[1] )
-ax.plot( [ x0, x1 ], [y0, y1], color="tab:orange", linestyle=":" )
-
-x0 = float( V[0,1] * v[1] )
-x1 = float( v_vec[0] )
-y0 = float( V[1,1] * v[1] )
-y1 = float( v_vec[1] )
-ax.plot( [ x0, x1 ], [y0, y1], color="tab:orange", linestyle=":" )
-
-matplotlib.pyplot.show()
+# PLOT "TO"
+Plots.plot!( [ 0, V[1,1] * v[1] ],    [0, V[2,1] * v[1] ],            label="", linewidth=4, arrow=true,  linecolor=:goldenrod1, aspect_ratio=:equal, linealpha=0.5 )
+Plots.plot!( [ 0, V[1,2] * v[2] ],    [0, V[2,2] * v[2] ],            label="", linewidth=4, arrow=true,  linecolor=:goldenrod1, aspect_ratio=:equal, linealpha=0.5 )
+Plots.plot!( [ V[1,1] * v[1], v_vec[1] ], [V[2,1] * v[1], v_vec[2] ], label="", linewidth=4, arrow=false, linecolor=:goldenrod2, aspect_ratio=:equal, linealpha=0.5, linestyle=:dot )
+Plots.plot!( [ V[1,2] * v[2], v_vec[1] ], [V[2,2] * v[2], v_vec[2] ], label="", linewidth=4, arrow=false, linecolor=:goldenrod2, aspect_ratio=:equal, linealpha=0.5, linestyle=:dot )
+Plots.plot!( [ 0, v_vec[1] ],   [0, v_vec[2] ],                       label="", linewidth=4, arrow=true,  linecolor=:goldenrod1, aspect_ratio=:equal )
+Plots.plot!( [ 0, V[1,1] ], [0, V[2,1] ],                             label="", linewidth=8, arrow=true,  linecolor=:goldenrod,  aspect_ratio=:equal )
+Plots.plot!( [ 0, V[1,2] ], [0, V[2,2] ],                             label="", linewidth=8, arrow=true,  linecolor=:goldenrod,  aspect_ratio=:equal )
 ```
 
 ## Example: Polynomial Change of Basis
@@ -334,28 +328,27 @@ We wish to represent this polynomial in the Lagrange basis.
 Within our mnemonic, $\Matrix{T} \equiv \Matrix{M}$, $\Matrix{F} \equiv \Matrix{L}$, $\Vector{f} \equiv \Vector{m}$, and the representation we wish to find is $\Vector{t} \equiv \Vector{\ell}$.
 
 
-```{python}
-from sympy.integrals import integrate
-def PolynomialChangeOfBasis( from_basis, to_basis, from_coeffs, domain ):
-    basis_dim = len( from_coeffs )
-    D = sympy.zeros( basis_dim )
-    C = sympy.zeros( basis_dim )
-    variate = list( from_basis[0].atoms( sympy.Symbol ) )[0]
-    for i in range( 0, basis_dim ):
-        for j in range( 0, basis_dim ):
-            integrand = to_basis[i].as_expr() * to_basis[j].as_expr()
-            D[i,j] = integrate( integrand, ( variate, domain[0], domain[1] ) )
-            integrand = to_basis[i].as_expr() * from_basis[j].as_expr()
-            C[i,j] = integrate( integrand, ( variate, domain[0], domain[1] ) )
-    R = D.solve( C )
-    to_coeffs = R.multiply( from_coeffs )
+```{julia}
+using SymbolicNumericIntegration: integrate
+function PolynomialChangeOfBasis( from_basis, to_basis, from_coeffs, domain )
+    basis_dim = length( from_coeffs )
+    variate = Symbolics.get_variables( from_basis[end] )[1]
+    var_tuple = fill( ( variate, domain[1], domain[2] ), ( length( from_basis ), length( from_basis ) ) )
+    D = integrate.( to_basis * transpose( to_basis ), var_tuple; detailed = false )
+    C = integrate.( to_basis * transpose( from_basis ), var_tuple; detailed = false )
+    R = D \ C
+    to_coeffs = R * from_coeffs
+    return to_coeffs, R
+end
 ```
 
-```{python}
-x = sympy.Symbol( "x" )
-domain = [Rat(0), Rat(1)]
-m_coeffs = sympy.Matrix( [Rat(-1), Rat(1), Rat(4), Rat(0), Rat(-1)] )
-M = PolynomialBasisFunction( "Monomial", 4, x, domain )
-L = PolynomialBasisFunction( "Lagrange", 4, x, domain )
-l_coeffs = PolynomialChangeOfBasis( M, L, m_coeffs, domain )
+```{julia}
+Symbolics.@variables x
+domain = [ 0//1, 1//1 ]
+m_coeffs = [-1//1, 1//1, 4//1, 0//1, -1//1]
+M = PolynomialBasisFunctions( "Monomial", 4, x, domain )
+L = PolynomialBasisFunctions( "Lagrange", 4, x, domain )
+l_coeffs, R = PolynomialChangeOfBasis( M, L, m_coeffs, domain )
+display( l_coeffs )
+display( R )
 ```

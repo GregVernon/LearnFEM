@@ -334,8 +334,8 @@ function PolynomialChangeOfBasis( from_basis, to_basis, from_coeffs, domain )
     basis_dim = length( from_coeffs )
     variate = Symbolics.get_variables( from_basis[end] )[1]
     var_tuple = fill( ( variate, domain[1], domain[2] ), ( length( from_basis ), length( from_basis ) ) )
-    D = integrate.( to_basis * transpose( to_basis ), var_tuple; detailed = false )
-    C = integrate.( to_basis * transpose( from_basis ), var_tuple; detailed = false )
+    D = integrate.( to_basis * transpose( to_basis ), var_tuple; detailed=false )
+    C = integrate.( to_basis * transpose( from_basis ), var_tuple; detailed=false )
     R = D \ C
     to_coeffs = R * from_coeffs
     return to_coeffs, R

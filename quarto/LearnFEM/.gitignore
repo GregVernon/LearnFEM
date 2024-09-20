@@ -1,8 +1,11 @@
 /.quarto/
 
+*.tex
+
 __pycache__/
 _book/
 /env/
+/index_files/
 /lecture_00/inner_products_files
 /lecture_00/change_of_basis_files/
 /lecture_00/change_of_variable_files/

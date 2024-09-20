@@ -11,7 +11,7 @@ import Plots
 include( "lecture_00_utils.jl" )
 using .lecture_00_utils: to_numeric
 include( "lecture_00.jl" )
-using .lecture_00: ChangeOfVariable, PlotPolynomialBasis, PolynomialBasisFunctions
+using .lecture_00: ChangeOfVariable, PlotPolynomialBasis, PolynomialBasisFunction
 ```
 
 # Change of Basis
@@ -346,8 +346,8 @@ end
 Symbolics.@variables x
 domain = [ 0//1, 1//1 ]
 m_coeffs = [-1//1, 1//1, 4//1, 0//1, -1//1]
-M = PolynomialBasisFunctions( "Monomial", 4, x, domain )
-L = PolynomialBasisFunctions( "Lagrange", 4, x, domain )
+M = PolynomialBasisFunction( "Monomial", 4, x, domain )
+L = PolynomialBasisFunction( "Lagrange", 4, x, domain )
 l_coeffs, R = PolynomialChangeOfBasis( M, L, m_coeffs, domain )
 display( l_coeffs )
 display( R )

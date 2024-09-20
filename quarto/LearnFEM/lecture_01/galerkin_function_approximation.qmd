@@ -1,18 +1,17 @@
-```{python}
+---
+engine: julia
+---
+```{julia}
 #| include: false
-import sympy
-import numpy
-import scipy.integrate
-import scipy.sparse.linalg
-import functools
-import matplotlib.pyplot
-import spb
-from sympy import integrate
-from lecture_01 import PolynomialBasisFunction, BasisToLatexString, PlotPolynomialBasis, BasisPolynomialListToExprMatrix, BasisPolynomialListToLambdaArray, ScalarProjection, ScalarProjectionFast, ComputeL2Error, ComputeL2ErrorFast
-from IPython.display import Markdown, Latex
-matplotlib.pyplot.rcParams['figure.constrained_layout.use'] = False
-matplotlib.pyplot.rcParams['axes.axisbelow'] = True
-sympy.init_printing( use_latex='mathjax', use_unicode=False )
+import Pkg
+Pkg.activate( "../LearnFEM" )
+import Symbolics, Latexify, SymbolicUtils, LaTeXStrings, Nemo
+import LinearAlgebra
+import Plots
+include( "lecture_01_utils.jl" )
+using .lecture_01_utils: to_numeric
+include( "lecture_01.jl" )
+using .lecture_01: ChangeOfVariable, PolynomialBasis, PlotPolynomialBasis, PolynomialBasisFunction, ScalarProjection, ComputeL2Error
 ```
 
 # Galerkin's Method for Function Approximation
@@ -21,32 +20,46 @@ Let's suppose that we have some function that we wish to approximate as a polyno
 Specifically, we want to find the polynomial function that most closely represents the function over a finite domain, in the $L^2$ sense.
 The function we wish to approximate, over the domain $[0,1]$ is
 
-```{python}
-#| echo: false
-x = sympy.Symbol( "x" )
-domain = [sympy.Rational(0), sympy.Rational(1)]
-target_fun = sympy.sin( sympy.pi * x )**2 + sympy.cos( x ) - 1
-Markdown( f"$$g(x) = {sympy.latex( target_fun )}$$" )
+```{julia}
+#| include: true
+let
+    Symbolics.@variables x target_fun(x)
+    target_fun(x) = sin( π * x )^2 + cos( x ) - 1;
+    domain = [0, 1]
+    Plots.plot( target_fun, domain[1], domain[2], linewidth=4 )
+end
+```
+
+```{=latex}
+\begin{equation*}
+    g(x) = \sin( \pi x )^2 + \cos( x ) - 1
+\end{equation*}
 ```
 
 And let's further suppose that we wish to approximate this function with a quartic polynomial, let's use the monomial basis
 
-```{python}
-import sympy
-x = sympy.Symbol( "x" )
-domain = [sympy.Rational(0), sympy.Rational(1)]
-degree = 2
-basis_name="Monomial"
-monomial_basis = PolynomialBasisFunction( basis_name, degree, x, domain )
+```{julia}
+#| eval: true
+let
+    Symbolics.@variables x
+    domain = [0, 1]
+    degree = 2
+    basis_name = lecture_01.Monomial
+    monomial_basis = PolynomialBasisFunction( basis_name, degree, x, domain )
+    PlotPolynomialBasis( basis_name, degree, x, domain )
+end
 ```
 
-```{python}
-#| echo: false
-Markdown( f"$${BasisToLatexString( monomial_basis, "M" )}$$" )
-```
-
-```{python}
-PlotPolynomialBasis( basis_name, degree, x, domain )
+```{=latex}
+\begin{equation*}
+    \Matrix{M}
+    =
+    \begin{bmatrix}
+        x^0 \\
+        x^1 \\
+        x^2 \\
+    \end{bmatrix}
+\end{equation*}
 ```
 
 Using the change of basis mnemonic, $\Matrix{T} \equiv \Matrix{M}$, however we need to do something different with the "from basis" and "from_coefficient" ( $\Matrix{F}$ and $\Vector{f}$, respectively).
@@ -152,62 +165,139 @@ and since our target function is "defined" as
 
 Proceeding with assembly of the left-hand side, which is often referred to as the *Gram matrix*
 
-```{python}
-#| eval: true
-#| echo: false
-basis = BasisPolynomialListToExprMatrix( monomial_basis )
-ScalarProjection()( target_fun, basis_name, degree, domain )
-D = ScalarProjection.AssembleGramMatrix( basis, domain, x )
-```
-
 ```{=latex}
-\begin{equation}
-    \Matrix{D} = \Inner{\Matrix{M}}{\Matrix{M}}
-\end{equation}
-```
-
-```{python}
-#| echo: false
-Markdown( r"$$\Matrix{D}=" + f"{sympy.latex( D )}$$" )
+\begin{align*}
+    %%% EQN 1
+    \Matrix{D} &= \Inner{\Matrix{M}}{\Matrix{M}} \\
+    %%% EQN 2
+    \Matrix{D} &=
+    \begin{bmatrix}
+        \int_{0}^{1} x^0 x^0 \mathop{dx} & \int_{0}^{1} x^0 x^1 \mathop{dx} & \int_{0}^{1} x^0 x^2 \mathop{dx} \\
+        \int_{0}^{1} x^1 x^0 \mathop{dx} & \int_{0}^{1} x^1 x^1 \mathop{dx} & \int_{0}^{1} x^1 x^2 \mathop{dx} \\
+        \int_{0}^{1} x^2 x^0 \mathop{dx} & \int_{0}^{1} x^2 x^1 \mathop{dx} & \int_{0}^{1} x^2 x^2 \mathop{dx} \\
+    \end{bmatrix} \\
+    %%% EQN 3
+    \Matrix{D} &=
+    \begin{bmatrix}
+        1           & \frac{1}{2}  & \frac{1}{3} \\
+        \frac{1}{2} & \frac{1}{3}  & \frac{1}{4} \\
+        \frac{1}{3} & \frac{1}{4}  & \frac{1}{5} \\
+    \end{bmatrix} \\
+\end{align*}
 ```
 
 And the right-hand side, often referred to as the *force vector*
 
-```{python}
+```{julia}
 #| eval: true
 #| echo: false
-basis = BasisPolynomialListToExprMatrix( monomial_basis )
-ScalarProjection()( target_fun, basis_name, degree, domain )
-f = ScalarProjection.AssembleForceVector( target_fun, basis, domain, x )
+let
+    using SymbolicNumericIntegration: integrate
+
+    Symbolics.@variables x
+    target_fun = sin( π * x )^2 + cos( x ) - 1;
+    domain = [0, 1]
+    degree = 2
+    basis_name = lecture_01.Monomial
+    monomial_basis = PolynomialBasisFunction( basis_name, degree, x, domain )
+    
+    var_tuple = fill( ( x, domain[1], domain[2] ), ( degree + 1, degree + 1 ) )
+    integrand = monomial_basis * transpose( monomial_basis )
+    D = integrate.( integrand )
+    D = integrate.( integrand, var_tuple; detailed=false )
+    D = to_numeric( Float64, D)
+
+    var_tuple = fill( ( x, domain[1], domain[2] ), ( degree + 1, 1 ) )
+    integrand = monomial_basis * target_fun
+    F = integrate.( integrand )
+    F = integrate.( integrand, var_tuple; detailed=false, symbolic=true,abstol=1e-20, num_steps=10, num_trials=100, verbose=true )
+    d = vec( D \ F )
+    approx_fun = transpose( d ) * monomial_basis
+
+    Plots.plot( target_fun, domain[1], domain[2], linewidth=4, label="" )
+    Plots.plot!( approx_fun, domain[1], domain[2], linewidth=3, label="" )
+end
 ```
 
 ```{=latex}
-\begin{equation}
-    \Matrix{C}\Vector{c} = \Vector{f} = \Inner{\Matrix{M}}{g(x)}
-\end{equation}
-```
-
-```{python}
-#| echo: false
-Markdown( r"$$\Vector{f}=" + f"{sympy.latex( f )}$$" )
+\begin{align*}
+    %%% EQN 1
+    \Matrix{C}\Vector{c} = \Vector{f} &= \Inner{\Matrix{M}}{g(x)} \\
+    %%% EQN 2
+    \Vector{f} &=
+    \begin{bmatrix}
+        \int_{0}^{1} x^0 \left( \sin(\pi x)^2 + \cos(x) - 1 \right) \mathop{dx} \\
+        \int_{0}^{1} x^1 \left( \sin(\pi x)^2 + \cos(x) - 1 \right) \mathop{dx} \\
+        \int_{0}^{1} x^2 \left( \sin(\pi x)^2 + \cos(x) - 1 \right) \mathop{dx} \\
+    \end{bmatrix} \\
+    %%% EQN 3
+    \Vector{f} &=
+    \begin{bmatrix}
+        \sin(1) - \frac{1}{2}                           \\
+        \cos(1) + \sin(1) - \frac{5}{4}                 \\
+        2\cos(1) - \sin(1) + \frac{2\pi^2 - 3}{12\pi^2} \\
+    \end{bmatrix} \\
+    %%% EQN 4
+    \Vector{f} &\approx
+    \begin{bmatrix}
+        0.3415  \\
+        0.1318  \\
+        0.04714 \\
+    \end{bmatrix} \\
+\end{align*}
 ```
 
 Resulting in the linear system of equations
 
-```{python}
-#| echo: false
-Markdown( f"$${sympy.latex( D )}" + r"\Vector{d} = " + f"{sympy.latex( f )}$$" )
-```
-
-```{python}
-#| echo: false
-Markdown( r"$$\Vector{d} = " + f"{sympy.latex( D )}" + "^{-1}" + f"{sympy.latex( f )}$$" )
-```
-
-```{python}
-#| echo: false
-d = D.solve( f )
-Markdown( r"$$\Vector{d} = " + f"{sympy.latex( D.solve( f ) )}$$" )
+```{=latex}
+\begin{align*}
+    %%% EQN 1
+    \begin{bmatrix}
+        1           & \frac{1}{2}  & \frac{1}{3} \\
+        \frac{1}{2} & \frac{1}{3}  & \frac{1}{4} \\
+        \frac{1}{3} & \frac{1}{4}  & \frac{1}{5} \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        d_0 \\
+        d_1 \\
+        d_2
+    \end{bmatrix}
+    &=
+    \begin{bmatrix}
+        0.3415  \\
+        0.1318  \\
+        0.04714 \\
+    \end{bmatrix} \\
+    %%% EQN 2
+    \begin{bmatrix}
+        d_0 \\
+        d_1 \\
+        d_2
+    \end{bmatrix}
+    &=
+    \begin{bmatrix}
+        1           & \frac{1}{2}  & \frac{1}{3} \\
+        \frac{1}{2} & \frac{1}{3}  & \frac{1}{4} \\
+        \frac{1}{3} & \frac{1}{4}  & \frac{1}{5} \\
+    \end{bmatrix}^{-1}
+    \begin{bmatrix}
+        0.3415  \\
+        0.1318  \\
+        0.04714 \\
+    \end{bmatrix} \\
+    %%% EQN 2
+    \begin{bmatrix}
+        d_0 \\
+        d_1 \\
+        d_2
+    \end{bmatrix}
+    &\approx
+    \begin{bmatrix}
+        -0.2565  \\
+         4.523  \\
+        -4.99 \\
+    \end{bmatrix}
+\end{align*}
 ```
 
 Finally, we construct our polynomial approximation
@@ -218,92 +308,68 @@ Finally, we construct our polynomial approximation
 \end{equation}
 ```
 
-```{python}
-#| echo: false
-u = ( d.T * basis )[0]
-Markdown( r"$$\tilde{g}(x) \approx " + f"{sympy.latex( u.n(4) )}$$" )
-```
-
-```{python}
-#| echo: false
-#| warning: false
-#| error: false
-plt  = spb.plot( target_fun, (x, domain[0], domain[1] ), label=f"$g(x)$", show=False )
-plt += spb.plot( u,          (x, domain[0], domain[1] ), label=r"$\tilde{g}(x)$", show=False )
-plt.show()
+```{=latex}
+\begin{equation*}
+    \tilde{g}(x) \approx  -4.99 x^2 + 4.523 x^1 - 0.2565 x^0
+\end{equation*}
 ```
 
 Now, that doesn't appear to be a particularly good fit, but let's look at what happens if we use a higher-order polynomial function in our approximation.
 But first, let's collect our work above to write a simple class that performs the scalar projection:
 
-```{python}
+```{julia}
 #| eval: false
-class ScalarProjection:
-    def __call__(self, target_fun, basis_name, degree, domain ):
-        variate = list( target_fun.atoms( sympy.Symbol ) )[0]
-        basis = PolynomialBasisFunction( basis_name, degree, variate, domain )
-        basis = BasisPolynomialListToExprMatrix( basis )
-        M = self.AssembleGramMatrix( basis, domain, variate )
-        F = self.AssembleForceVector( target_fun, basis, domain, variate )
-        d = M.solve( F )
-        u = ( d.T * basis )[0]
-        return u, M, F, basis, d
+using SymbolicNumericIntegration: integrate
+function ScalarProjection( target_fun, basis_name, degree, domain )
+    integrate_params = Dict(
+        :abstol     => 1e-12,
+        :detailed   => false,
+        :symbolic   => false,
+    )
 
-    @staticmethod
-    def AssembleGramMatrix( basis, domain, variate ):
-        basis_dim = len( basis )
-        var = ( variate, domain[0], domain[1] )
-        M = sympy.zeros( basis_dim )
-        for i in range( 0, basis_dim ):
-            for j in range( 0, basis_dim ):
-                M[i,j] = integrate( basis[i] * basis[j], var )
-        return M
+    function AssembleGramMatrix()
+        var_tuple = fill( ( variate, domain[1], domain[2] ), ( basis_dim, basis_dim ) )
+        D = integrate.( basis * transpose( basis ), var_tuple; integrate_params... )
+        return D
+    end
 
-    @staticmethod
-    def AssembleForceVector( target_fun, basis, domain, variate ):
-        basis_dim = len( basis )
-        var = ( variate, domain[0], domain[1] )
-        F = sympy.zeros( rows=basis_dim, cols=1 )
-        for i in range( 0, basis_dim ):
-            F[i] = integrate( basis[i] * target_fun, var )
+    function AssembleForceVector( target_fun, basis, domain, variate )
+        var_tuple = fill( ( variate, domain[1], domain[2] ), ( basis_dim, 1 ) )
+        F = integrate.( basis * target_fun, var_tuple; integrate_params... )
         return F
+    end
+
+    variate = Symbolics.Num( Symbolics.get_variables( target_fun )[1] )
+    basis = PolynomialBasisFunction( basis_name, degree, variate, domain )
+    basis_dim = length( basis )
+    M = AssembleGramMatrix( )
+    F = AssembleForceVector( )
+    d = vec( M \ F )
+    u = transpose( d ) * basis
+    return u, M, F, basis, d
+end
 ```
 
 Now lets see what happens if we use a high-order polynomial for our approximation -- this time a quartic polynomial
 
-```{python}
-#| echo: false
-degree = 4
-monomial_basis = PolynomialBasisFunction( basis_name, degree, x, domain )
+```{=latex}
+\begin{equation*}
+    \tilde{g}(x) = 20.42 x^4 - 40.76 x^3 + 21.15 x^2 - 1.265 x^1 + 0.0313 x^0
+\end{equation*}
 ```
 
-```{python}
+```{julia}
 #| echo: false
-Markdown( f"$${BasisToLatexString( monomial_basis, "M" )}$$" )
-```
-
-```{python}
-#| echo: false
-PlotPolynomialBasis( basis_name, degree, x, domain )
-```
-
-```{python}
-#| echo: false
-u = ScalarProjection()( target_fun, basis_name, degree, domain )[0]
-```
-
-```{python}
-#| echo: false
-Markdown( r"$$\tilde{g}(x) \approx " + f"{sympy.latex( u.n(4) )}$$" )
-```
-
-```{python}
-#| echo: false
-#| warning: false
-#| error: false
-plt  = spb.plot( target_fun, (x, domain[0], domain[1] ), label=f"$g(x)$", show=False )
-plt += spb.plot( u,          (x, domain[0], domain[1] ), label=r"$\tilde{g}(x)$", show=False )
-plt.show()
+let
+    Symbolics.@variables x target_fun(x)
+    target_fun = sin( π * x )^2 + cos( x ) - 1
+    degree = 4
+    domain = [0, 1]
+    basis_name = lecture_01.Monomial
+    u, M, F, basis, d = ScalarProjection( target_fun, basis_name, degree, domain )
+    Plots.plot( target_fun, domain[1], domain[2], linewidth=4, label="" )
+    Plots.plot!( u, domain[1], domain[2], linewidth=3, label="" )
+end
 ```
 
 As we can clearly see, the higher-order polynomial is a much better approximation of the function.
@@ -311,13 +377,27 @@ We can perform a "degree-refinement study" to explore and quantify the improveme
 
 ## Convergence of the Galerkin method under degree refinement
 
-```{python}
+```{julia}
 #| echo: false
-l2_error = []
-degree = [ i for i in range( 0, 13 ) ]
-for p in degree:
-    u = ScalarProjectionFast()( target_fun, basis_name, p, domain )[0]
-    l2_error.append( ComputeL2ErrorFast( sympy.lambdify( x, target_fun ), u, domain ) )
+let
+    Symbolics.@variables x
+    target_fun = sin( π * x )^2 + cos( x ) - 1
+    domain = [0, 1]
+    basis_name = lecture_01.Legendre
+
+    l2_error = []
+    degree = 0 : 5
+    for p in degree
+        approx_fun = ScalarProjection( target_fun, basis_name, p, domain )[1]
+        err = ComputeL2Error( target_fun, approx_fun, domain )
+        append!( l2_error, err )
+    end
+
+    Plots.plot( degree, l2_error, markershape=:circle, linewidth=2 )
+    Plots.plot!( yscale=:log10, minorgrid=true )
+    Plots.xlabel!( "Degree" )
+    Plots.ylabel!( "L2 Error" )
+end
 ```
 
 ```{python}

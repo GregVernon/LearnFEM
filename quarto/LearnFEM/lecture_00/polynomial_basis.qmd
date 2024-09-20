@@ -240,7 +240,7 @@ Also included are various other orthogonal polynomials such as the Leguerre, Lob
 To simplify accessing the various basis polynomials later in this text, let's define an interface method:
 
 ```{julia}
-function PolynomialBasisFunctions( basis_name, degree, variate, domain )
+function PolynomialBasisFunction( basis_name, degree, variate, domain )
         if basis_name == "Bernstein"
             basis = BernsteinBasis( degree, variate, domain )
         elseif basis_name == "Chebyshev"

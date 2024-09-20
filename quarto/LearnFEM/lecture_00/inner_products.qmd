@@ -9,7 +9,7 @@ import Symbolics, SymbolicNumericIntegration, Latexify, SymbolicUtils, LaTeXStri
 import LinearAlgebra
 import Plots
 include( "lecture_00.jl" )
-using .lecture_00: ChangeOfVariable, PlotPolynomialBasis, PolynomialBasisFunctions
+using .lecture_00: ChangeOfVariable, PlotPolynomialBasis, PolynomialBasisFunction
 ```
 
 # Inner Products

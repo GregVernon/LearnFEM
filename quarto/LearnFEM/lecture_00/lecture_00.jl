@@ -32,7 +32,7 @@ module lecture_00
     end
 
     ## Basis Functions
-    function PolynomialBasisFunctions( basis_name, degree, variate, domain )
+    function PolynomialBasisFunction( basis_name, degree, variate, domain )
         if basis_name == "Bernstein"
             basis = BernsteinBasis( degree, variate, domain )
         elseif basis_name == "Chebyshev"
@@ -85,7 +85,7 @@ module lecture_00
     function LegendreBasis( degree, variate, domain )
         variate = ChangeOfVariable( variate, domain, [-1, 1] )
         basis = []
-        for i = 0 : degree + 1
+        for i = 0 : degree
             if i == 0
                 append!( basis, variate^0 )
             elseif i == 1
@@ -117,7 +117,7 @@ module lecture_00
 
     ## PLOTTING
     function PlotPolynomialBasis( basis_name, degree, variate, domain )
-        basis = PolynomialBasisFunctions( basis_name, degree, variate, domain )
+        basis = PolynomialBasisFunction( basis_name, degree, variate, domain )
         basis_id_string = BASIS_ID_STRINGS[basis_name]
         domain = to_numeric( Float64, domain )
         plot = Plots.plot( basis[1], domain[1], domain[2], label="\$ $(basis_id_string)_0 \$" )

@@ -34,8 +34,8 @@ book:
         - lecture_00/inner_products.qmd
         - lecture_00/change_of_basis.qmd
     - part: lecture_01/intro.qmd
-    #   chapters:
-    #     - lecture_01/galerkin_function_approximation.qmd
+      chapters:
+        - lecture_01/galerkin_function_approximation.qmd
     #     - lecture_01/galerkin_function_approximation_with_boundary_conditions.qmd
     # - summary.qmd
     # - references.qmd
@@ -70,21 +70,22 @@ format:
         };
         </script>
   pdf:
-    pdf-engine: pdflatex
-    # pdf-engine-opts:
-    #   - '--no-shell-escape'
-    #   - '--halt-on-error'
-    # mainfont: "OpenSans-Regular"
-    # monofont: "JuliaMono"
+    pdf-engine: xelatex
+    latex-auto-install: true
+    latex-clean: true
+    latex-tinytex: false
+    keep-tex: true
+    mainfont: "Times New Roman"
+    monofont: "JuliaMono"
     documentclass: scrreprt
     include-in-header:
       text: |
-        \usepackage[utf8]{inputenc}
         \usepackage{amsmath}
         \usepackage{amssymb}
+        \usepackage{mathpazo}
         \usepackage{mathtools}
         \usepackage{bm}
-        \usepackage{breqn}
+        %\usepackage{breqn}
         \newcommand{\Real}{\mathbb{R}}
         \newcommand{\Inner}[2]{\left\langle #1, #2 \right\rangle}
         \newcommand{\Vector}[1]{\mathbf{\mathit{#1}}}

@@ -1,15 +1,12 @@
 ---
-engine: julia
+jupyter: mkernel
 ---
-```{julia}
-#| include: false
-import Pkg
-Pkg.activate( "../LearnFEM" )
-import Symbolics, Latexify, SymbolicUtils, LaTeXStrings, Nemo
-import LinearAlgebra
-import Plots
-include( "lecture_00.jl" )
-using .lecture_00: ChangeOfVariable, PlotPolynomialBasis
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
 ```
 
 # Polynomial Basis
@@ -21,63 +18,93 @@ Let's investigate.
 ## The Monomial Basis
 The polynomial basis probably most familiar to the reader is the *monomial basis*, sometimes called the *power basis*.
 
-```{julia}
-function MonomialBasis( degree, variate, domain )
-    variate = ChangeOfVariable( variate, domain, [0, 1] )
-    basis = []
-    for n in range( 0, degree )
-        append!( basis, variate^n )
+```{matlab}
+%| output: false
+function basis = MonomialBasis( degree, variate, domain )
+    variate = ChangeOfVariable( variate, domain, [0, 1] );
+    basis = sym( zeros( degree + 1, 1 ) );
+    for ii = 1 : degree + 1
+        basis(ii) = variate^( ii - 1 );
     end
-    return basis
 end
 ```
 
 These basis polynomials are, as the name suggests, the familiar monomials and, as such, is normally defined over the unit domain $[0,1]$.
 
-```{julia}
-#| output: false
-import Symbolics
-degree = 4
-Symbolics.@variables x
-domain = [ Symbolics.Num( 0 ), Symbolics.Num( 1 ) ]
-monomial_basis = MonomialBasis( degree, x, domain )
+```{matlab}
+%| output: false
+x = sym( "x", "real" );
+degree = 3;
+domain = sym( [0, 1] );
+monomial_basis = MonomialBasis( degree, x, domain );
 ```
 
 ```{=latex}
 \begin{equation*}
-    \Matrix{M}
+    \Matrix{M}^3(x)
     =
     \begin{bmatrix}
         x^0 \\
         x^1 \\
         x^2 \\
         x^3 \\
-        x^4
     \end{bmatrix}
 \end{equation*}
 ```
 
-```{julia}
-#| echo: false
-p = PlotPolynomialBasis( "Monomial", degree, x, domain )
+```{matlab}
+%| echo: false
+
+x = sym( "x", "real" );
+domain = sym( [0, 1] );
+
+figure
+for degree = 0 : 3
+    subplot( 2, 2, degree + 1 )
+    hold on
+    monomial_basis = MonomialBasis( degree, x, domain );
+    for ii = 1 : length( monomial_basis )
+        fplot( monomial_basis(ii), double( domain ), LineWidth=2, DisplayName="$M_" + num2str(ii) + "$" )
+    end
+    ax = gca;
+    ax.YLim = [0, 1];
+    legend( Location="northoutside", Orientation="horizontal" )
+end
 ```
 
 However, including the change of variable operator in its construction allows for defining the monomial basis over any domain, such as the bi-unit domain $[-1,1]$
 
-```{julia}
-#| output: false
-domain = [ Symbolics.Num( -1 ), Symbolics.Num( 1 ) ]
-monomial_basis = MonomialBasis( degree, x, domain )
+```{=latex}
+\begin{equation*}
+    \Matrix{M}^3(x)
+    =
+    \begin{bmatrix}
+        \left( \frac{x + 1}{2} \right)^0 \\
+        \left( \frac{x + 1}{2} \right)^1 \\
+        \left( \frac{x + 1}{2} \right)^2 \\
+        \left( \frac{x + 1}{2} \right)^3 \\
+    \end{bmatrix}
+\end{equation*}
 ```
 
-<!-- ```{julia}
-#| echo: false
-Markdown( f"$${BasisToLatexString( monomial_basis, "M" )}$$" )
-``` -->
+```{matlab}
+%| echo: false
+figure
+subplot( 2, 1, 1 )
+hold on
+for ii = 1 : length( monomial_basis )
+    fplot( monomial_basis(ii), [-1, 1], LineWidth=2, DisplayName="$M_" + num2str(ii) + "$" )
+end
+ax1 = gca;
+ax1.XLim = [-1, 1];
 
-```{julia}
-#| echo: false
-p = PlotPolynomialBasis( "Monomial", degree, x, domain )
+subplot( 2, 1, 2 )
+domain = sym( [-1, 1] );
+monomial_basis = MonomialBasis( degree, x, domain );
+hold on
+for ii = 1 : length( monomial_basis )
+    fplot( monomial_basis(ii), double( domain ), LineWidth=2, DisplayName="$M_" + num2str(ii) + "$" )
+end
 ```
 
 ## The Lagrange Basis
@@ -85,36 +112,84 @@ p = PlotPolynomialBasis( "Monomial", degree, x, domain )
 The Lagrange basis is a so-called *interpolatory basis* and has wide applications in interpolation and approximation.
 In fact, because of its interpolation properties it is the *de facto* standard basis used in traditional finite element codes.
 It also gives rise to the Lagrange interpolating polynomial.
+Note that the Lagrange basis is usually defined over the bi-unit domain $[-1, 1]$.
 
-```{julia}
-function LagrangeBasis( degree, variate, domain )
-    node = LinRange( domain[1], domain[2], degree + 1 )
-    basis = []
-    for i = 1 : degree + 1
-        append!( basis, variate^0 )
-        for j = 1 : degree + 1
-            if i != j
-                basis[i] *= ( ( variate - node[j] ) / ( node[i] - node[j] ) )
+```{matlab}
+%| output: false
+function basis = LagrangeBasis( degree, variate, domain )
+    node = linspace( domain(1), domain(2), degree + 1 );
+    basis = sym( zeros( degree+1, 1 ) );
+    for ii=1:degree+1
+        basis(ii) = variate ^ 0;
+        for jj = 1 : degree + 1
+            if ii ~= jj
+                basis(ii) = basis(ii) * ( ( variate - node(jj) ) / ( node(ii) - node(jj) ) );
             end
         end
     end
-    return basis
 end
 ```
 
-Note that the Lagrange basis is usually defined over the bi-unit domain $[-1, 1]$.
-
-```{julia}
-#| output: false
-degree = 4
-Symbolics.@variables x
-domain = [ Symbolics.Num( -1 ), Symbolics.Num( 1 ) ]
-lagrange_basis = LagrangeBasis( degree, x, domain )
+```{=latex}
+\begin{align*}
+    \begin{array}{ll}
+        \Matrix{L}^0(x)
+        =
+        \begin{bmatrix}
+            x^0 \\
+        \end{bmatrix}
+        %%%%%%%%%%%%%%%%
+        &
+        %%%%%%%%%%%%%%%%
+        \Matrix{L}^1(x)
+        =
+        \begin{bmatrix}
+            -\frac{x^1}{2} + \frac{x^0}{2}\\
+             \frac{x^1}{2} + \frac{x^0}{2}
+        \end{bmatrix}
+        %%%%%%%%%%%%%%%%
+        \\
+        %%%%%%%%%%%%%%%%
+        \Matrix{L}^2(x)
+        =
+        \begin{bmatrix}
+            \frac{x^2}{2} - \frac{x^1}{2}\\
+            x^0-x^2 \\
+            \frac{x^2}{2} + \frac{x^1}{2}
+        \end{bmatrix}
+        %%%%%%%%%%%%%%%%
+        &
+        %%%%%%%%%%%%%%%%
+        \Matrix{L}^3(x)
+        =
+        \begin{bmatrix}
+            -\frac{9x^3}{16}  + \frac{9x^2}{16} + \frac{x^1}{16}   - \frac{x^0}{16}  \\
+             \frac{27x^3}{16} - \frac{9x^2}{16} - \frac{27x^1}{16} + \frac{9x^0}{16} \\
+            -\frac{27x^3}{16} - \frac{9x^2}{16} + \frac{27x^1}{16} + \frac{9x^0}{16} \\
+             \frac{9x^3}{16}  + \frac{9x^2}{16} - \frac{x^1}{16}   - \frac{x^0}{16}
+        \end{bmatrix}
+    \end{array}
+\end{align*}
 ```
 
-```{julia}
-#| echo: false
-PlotPolynomialBasis( "Lagrange", degree, x, domain )
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+domain = sym( [-1, 1] );
+
+figure
+for degree = 0 : 3;
+    subplot( 2, 2, degree + 1 )
+    hold on
+    lagrange_basis = LagrangeBasis( degree, x, domain );
+    % latex( expand( lagrange_basis ) )
+    for ii = 1 : length( lagrange_basis )
+        fplot( lagrange_basis(ii), double( domain ), LineWidth=2, DisplayName="$L_" + num2str(ii) + "$" )
+    end
+    ax = gca;
+    ax.YLim = [-0.5, 1.5];
+    legend( Location="northoutside", Orientation="horizontal" )
+end
 ```
 
 ## The Bernstein Basis
@@ -125,31 +200,77 @@ We will talk more about these later.
 
 Note that the Bernstein basis is usually defined over the unit domain $[0,1]$.
 
-```{julia}
-function BernsteinBasis( degree, variate, domain )
-    variate = ChangeOfVariable( variate, domain, [0, 1] )
-    basis = []
-    for i = 0 : degree
-        bin_coeff = binomial( degree, i )
-        monomial = variate^i
-        polynomial = ( 1 - variate ) ^ ( degree - i )
-        append!( basis, bin_coeff * monomial * polynomial )
+```{matlab}
+%| output: false
+function basis = BernsteinBasis( degree, variate, domain )
+    variate = ChangeOfVariable( variate, domain, [0 1] );
+    basis = sym( zeros( degree + 1, 1 ) );
+    for a=0:degree
+        basis(a+1) = nchoosek( degree, a ) * ( variate ^ a ) * ( ( 1 - variate ) ^ ( degree - a ) );
     end
-    return basis
 end
 ```
 
-```{julia}
-#| ouput: false
-degree = 4
-Symbolics.@variables x
-domain = [ Symbolics.Num( 0 ), Symbolics.Num( 1 ) ]
-bernstein_basis = BernsteinBasis( degree, x, domain )
+```{=latex}
+\begin{align*}
+    \begin{array}{ll}
+        \Matrix{B}^0(x)
+        =
+        \begin{bmatrix}
+            x^0
+        \end{bmatrix}
+        %%%%%%%%%%%%%%%%
+        &
+        %%%%%%%%%%%%%%%%
+        \Matrix{B}^1(x)
+        =
+        \begin{bmatrix}
+            x^0-x^1 \\
+            x^1
+        \end{bmatrix}
+        %%%%%%%%%%%%%%%%
+        \\
+        %%%%%%%%%%%%%%%%
+        \Matrix{B}^2(x)
+        =
+        \begin{bmatrix}
+            x^0 - 2x^1 + x^2 \\
+            2x^1 - 2x^2 \\
+            x^2
+        \end{bmatrix}
+        %%%%%%%%%%%%%%%%
+        &
+        %%%%%%%%%%%%%%%%
+        \Matrix{B}^3(x)
+        =
+        \begin{bmatrix}
+            x^0 - 3x^1 + 3x^2 - x^3 \\
+            3x^0 - 6x^2 + 3x^3 \\
+            3x^2 - 3x^3 \\
+            x^3
+        \end{bmatrix}
+    \end{array}
+\end{align*}
 ```
 
-```{julia}
-#| echo: false
-PlotPolynomialBasis( "Bernstein", degree, x, domain )
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+domain = sym( [0, 1] );
+
+figure
+for degree = 0 : 3;
+    subplot( 2, 2, degree + 1 )
+    hold on
+    bernstein_basis = BernsteinBasis( degree, x, domain );
+    % latex( expand( bernstein_basis ) )
+    for ii = 1 : length( bernstein_basis )
+        fplot( bernstein_basis(ii), double( domain ), LineWidth=2, DisplayName="$B_" + num2str(ii) + "$" )
+    end
+    ax = gca;
+    ax.YLim = [0, 1];
+    legend( Location="northoutside", Orientation="horizontal" )
+end
 ```
 
 ## The Legendre basis
@@ -157,37 +278,86 @@ PlotPolynomialBasis( "Bernstein", degree, x, domain )
 The Legendre basis is the first of the orthogonal basis, so-called each basis polynomial is orthogonal in the $L^2$-norm to every other polynomial in the basis --- we'll define what this means later.
 For now, it's enough to know that this orthogonality property provides a number of desirable numerical properties, even at high polynomial degree (especially in contrast to the Lagrange basis), and will prove especially useful when we later develop numerical quadrature schemes.
 
-```{julia}
-function LegendreBasis( degree, variate, domain )
-    variate = ChangeOfVariable( variate, domain, [-1, 1] )
-    basis = []
-    for i = 0 : degree + 1
-        if i == 0
-            append!( basis, variate^0 )
-        elseif i == 1
-            append!( basis, variate^1 )
-        else
-            n = i - 1
-            term_1 = ( 2 * n + 1 ) * variate * basis[i]
-            term_2 = n * basis[i-1]
-            append!( basis, ( term_1 - term_2 ) / ( n + 1 ) )
-        end
+```{matlab}
+%| output: false
+function basis = LegendreBasis( degree, variate, domain )
+variate = ChangeOfVariable( variate, domain, [-1, 1] );
+basis = sym( zeros( degree + 1, 1 ) );
+for ii = 0 : degree
+    if ii == 0
+        basis(ii+1) = variate ^ 0 ;
+    elseif ii == 1
+        basis(ii+1) = variate ^ 1;
+    else
+        n = ii - 1;
+        term1 = ( 2 * n + 1 ) * variate * basis(n+1);
+        term2 = n * basis(n);
+        basis(ii+1) = simplify ( ( term1 - term2 ) / ( n + 1 ) );
     end
-    return basis
+end
 end
 ```
 
-```{julia}
-#| output: false
-degree = 4
-Symbolics.@variables x
-domain = [ Symbolics.Num( -1 ), Symbolics.Num( 1 ) ]
-legendre_basis = LegendreBasis( degree, x, domain )
+```{=latex}
+\begin{align*}
+    \begin{array}{ll}
+        \Matrix{P}^0(x)
+        =
+        \begin{bmatrix}
+            x^0
+        \end{bmatrix}
+        %%%%%%%%%%%%%%%%
+        &
+        %%%%%%%%%%%%%%%%
+        \Matrix{P}^1(x)
+        =
+        \begin{bmatrix}
+            x^0 \\
+            x^1
+        \end{bmatrix}
+        %%%%%%%%%%%%%%%%
+        \\
+        %%%%%%%%%%%%%%%%
+        \Matrix{P}^2(x)
+        =
+        \begin{bmatrix}
+            x^0 \\
+            x^1 \\
+            -\frac{x^0}{2} + \frac{3x^2}{2}
+        \end{bmatrix}
+        %%%%%%%%%%%%%%%%
+        &
+        %%%%%%%%%%%%%%%%
+        \Matrix{P}^3(x)
+        =
+        \begin{bmatrix}
+            x^0 \\
+            x^1 \\
+            -\frac{x^0}{2} + \frac{3x^2}{2} \\
+            -\frac{3x^1}{2} + \frac{5x^3}{2}
+        \end{bmatrix}
+    \end{array}
+\end{align*}
 ```
 
-```{julia}
-#| echo: false
-PlotPolynomialBasis( "Legendre", degree, x, domain )
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+domain = sym( [-1, 1] );
+
+figure
+for degree = 0 : 3;
+    subplot( 2, 2, degree + 1 )
+    hold on
+    legendre_basis = LegendreBasis( degree, x, domain );
+    % latex( expand( legendre_basis ) )
+    for ii = 1 : length( legendre_basis )
+        fplot( legendre_basis(ii), double( domain ), LineWidth=2, DisplayName="$P_" + num2str(ii) + "$" )
+    end
+    ax = gca;
+    ax.YLim = [-1, 1];
+    legend( Location="northoutside", Orientation="horizontal" )
+end
 ```
 
 ## The Chebyshev basis
@@ -196,34 +366,83 @@ The Chebyshev basis is another orthogonal basis, however its orthogonality is de
 We will discuss this nuance later, but it is sufficient to say that it too has many beneficial numerical properties stemming from its orthogonality and is incredibly important in modern approximation theory.
 Due to various transliterations of its namesake, [Pafnuty Chebyshev](https://en.wikipedia.org/wiki/Pafnuty_Chebyshev), it is sometimes written as *Tchebycheff*, *Tchebyshev* (French), or *Tschebyschow* (German).
 
-```{julia}
-function ChebyshevBasis( degree, variate, domain )
-    variate = ChangeOfVariable( variate, domain, [-1, 1] )
-    basis = []
-    for i = 0 : degree
-        if i == 0
-            append!( basis, variate^0 )
-        elseif i == 1
-            append!( basis, variate^1 )
+```{matlab}
+%| output: false
+function basis = ChebyshevBasis( degree, variate, domain )
+    variate = ChangeOfVariable( variate, domain, [-1, 1] );
+    basis = sym( zeros( degree + 1, 1 ) );
+    for ii = 0 : degree
+        if ii == 0
+            basis(ii+1) = variate ^ 0;
+        elseif ii == 1
+            basis(ii+1) = variate ^ 1;
         else
-            append!( basis, ( 2 * variate * basis[i] ) - basis[i-1] )
+            basis(ii+1) = ( 2 * variate * basis(ii) ) - basis(ii-1);
         end
     end
-    return basis
 end
 ```
 
-```{julia}
-#| output: false
-degree = 4
-Symbolics.@variables x
-domain = [ Symbolics.Num( -1 ), Symbolics.Num( 1 ) ]
-chebyshev_basis = ChebyshevBasis( degree, x, domain )
+```{=latex}
+\begin{align*}
+    \begin{array}{ll}
+        \Matrix{T}^0(x)
+        =
+        \begin{bmatrix}
+            x^0
+        \end{bmatrix}
+        %%%%%%%%%%%%%%%%
+        &
+        %%%%%%%%%%%%%%%%
+        \Matrix{T}^1(x)
+        =
+        \begin{bmatrix}
+            x^0 \\
+            x^1
+        \end{bmatrix}
+        %%%%%%%%%%%%%%%%
+        \\
+        %%%%%%%%%%%%%%%%
+        \Matrix{T}^2(x)
+        =
+        \begin{bmatrix}
+            x^0 \\
+            x^1 \\
+            -x^0 + x^2
+        \end{bmatrix}
+        %%%%%%%%%%%%%%%%
+        &
+        %%%%%%%%%%%%%%%%
+        \Matrix{T}^3(x)
+        =
+        \begin{bmatrix}
+            x^0 \\
+            x^1 \\
+            -x^0 + x^2 \\
+            -3x^1 + 4x^3
+        \end{bmatrix}
+    \end{array}
+\end{align*}
 ```
 
-```{julia}
-#| echo: false
-PlotPolynomialBasis( "Chebyshev", degree, x, domain )
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+domain = sym( [-1, 1] );
+
+figure
+for degree = 0 : 3;
+    subplot( 2, 2, degree + 1 )
+    hold on
+    chebyshev_basis = ChebyshevBasis( degree, x, domain );
+    % latex( expand( chebyshev_basis ) )
+    for ii = 1 : length( chebyshev_basis )
+        fplot( chebyshev_basis(ii), double( domain ), LineWidth=2, DisplayName="$T_" + num2str(ii) + "$" )
+    end
+    ax = gca;
+    ax.YLim = [-1, 1];
+    legend( Location="northoutside", Orientation="horizontal" )
+end
 ```
 
 ## Other Basis Polynomials
@@ -239,7 +458,8 @@ Also included are various other orthogonal polynomials such as the Leguerre, Lob
 
 To simplify accessing the various basis polynomials later in this text, let's define an interface method:
 
-```{julia}
+```{matlab}
+%| output: false
 function PolynomialBasisFunction( basis_name, degree, variate, domain )
         if basis_name == "Bernstein"
             basis = BernsteinBasis( degree, variate, domain )

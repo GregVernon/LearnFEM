@@ -122,6 +122,7 @@ Finally, we compute the eigenvalues of the companion matrix to recover the (appr
 ```
 
 ```{matlab}
+%| output: false
 function [eigvals, ritz] = ComputeEigenvalues( A, tol, maxiter )
   num_digits = ceil( log10( 1/tol ) );
   ritz = sym( zeros( size( A, 1 ), maxiter + 1 ) );
@@ -165,6 +166,7 @@ ax.XAxisLocation = "origin";
 ```
 
 ```{matlab}
+%| output: false
 function eigvals = PolynomialRoots( polynomial )
   C = CompanionMatrix( polynomial )
   eigvals = ComputeEigenvalues( C, 1e-16, 1e3 );

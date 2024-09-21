@@ -30,8 +30,8 @@ book:
       chapters:
         - lecture_00/change_of_variable.qmd
         - lecture_00/polynomial_roots.qmd
-    #     - lecture_00/polynomial_basis.qmd
-    #     - lecture_00/inner_products.qmd
+        - lecture_00/polynomial_basis.qmd
+        - lecture_00/inner_products.qmd
     #     - lecture_00/change_of_basis.qmd
     # - part: lecture_01/intro.qmd
     #   chapters:

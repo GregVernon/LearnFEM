@@ -1,15 +1,12 @@
 ---
-engine: julia
+jupyter: mkernel
 ---
-```{julia}
-#| include: false
-import Pkg
-Pkg.activate( "../LearnFEM" )
-import Symbolics, SymbolicNumericIntegration, Latexify, SymbolicUtils, LaTeXStrings, Nemo
-import LinearAlgebra
-import Plots
-include( "lecture_00.jl" )
-using .lecture_00: ChangeOfVariable, PlotPolynomialBasis, PolynomialBasisFunction
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
 ```
 
 # Inner Products
@@ -89,25 +86,30 @@ Let's look at a slightly more difficult use-case:
 
 If we have two vectors consisting of real numbers
 
-$$
+```{=latex}
 \begin{aligned}
   \vec{x} = [ x_0, \cdots, x_n ]^T, &\quad i \in 0:n \\
   \vec{y} = [ y_0, \cdots, y_n ]^T, &\quad i \in 0:n \\
 \end{aligned}
-$$
+```
 
 the inner product, which we previously stated is also known as the "dot product", is defined as
 
-$$
+```{=latex}
+\begin{equation*}
 \Inner{\vec{x}}{\vec{y}} = \vec{x}^T \vec{y} \sum_{i=0}^{n-1} x_i y_i = x_0 y_0 + \cdots + x_{n-1} y_{n-1}
-$$
+\end{equation*}
+```
 
 And again, we ask the question "how does the inner product allow us to compare and/or measure vectors?"
 And again, we answer with an example.
 As before we can compare the vectors against each other via
-$$
-\frac{\Inner{\vec{x}}{\vec{y}}}{\Inner{\vec{y}}{\vec{y}}}
-$$
+
+```{=latex}
+\begin{equation*}
+  \frac{\Inner{\vec{x}}{\vec{y}}}{\Inner{\vec{y}}{\vec{y}}}
+\end{equation*}
+```
 
 Which gives us the comparisons:
 
@@ -123,29 +125,31 @@ Which gives us the comparisons:
 ## The Inner Product of Real Functions
 Given two real functions[^2], $f$ and $g$, the inner product is
 
-$$
-\Inner{f}{g}_{L^2} \coloneqq \int_{\Omega}{ f g } \ d\Omega
-$$
+```{=latex}
+\begin{equation*}
+  \Inner{f}{g}_{L^2} \coloneqq \int_{\Omega}{ f g } \ d\Omega
+\end{equation*}
+```
 
 which is also known as the $L^2$ inner product.
 The norm induced by the $L^2$ inner product is the $L^2$-norm
-$$
-\| f \|_{L^2} \coloneqq \sqrt{ \Inner{f}{f} }
-$$
+
+```{=latex}
+\begin{equation*}
+  \| f \|_{L^2} \coloneqq \sqrt{ \Inner{f}{f} }
+\end{equation*}
+```
 
 Since we'll be dealing with the $L^2$ inner product quite a bit, let's consider some examples
 
 ### Example 4.4.1
 
-```{julia}
-#| output: false
-import Symbolics
-import SymbolicNumericIntegration
-using SymbolicNumericIntegration: integrate
-Symbolics.@variables x
-f = sin( x )
-g = sin( x )
-L2 = SymbolicNumericIntegration.integrate( f * g, x )[1]
+```{matlab}
+%| output: false
+x = sym( "x", "real" );
+f = sin( x );
+g = sin( x );
+L2 = int( f * g );
 ```
 
 ```{=latex}
@@ -156,24 +160,31 @@ L2 = SymbolicNumericIntegration.integrate( f * g, x )[1]
 \end{align*}
 ```
 
-```{julia}
-#| echo: false
-L2 = Symbolics.substitute( L2, Dict([x=>x]) )
-p1 = Plots.plot( f, 0, 2π, label="\$f(x)\$" )
-Plots.plot!( g, 0, 2π, label="\$g(x)\$" )
-p2 = Plots.plot( L2, 0, 2π, label="\$\\| f, g \\|_2 \$" )
-Plots.plot( p1, p2, layout=Plots.@layout([a;b]), link=:x, fmt=:png )
+```{matlab}
+%| echo: false
+domain = sym( [0, 2*pi] );
+
+figure
+subplot( 2, 1, 1 )
+hold on
+fplot( f, double( domain ), LineWidth=2, DisplayName="$f(x)$" )
+fplot( g, double( domain ), LineWidth=2, DisplayName="$g(x)$" )
+legend()
+
+subplot( 2, 1, 2 )
+fplot( L2, double( domain ), LineWidth=2, DisplayName="$\langle f(x), g(x) \rangle$" )
+legend()
 ```
 
 Where evaluating the inner product provides us with a function of the domain:
 
 And, for example, the inner product on the domain $[0,2\pi]$ is then
 
-```{julia}
-#| output: false
-f = sin( x )
-g = sin( x )
-L2 = integrate( f * g, ( x, 0 // 1, 2π ); symbolic = true, detailed = false )
+```{matlab}
+%| output: false
+f = sin( x );
+g = sin( x );
+L2 = int( f * g, domain );
 ```
 
 ```{=latex}
@@ -185,11 +196,11 @@ L2 = integrate( f * g, ( x, 0 // 1, 2π ); symbolic = true, detailed = false )
 
 ### Example 4.4.2
 
-```{julia}
-#| output: false
+```{matlab}
+%| output: false
 f = sin( x )
 g = -1 * sin( x )
-L2 = integrate( f * g )[1]
+L2 = int( f * g )
 ```
 
 Where evaluating the inner product provides us with a function of the domain:
@@ -197,18 +208,25 @@ Where evaluating the inner product provides us with a function of the domain:
 ```{=latex}
 \begin{align*}
   f(x) &= \sin(x) \\
-  g(x) &= \sin(x) \\
+  g(x) &= -\sin(x) \\
   \Inner{f(x)}{g(x)} &= \frac{1}{2} ( \sin(x) \cos(x) + x) \\
 \end{align*}
 ```
 
-```{julia}
-#| echo: false
-L2 = Symbolics.substitute( L2, Dict([x=>x]) )
-p1 = Plots.plot( f, 0, 2π, label="\$f(x)\$" )
-Plots.plot!( g, 0, 2π, label="\$g(x)\$" )
-p2 = Plots.plot( L2, 0, 2π, label="\$\\| f, g \\|_2 \$" )
-Plots.plot( p1, p2, layout=Plots.@layout([a;b]), link=:x, fmt=:png )
+```{matlab}
+%| echo: false
+domain = sym( [0, 2*pi] );
+
+figure
+subplot( 2, 1, 1 )
+hold on
+fplot( f, double( domain ), LineWidth=2, DisplayName="$f(x)$" )
+fplot( g, double( domain ), LineWidth=2, DisplayName="$g(x)$" )
+legend()
+
+subplot( 2, 1, 2 )
+fplot( L2, double( domain ), LineWidth=2, DisplayName="$\langle f(x), g(x) \rangle$" )
+legend()
 ```
 And, for example, the inner product on the domain $[0,2\pi]$ is then
 
@@ -220,11 +238,11 @@ And, for example, the inner product on the domain $[0,2\pi]$ is then
 
 ### Example 4.4.3
 
-```{julia}
-#| output: false
+```{matlab}
+%| output: false
 f = sin( x )
 g = cos( x )
-L2 = integrate( f * g )[1]
+L2 = int( f * g )
 ```
 
 Where evaluating the inner product provides us with a function of the domain:
@@ -237,13 +255,20 @@ Where evaluating the inner product provides us with a function of the domain:
 \end{align*}
 ```
 
-```{julia}
-#| echo: false
-L2 = Symbolics.substitute( L2, Dict([x=>x]) )
-p1 = Plots.plot( f, 0, 2π, label="\$f(x)\$" )
-Plots.plot!( g, 0, 2π, label="\$g(x)\$" )
-p2 = Plots.plot( L2, 0, 2π, label="\$\\| f, g \\|_2 \$" )
-Plots.plot( p1, p2, layout=Plots.@layout([a;b]), link=:x, fmt=:png )
+```{matlab}
+%| echo: false
+domain = sym( [0, 2*pi] );
+
+figure
+subplot( 2, 1, 1 )
+hold on
+fplot( f, double( domain ), LineWidth=2, DisplayName="$f(x)$" )
+fplot( g, double( domain ), LineWidth=2, DisplayName="$g(x)$" )
+legend()
+
+subplot( 2, 1, 2 )
+fplot( L2, double( domain ), LineWidth=2, DisplayName="$\langle f(x), g(x) \rangle$" )
+legend()
 ```
 And, for example, the inner product on the domain $[0,2\pi]$ is then
 
@@ -255,11 +280,11 @@ And, for example, the inner product on the domain $[0,2\pi]$ is then
 
 ### Example 4.4.4
 
-```{julia}
-#| output: false
+```{matlab}
+%| output: false
 f = sin( x )
 g = sin( 2*x )
-L2 = integrate( f * g )[1]
+L2 = int( f * g )
 ```
 
 Where evaluating the inner product provides us with a function of the domain:
@@ -272,14 +297,22 @@ Where evaluating the inner product provides us with a function of the domain:
 \end{align*}
 ```
 
-```{julia}
-#| echo: false
-L2 = Symbolics.substitute( L2, Dict([x=>x]) )
-p1 = Plots.plot( f, 0, 2π, label="\$f(x)\$" )
-Plots.plot!( g, 0, 2π, label="\$g(x)\$" )
-p2 = Plots.plot( L2, 0, 2π, label="\$\\| f, g \\|_2 \$" )
-Plots.plot( p1, p2, layout=Plots.@layout([a;b]), link=:x, fmt=:png )
+```{matlab}
+%| echo: false
+domain = sym( [0, 2*pi] );
+
+figure
+subplot( 2, 1, 1 )
+hold on
+fplot( f, double( domain ), LineWidth=2, DisplayName="$f(x)$" )
+fplot( g, double( domain ), LineWidth=2, DisplayName="$g(x)$" )
+legend()
+
+subplot( 2, 1, 2 )
+fplot( L2, double( domain ), LineWidth=2, DisplayName="$\langle f(x), g(x) \rangle$" )
+legend()
 ```
+
 And, for example, the inner product on the domain $[0,2\pi]$ is then
 
 ```{=latex}

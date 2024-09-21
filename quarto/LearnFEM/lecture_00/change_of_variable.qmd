@@ -1,13 +1,12 @@
 ---
-engine: julia
+jupyter: mkernel
 ---
 
-```{julia}
-#| include: false
-import Pkg
-Pkg.activate( "../LearnFEM" )
-import Symbolics, Latexify, SymbolicUtils, LaTeXStrings
-import Plots
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
 ```
 
 # Change of Variable
@@ -70,53 +69,47 @@ $$
 
 Noting the similar structure of these two mappings, let's now write a function that simply maps from some domain to some other domain using change of variable.
 
-```{julia}
-#| echo: true
-#| output: false
-function ChangeOfVariable( from_value, from_domain, to_domain )
-    ## SHIFT TO ZERO
-    to_value = from_value - from_domain[1]
-    ## SCALE TO EQUAL RANGE
-    to_value *= ( to_domain[2] - to_domain[1] ) / ( from_domain[2] - from_domain[1] )
-    ## APPLY TO DOMAIN
-    to_value += to_domain[1]
-    return to_value
+```{matlab}
+%| echo: true
+%| output: false
+function to_value = ChangeOfVariable( from_value, from_domain, to_domain )
+    % SHIFT TO ZERO
+    to_value = from_value - from_domain(1);
+    % SCALE TO EQUAL RANGE
+    to_value = to_value * range( to_domain ) / range( from_domain );
+    % APPLY TO DOMAIN
+    to_value = to_value + to_domain(1);
 end
 ```
 
 Let's see this function in action!
 
-```{julia}
-#| echo: true
-from_domain = [-1, 1]
-to_domain = [2, 7]
-from_values = [-1, -0.5, 0, 0.5, 1]
+```{matlab}
+%| echo: true
+from_domain = sym( [-1, 1] );
+to_domain = sym( [2, 7] );
+from_values = sym( [-1, -0.5, 0, 0.5, 1] );
 
-for from_value in from_values
-    to_value = ChangeOfVariable( from_value, from_domain, to_domain )
-    println( "x($from_value) = $to_value" )
+for ii = 1 : length( from_values )
+    to_values(ii) = ChangeOfVariable( from_values(ii), from_domain, to_domain );
 end
+display( from_values )
+display( to_values )
 ```
 
 Now let's see what happens when we use the change of variable in an actual function.  
 First let's choose a function defined over $x$ and map it to $\xi$, using the mapping $x(\xi)$.
 
-```{julia}
-#| output: false
-x_domain = [2, 7]
-xi_domain = [-1, 1]
+```{matlab}
+%| output: true
+x = sym( "x", "real" );
+x_domain = sym( [2, 7] );
+xi = sym( "xi", "real" );
+xi_domain = sym( [-1, 1] );
 
-Symbolics.@variables x, xi
-f = exp( x ) * cos( Symbolics.pi * x )
-x_xi = ChangeOfVariable( xi, xi_domain, x_domain )
-g = SymbolicUtils.substitute( f, Dict( [ x => x_xi] ), fold=false )
-```
-
-```{julia}
-#| include: false
-# latex_f = print( Symbolics.Latexify.latexify( f ) )
-# latex_xi = print( Symbolics.Latexify.latexify( x_xi ) )
-# latex_g = print( Symbolics.Latexify.latexify( g ) )
+f = str2sym( "exp( x ) * cos( pi * x )" );
+x_xi = ChangeOfVariable( xi, xi_domain, x_domain );
+g = subs( f, x, x_xi );
 ```
 
 ```{=latex}
@@ -127,47 +120,53 @@ g = SymbolicUtils.substitute( f, Dict( [ x => x_xi] ), fold=false )
 \end{align*}
 ```
 
-```{julia}
-#| echo: false
-let
-   p1 = Plots.plot( f,  x_domain[1], x_domain[2] )
-   p2 = Plots.plot( g, xi_domain[1], xi_domain[2] )
-   Plots.plot( p1, p2, layout=Plots.@layout([a;b]), link=:x, fmt=:png )
-end
+```{matlab}
+%| echo: false
+figure
+subplot( 2, 1, 1 )
+fplot( f, double( x_domain ), LineWidth=2 )
+ax1 = gca;
+ax1.XLim = [-2 8];
+
+subplot( 2, 1, 2 )
+fplot( g, double( xi_domain ), LineWidth=2 )
+ax2 = gca;
+ax2.XLim = [-2 8];
 ```
 
 And again on another function, this time using the mapping $\xi(x)$:
 
-```{julia}
-#| output: false
-x_domain = [-1, 1]
-xi_domain = [0, 4*pi]
-Symbolics.@variables x, xi
-f = xi^cos(xi)
-xi_x = ChangeOfVariable( x, x_domain, xi_domain )
-g = SymbolicUtils.substitute( f, Dict( [ xi => xi_x] ), fold=false )
+```{matlab}
+%| output: true
+x = sym( "x", "real" );
+x_domain = sym( [1, 2] );
+xi = sym( "xi", "real" );
+xi_domain = sym( [0, pi] );
+
+f = str2sym( "xi^cos( 4*xi )" );
+xi_x = ChangeOfVariable( x, x_domain, xi_domain );
+g = subs( f, xi, xi_x );
 ```
 
-```{julia}
-#| include: false
-latex_f = print( Symbolics.Latexify.latexify( f ) )
-latex_xi = print( Symbolics.Latexify.latexify( xi_x ) )
-latex_g = print( Symbolics.Latexify.latexify( g ) )
+```{matlab}
+%| echo: false
+figure
+subplot( 2, 1, 1 )
+fplot( f, double( xi_domain ), LineWidth=2 )
+ax1 = gca;
+ax1.XLim = [-1 pi+1];
+
+subplot( 2, 1, 2 )
+fplot( g, double( x_domain ), LineWidth=2 )
+ax2 = gca;
+ax2.XLim = [-1 pi+1];
 ```
 
 ```{=latex}
 \begin{align*}
-   f(x) &= \xi^{\cos( \xi )} \\
-   x(\xi) &= 2 \pi ( 1 + x )\\
-   g( x(\xi) ) &= \xi(x)^{\cos( \xi(x) )} \\ &= ( 2 \pi ( 1 + x ) )^{\cos( 2 \pi ( 1 + x ) )}
+   f(x) &= \xi^{\cos( 4 \xi )} \\
+   x(\xi) &= \pi ( x - 1 ) \\
+   g( x(\xi) ) &= \xi(x)^{\cos( 4 \xi(x) )} \\ 
+               &= \left( \pi \left( x - 1 \right) \right)^{\cos{ \left( 4 \left( \pi \left( x - 1 \right) \right) \right) } }
 \end{align*}
-```
-
-```{julia}
-#| echo: false
-let
-   p1 = Plots.plot( f, xi_domain[1], xi_domain[2] )
-   p2 = Plots.plot( g,  x_domain[1],  x_domain[2] )
-   Plots.plot( p1, p2, layout=Plots.@layout([a;b]), link=:x, fmt=:png )
-end
 ```

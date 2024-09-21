@@ -29,13 +29,13 @@ book:
     - part: lecture_00/intro.qmd
       chapters:
         - lecture_00/change_of_variable.qmd
-        - lecture_00/polynomial_roots.qmd
-        - lecture_00/polynomial_basis.qmd
-        - lecture_00/inner_products.qmd
-        - lecture_00/change_of_basis.qmd
-    - part: lecture_01/intro.qmd
-      chapters:
-        - lecture_01/galerkin_function_approximation.qmd
+    #     - lecture_00/polynomial_roots.qmd
+    #     - lecture_00/polynomial_basis.qmd
+    #     - lecture_00/inner_products.qmd
+    #     - lecture_00/change_of_basis.qmd
+    # - part: lecture_01/intro.qmd
+    #   chapters:
+    #     - lecture_01/galerkin_function_approximation.qmd
     #     - lecture_01/galerkin_function_approximation_with_boundary_conditions.qmd
     # - summary.qmd
     # - references.qmd

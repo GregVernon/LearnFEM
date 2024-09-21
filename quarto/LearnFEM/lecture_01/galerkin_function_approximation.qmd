@@ -1,17 +1,13 @@
 ---
-engine: julia
+jupyter: mkernel
 ---
-```{julia}
-#| include: false
-import Pkg
-Pkg.activate( "../LearnFEM" )
-import Symbolics, Latexify, SymbolicUtils, LaTeXStrings, Nemo
-import LinearAlgebra
-import Plots
-include( "lecture_01_utils.jl" )
-using .lecture_01_utils: to_numeric
-include( "lecture_01.jl" )
-using .lecture_01: ChangeOfVariable, PolynomialBasis, PlotPolynomialBasis, PolynomialBasisFunction, ScalarProjection, ComputeL2Error
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
 ```
 
 # Galerkin's Method for Function Approximation
@@ -20,33 +16,40 @@ Let's suppose that we have some function that we wish to approximate as a polyno
 Specifically, we want to find the polynomial function that most closely represents the function over a finite domain, in the $L^2$ sense.
 The function we wish to approximate, over the domain $[0,1]$ is
 
-```{julia}
-#| include: true
-let
-    Symbolics.@variables x target_fun(x)
-    target_fun(x) = sin( π * x )^2 + cos( x ) - 1;
-    domain = [0, 1]
-    Plots.plot( target_fun, domain[1], domain[2], linewidth=4 )
-end
-```
-
 ```{=latex}
 \begin{equation*}
     g(x) = \sin( \pi x )^2 + \cos( x ) - 1
 \end{equation*}
 ```
 
+```{matlab}
+%| echo: true
+%| output: false
+x = sym( "x", "real" );
+domain = sym( [0, 1] );
+target_fun = sin( pi * x )^2 + cos( x ) - 1;
+```
+
+```{matlab}
+%| echo: false
+figure
+fplot( target_fun, double( domain ), LineWidth=4, Color="k" )
+```
+
 And let's further suppose that we wish to approximate this function with a quartic polynomial, let's use the monomial basis
 
-```{julia}
-#| eval: true
-let
-    Symbolics.@variables x
-    domain = [0, 1]
-    degree = 2
-    basis_name = lecture_01.Monomial
-    monomial_basis = PolynomialBasisFunction( basis_name, degree, x, domain )
-    PlotPolynomialBasis( basis_name, degree, x, domain )
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+domain = sym( [0, 1] );
+degree = 2;
+basis_name = "Monomial";
+
+figure
+hold on
+basis = PolynomialBasisFunction( basis_name, degree, x, domain );
+for ii = 1 : length( basis )
+    fplot( basis(ii), double( domain ), LineWidth=2, DisplayName="$M_" + num2str(ii) + "$" )
 end
 ```
 
@@ -186,37 +189,18 @@ Proceeding with assembly of the left-hand side, which is often referred to as th
 \end{align*}
 ```
 
+```{matlab}
+%| eval: true
+%| echo: true
+D = int( basis * transpose( basis ), domain );
+```
+
 And the right-hand side, often referred to as the *force vector*
 
-```{julia}
-#| eval: true
-#| echo: false
-let
-    using SymbolicNumericIntegration: integrate
-
-    Symbolics.@variables x
-    target_fun = sin( π * x )^2 + cos( x ) - 1;
-    domain = [0, 1]
-    degree = 2
-    basis_name = lecture_01.Monomial
-    monomial_basis = PolynomialBasisFunction( basis_name, degree, x, domain )
-    
-    var_tuple = fill( ( x, domain[1], domain[2] ), ( degree + 1, degree + 1 ) )
-    integrand = monomial_basis * transpose( monomial_basis )
-    D = integrate.( integrand )
-    D = integrate.( integrand, var_tuple; detailed=false )
-    D = to_numeric( Float64, D)
-
-    var_tuple = fill( ( x, domain[1], domain[2] ), ( degree + 1, 1 ) )
-    integrand = monomial_basis * target_fun
-    F = integrate.( integrand )
-    F = integrate.( integrand, var_tuple; detailed=false, symbolic=true,abstol=1e-20, num_steps=10, num_trials=100, verbose=true )
-    d = vec( D \ F )
-    approx_fun = transpose( d ) * monomial_basis
-
-    Plots.plot( target_fun, domain[1], domain[2], linewidth=4, label="" )
-    Plots.plot!( approx_fun, domain[1], domain[2], linewidth=3, label="" )
-end
+```{matlab}
+%| eval: true
+%| echo: true
+F = int( basis * target_fun, domain );
 ```
 
 ```{=latex}
@@ -300,6 +284,13 @@ Resulting in the linear system of equations
 \end{align*}
 ```
 
+```{matlab}
+%| eval: true
+%| echo: true
+d = D \ F;
+```
+
+
 Finally, we construct our polynomial approximation
 
 ```{=latex}
@@ -314,43 +305,76 @@ Finally, we construct our polynomial approximation
 \end{equation*}
 ```
 
+```{matlab}
+%| eval: true
+%| echo: true
+approx_fun = transpose( d ) * basis;
+```
+
+```{matlab}
+%| eval: true
+%| echo: false
+figure
+hold on
+fplot( target_fun, double( domain ), LineWidth=4, Color="k",     DisplayName="$f(x)$" )
+fplot( approx_fun, double( domain ), LineWidth=3, SeriesIndex=1, DisplayName="$\tilde{f}(x)$" )
+```
+
 Now, that doesn't appear to be a particularly good fit, but let's look at what happens if we use a higher-order polynomial function in our approximation.
-But first, let's collect our work above to write a simple class that performs the scalar projection:
 
-```{julia}
-#| eval: false
-using SymbolicNumericIntegration: integrate
-function ScalarProjection( target_fun, basis_name, degree, domain )
-    integrate_params = Dict(
-        :abstol     => 1e-12,
-        :detailed   => false,
-        :symbolic   => false,
-    )
-
-    function AssembleGramMatrix()
-        var_tuple = fill( ( variate, domain[1], domain[2] ), ( basis_dim, basis_dim ) )
-        D = integrate.( basis * transpose( basis ), var_tuple; integrate_params... )
-        return D
+```{matlab}
+%| output: false
+function l2_error = ComputeL2Error( target_fun, approx_fun, domain, method )
+    l2_error_fun = simplify( ( target_fun - approx_fun )^2, Steps=10 );
+    if method == "exact"
+        l2_error = sqrt( int( l2_error_fun, domain ) );
+    elseif method == "fast"
+        l2_error_fun = matlabFunction( l2_error_fun );
+        l2_error_fun_vpa = @(x) double( vpa( l2_error_fun(x), 32 ) );
+        domain = double( domain );
+        l2_error = sqrt( integral( l2_error_fun_vpa, domain(1), domain(2), reltol=1e-12 ) );
     end
-
-    function AssembleForceVector( target_fun, basis, domain, variate )
-        var_tuple = fill( ( variate, domain[1], domain[2] ), ( basis_dim, 1 ) )
-        F = integrate.( basis * target_fun, var_tuple; integrate_params... )
-        return F
-    end
-
-    variate = Symbolics.Num( Symbolics.get_variables( target_fun )[1] )
-    basis = PolynomialBasisFunction( basis_name, degree, variate, domain )
-    basis_dim = length( basis )
-    M = AssembleGramMatrix( )
-    F = AssembleForceVector( )
-    d = vec( M \ F )
-    u = transpose( d ) * basis
-    return u, M, F, basis, d
 end
 ```
 
-Now lets see what happens if we use a high-order polynomial for our approximation -- this time a quartic polynomial
+```{matlab}
+l2_error = ComputeL2Error( target_fun, approx_fun, domain, "exact" );
+l2_error = vpa( l2_error, 4 )
+```
+
+But first, let's collect our work above to write a function that performs the scalar projection:
+
+```{matlab}
+%| output: false
+function [u, M, F, basis, d] = ScalarProjection( target_fun, basis_name, degree, domain )
+
+    function D = AssembleGramMatrix()
+        D = int( basis * transpose( basis ), domain );
+    end
+
+    function F = AssembleForceVector()
+        F = int( basis * target_fun, domain );
+    end
+
+    variate = symvar( target_fun );
+    if isempty( variate )
+        variate = sym( "x", "real" );
+    end
+    basis = PolynomialBasisFunction( basis_name, degree, variate, domain );
+    M = AssembleGramMatrix();
+    F = AssembleForceVector();
+    d = M \ F;
+    u = transpose( d ) * basis;
+end
+```
+
+Before we move on, I just want to point something out that I think is rather important.
+Look at *how simple* the assembly operations are in the above code, and how simple Galerkin's method is when written symbolically.
+In later lectures, we will complicate our implementation(s) of Galerkins method for solving various problems, by adding numerical routines that are necessary for the efficient solution of them.
+In my experience, courses that dive immediately into those numerical approaches often leave students confused because of the necessity to implement all these routines before being able to see a solution.
+Here, with this (and later) symbolic implementations, the student have both a simple framework within which to insert numerical algorithms as well as a tool for generating reference solutions for testing.
+
+Now lets see what happens if we use a high-order polynomial for our approximation -- this time a quartic polynomial.
 
 ```{=latex}
 \begin{equation*}
@@ -358,92 +382,105 @@ Now lets see what happens if we use a high-order polynomial for our approximatio
 \end{equation*}
 ```
 
-```{julia}
-#| echo: false
-let
-    Symbolics.@variables x target_fun(x)
-    target_fun = sin( π * x )^2 + cos( x ) - 1
-    degree = 4
-    domain = [0, 1]
-    basis_name = lecture_01.Monomial
-    u, M, F, basis, d = ScalarProjection( target_fun, basis_name, degree, domain )
-    Plots.plot( target_fun, domain[1], domain[2], linewidth=4, label="" )
-    Plots.plot!( u, domain[1], domain[2], linewidth=3, label="" )
-end
+```{matlab}
+%| echo: true
+%| output: false
+x = sym( "x", "real" );
+target_fun = sin( pi * x )^2 + cos( x ) - 1;
+domain = sym( [0, 1] );
+degree = 4;
+basis_name = "Monomial";
+[u, M, F, basis, d] = ScalarProjection( target_fun, basis_name, degree, domain );
 ```
+
+```{matlab}
+%| echo: false
+figure
+hold on
+fplot( target_fun, double( domain ), linewidth=4, DisplayName="$f(x)$" )
+fplot( u, double( domain ),          linewidth=3, DisplayName="$\tilde{f}(x)$" )
+legend()
+```
+
+```{matlab}
+l2_error = ComputeL2Error( target_fun, u, domain, "exact" );
+l2_error = vpa( l2_error, 4 )
+```
+
 
 As we can clearly see, the higher-order polynomial is a much better approximation of the function.
 We can perform a "degree-refinement study" to explore and quantify the improvement of approximation as we increase the polynomial degree of the approximation.
 
 ## Convergence of the Galerkin method under degree refinement
 
-```{julia}
-#| echo: false
-let
-    Symbolics.@variables x
-    target_fun = sin( π * x )^2 + cos( x ) - 1
-    domain = [0, 1]
-    basis_name = lecture_01.Legendre
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+target_fun = sin( pi * x )^2 + cos( x ) - 1;
+domain = sym( [0, 1] );
+basis_name = "Monomial";
+[u, M, F, basis, d] = ScalarProjection( target_fun, basis_name, degree, domain );
 
-    l2_error = []
-    degree = 0 : 5
-    for p in degree
-        approx_fun = ScalarProjection( target_fun, basis_name, p, domain )[1]
-        err = ComputeL2Error( target_fun, approx_fun, domain )
-        append!( l2_error, err )
-    end
-
-    Plots.plot( degree, l2_error, markershape=:circle, linewidth=2 )
-    Plots.plot!( yscale=:log10, minorgrid=true )
-    Plots.xlabel!( "Degree" )
-    Plots.ylabel!( "L2 Error" )
+degree = 0 : 6;
+l2_error = sym( zeros( size( degree ) ) );
+for p = degree
+    approx_fun = ScalarProjection( target_fun, basis_name, p, domain );
+    l2_error(p+1) = vpa( ComputeL2Error( target_fun, approx_fun, domain, "exact" ), 32 );
 end
 ```
 
-```{python}
-#| echo: false
-#| warning: false
-#| error: false
-
-plt = matplotlib.pyplot.plot( degree, l2_error )
-matplotlib.pyplot.xlabel( "Degree" )
-matplotlib.pyplot.ylabel( "$L^2 Error$" )
-matplotlib.pyplot.yscale( "log" )
-matplotlib.pyplot.show()
+```{matlab}
+%| echo: false
+figure
+cmap = colormap( "lines" );
+plot( degree, l2_error, LineWidth=2, Marker="o", MarkerFaceColor=cmap(1,:), MarkerEdgeColor="k" )
+ax = gca;
+xlabel( "Degree" )
+ylabel( "$L^2$ Error" )
+ax.YScale = "log";
 ```
 
 ## Conditioning
 
-```{python}
-#| echo: false
-#| warning: false
-#| error: false
+```{matlab}
+%| echo: false
+degree = (0 : 6);
+condition = struct( "Monomial", [], "Bernstein", [], "Lagrange", [], "Legendre", [], "Chebyshev", [] );
+basis_functions = string( fieldnames( condition ) );
+for ii = 1 : length( basis_functions )
+    basis_name = basis_functions(ii);
+    for p = degree 
+        basis = PolynomialBasisFunction( basis_name, p, x, domain );
+        D = int( basis .* transpose( basis ), domain );
+        eigvals = ComputeEigenvalues( D, 1e-12, 1e4 );
+        condition.(basis_name)(end+1) = max(eigvals) / min( eigvals );
+    end
+end
 
-cond = { "Monomial": [], "Bernstein": [], "Lagrange": [], "Legendre": [], "Chebyshev": [] }
-for basis_name in list( cond.keys() ):
-    for i in range( 0, len( degree ) ):
-        p = degree[i]
-        basis = PolynomialBasisFunction( basis_name, p, x, domain )
-        basis = BasisPolynomialListToLambdaArray( basis, x )
-        D = ScalarProjectionFast().AssembleGramMatrix( basis, domain )
-        cond[basis_name].append( numpy.linalg.cond( D ) )
-    matplotlib.pyplot.plot( degree, cond[basis_name], label=basis_name )
-matplotlib.pyplot.xlabel( "Degree" )
-matplotlib.pyplot.ylabel( "$L^2 Error$" )
-matplotlib.pyplot.yscale( "log" )
-matplotlib.pyplot.legend()
-matplotlib.pyplot.show()
+figure
+hold on
+for ii = 1 : length( basis_functions )
+    basis_name = basis_functions(ii);
+    plot( degree, condition.(basis_name), LineWidth=2, DisplayName=basis_name )
+end
+ax = gca;
+xlabel( "Degree" )
+ylabel( "Condition Number" )
+grid on
+ax.YScale = "log";
+legend( Location="northwest" )
 ```
 
-```{python}
-#| echo: false
-u, D, F, _, _ = ScalarProjectionFast()( target_fun, "Monomial", 12, domain )
-xd = numpy.linspace( float( domain[0] ), float( domain[1] ), 1000 )
-target_fun_lambda = sympy.lambdify( x, target_fun )
-target_fun_d = numpy.array( [target_fun_lambda( xd[i] ) for i in range( 0, len( xd ) )] )
-ud = numpy.array( [u( xd[i] ) for i in range( 0, len( xd ) )] )
+```{matlab}
+%| echo: false
+[u, D, F, basis, d] = ScalarProjection( target_fun, "Monomial", 12, domain );
+Dd = double( D );
+Fd = double( F );
+dd = inv( Dd ) * Fd;
+ud = transpose( dd ) * basis;
 
-matplotlib.pyplot.plot( xd, target_fun_d )
-matplotlib.pyplot.plot( xd, ud )
-matplotlib.pyplot.show()
+figure
+hold on
+fplot( target_fun, double( domain ), LineWidth=4, Color="k" )
+fplot( u, double( domain ), LineWidth=2, SeriesIndex=1 )
 ```

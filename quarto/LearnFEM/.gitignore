@@ -1,6 +1,7 @@
 /.quarto/
 
 *.tex
+*.m
 
 __pycache__/
 _book/

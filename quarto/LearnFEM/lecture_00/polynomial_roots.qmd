@@ -1,15 +1,12 @@
 ---
-engine: julia
+jupyter: mkernel
 ---
-```{julia}
-#| include: false
-import Pkg
-Pkg.activate( "../LearnFEM" )
-import Symbolics, Latexify, SymbolicUtils, LaTeXStrings, Nemo
-import LinearAlgebra
-import Plots
-include( "lecture_00_utils.jl" )
-using .lecture_00_utils
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
 ```
 
 # Finding Polynomial Roots using Linear Algebra
@@ -29,6 +26,23 @@ $$
 p(x) = c_0 x^0 + c_1 x^1 + \cdots c_{n-1} x^{n-1} + c_n x^n \quad \mathrm{where} \ c_n = 1,
 $$
 
+```{matlab}
+%| output: false
+function monic = PolynomialToMonic( polynomial )
+  variate = symvar( polynomial );
+  if isempty( variate )
+    variate = sym( "x" );
+  end
+  c = fliplr( coeffs( polynomial, "all" ) );
+  c = c ./ c(end);
+  degree = length( c ) - 1;
+  monic = sym( 0 );
+  for p = 0 : degree
+    monic = monic + c(p+1) * variate^p;
+  end
+end
+```
+
 the companion matrix is defined as:
 
 $$
@@ -41,6 +55,23 @@ $$
     0      & 0      & \cdots & 1      & -c_{n-1} \\
 \end{bmatrix}
 $$
+
+```{matlab}
+%| output: false
+function C = CompanionMatrix( polynomial )
+  monic = PolynomialToMonic( polynomial );
+  monic_coeffs = fliplr( coeffs( monic, "all" ) );
+  degree = length( monic_coeffs ) - 1;
+  C = sym( zeros( degree ) );
+  for ii = 0 : degree - 1
+    row = ii + 1;
+    if ii > 0
+      C(row, row-1) = 1;
+    end
+    C(row,end) = -1 * monic_coeffs(ii+1);
+  end
+end
+```
 
 Recall that for a given polynomial we can convert it to a monic polynomial by simply dividing by the leading coefficient.
 Let's work through an example.
@@ -90,22 +121,56 @@ Finally, we compute the eigenvalues of the companion matrix to recover the (appr
 \end{equation*}
 ```
 
-```{julia}
-#| include: false
+```{matlab}
+function [eigvals, ritz] = ComputeEigenvalues( A, tol, maxiter )
+  num_digits = ceil( log10( 1/tol ) );
+  ritz = sym( zeros( size( A, 1 ), maxiter + 1 ) );
+  ritz(:,1) = diag( A );
+  for iter = 1 : maxiter
+    [Q, R] = qr( A );
+    A = vpa( R * Q, num_digits );
+    ritz(:,iter+1) = diag( A );
+    if norm( ritz(:,iter+1) - ritz(:, iter), inf ) <= tol
+      break
+    end
+  end
+  ritz(:, iter+2 : end) = [];
+  eigvals = ritz(:, end);
+end
+```
 
-Symbolics.@variables x
+```{matlab}
+x = sym( "x" );
 polynomial = (1/2)*x^4 + (1/2)*x^3 - 6*x^2 - 2*x^1 + 6*x^0
-monic_polynomial = polynomial_to_monic( polynomial )
-C = companion_matrix( monic_polynomial )
-λ, r = eigvals( C )
+monic_polynomial = PolynomialToMonic( polynomial )
+C = CompanionMatrix( polynomial )
+[eigvals, ritz] = ComputeEigenvalues( C, 1e-12, 1e3 );
+eigvals = vpa( sort( eigvals ), 4 )
 ```
 
 We can plot the polynomial and its roots to visually confirm that this approach has, in fact, found the polynomial's roots.
 
-```{julia}
-#| echo: false
-Plots.plot( x, polynomial, -4, 4, linewidth=4, label="\$p(x)\$" )
-Plots.scatter!( λ, zeros( size( λ ) ), markersize=6, markercolor=:black, label="\$\\lambda(\\mathbf{C})\$" )
+```{matlab}
+%| echo: false
+eig_center = mean( [ min( eigvals ), max( eigvals ) ] );
+eig_range = range( eigvals );
+domain = eig_center * ones( 1, 2 ) + 1.2 * [ -eig_range, eig_range ]/2;
+
+figure
+hold on
+fplot( polynomial, double( domain ), LineWidth=2 )
+scatter( eigvals, zeros( size( eigvals ) ), MarkerFaceColor="k", MarkerEdgeColor="k" )
+ax = gca;
+ax.XAxisLocation = "origin";
+```
+
+```{matlab}
+function eigvals = PolynomialRoots( polynomial )
+  C = CompanionMatrix( polynomial )
+  eigvals = ComputeEigenvalues( C, 1e-16, 1e3 );
+  [~, sidx] = sort( eigvals );
+  eigvals = eigvals( sidx );
+end
 ```
 
 ## A Footnote
@@ -132,7 +197,7 @@ In this demonstration we used an iterative method based on QR factorization.
       \State $\tilde{\lambda}_0 = \Vector{0}^{n,1}$
       \For{ $i \in \{1, \dots, \mathrm{maxit}\}$ }
         \State $\Matrix{Q}, \Matrix{R} = $ \Call{Factorize}{$\Matrix{A}$, method='qr'}
-        \State $\Matrix{A} = \Matrix{Q} \Matrix{R}$
+        \State $\Matrix{A} = \Matrix{R} \Matrix{Q}$
         \State $\tilde{\lambda}_{i} = \mathrm{diag}(\Matrix{A})$
         \If{$\| \tilde{\lambda}_{i} - \tilde{\lambda}_{i-1} \|_{\infty} \leq \mathrm{tol}$}
           \State \textbf{break}
@@ -148,42 +213,35 @@ Note that, in this algorithm, we use the notation $\tilde{\lambda}$ to denote th
 These converging approximations are often called *Ritz values*.
 We can plot the convergence of the Ritz values towards the true eigenvalues:
 
-```{julia}
-#| echo: false
-#| output: false
-roots = Symbolics.simplify( Symbolics.symbolic_solve( polynomial ) )
-# println( Symbolics.substitute( roots[1], Dict() ) )
-```
+```{matlab}
+%| echo: false
+[~, sidx] = sort( ritz(:,end) );
+sorted_ritz = ritz(sidx, :);
 
-<!-- ```{=latex}
-\begin{align*}
-  \lambda_1 &= - \frac{4}{3} 
-               - \frac{1}{2} \sqrt[3]{-\frac{10}{27} - \frac{2}{3}i \sqrt{\frac{37}{3}}} 
-               - \frac{1}{2} \sqrt[3]{-\frac{10}{27} + \frac{2}{3}i \sqrt{\frac{37}{3}}} 
-               - \frac{\sqrt{3}}{2}i \sqrt[3]{-\frac{10}{27} - \frac{2}{3}i \sqrt{\frac{37}{3}}} 
-               + \frac{\sqrt{3}}{2}i \sqrt[3]{-\frac{10}{27} + \frac{2}{3}i \sqrt{\frac{37}{3}}} \\
-  \lambda_2 &= - \frac{4}{3} 
-               - \frac{1}{2} \sqrt[3]{-\frac{10}{27} - \frac{2}{3}i \sqrt{\frac{37}{3}}} 
-               - \frac{1}{2} \sqrt[3]{-\frac{10}{27} + \frac{2}{3}i \sqrt{\frac{37}{3}}} 
-               + \frac{\sqrt{3}}{2}i \sqrt[3]{-\frac{10}{27} - \frac{2}{3}i \sqrt{\frac{37}{3}}} 
-               - \frac{\sqrt{3}}{2}i \sqrt[3]{-\frac{10}{27} + \frac{2}{3}i \sqrt{\frac{37}{3}}} \\
-  %
-  \lambda_3 &= - \frac{4}{3} 
-               + \sqrt[3]{\left( \frac{-10}{27} - \frac{2}{3}i \sqrt{\left( \frac{37}{3} \right)} \right)}
-               + \sqrt[3]{\left( \frac{-10}{27} + \frac{2}{3}i \sqrt{\left( \frac{37}{3} \right)} \right)} \\
-  %
-  \lambda_4 &= 3\\
-\end{align*}
-``` -->
+figure
+hold on
+for ii = 1 : size( ritz, 1 )
+  plot( sorted_ritz(ii,:), LineWidth=2, DisplayName="$\tilde{\lambda}_" + num2str(ii) + "$" )
+end
+xlabel( "Iteration" )
+legend()
 
-```{julia}
-#| echo: false
-r = reduce( vcat, transpose.( r ) )
-Plots.plot(  r[:,1], linewidth=2, label="\$\\tilde{\\lambda}_1\$" )
-Plots.plot!( r[:,2], linewidth=2, label="\$\\tilde{\\lambda}_2\$" )
-Plots.plot!( r[:,3], linewidth=2, label="\$\\tilde{\\lambda}_3\$" )
-Plots.plot!( r[:,4], linewidth=2, label="\$\\tilde{\\lambda}_4\$" )
-Plots.xlabel!( "Iteration" )
+true_eig = vpa( sort( vpa( eig( C ), 32 ) ), 32 );
+figure
+hold on
+for ii = 1 : size( sorted_ritz, 1 )
+  err = abs( ( sorted_ritz(ii, :) - true_eig(ii) ) );
+  plot( err, LineWidth=2, DisplayName="$\tilde{\lambda}_" + num2str(ii) + "$" )
+end
+xlabel( "Iteration" )
+ylabel( "$ \| \tilde{\lambda}_{\mathrm{i}} - \lambda_{\mathrm{i}} \| $" )
+legend()
+
+ax = gca;
+ax.XScale = "linear";
+ax.YScale = "log";
+ax.YGrid = "on";
+ax.YMinorGrid = "on";
 ```
 
 [^1]: This is the [Abel-Ruffini theorem](https://en.wikipedia.org/wiki/Abel%E2%80%93Ruffini_theorem).

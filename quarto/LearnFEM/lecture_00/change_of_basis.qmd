@@ -1,17 +1,12 @@
 ---
-engine: julia
+jupyter: mkernel
 ---
-```{julia}
-#| include: false
-import Pkg
-Pkg.activate( "../LearnFEM" )
-import Symbolics, Latexify, SymbolicUtils, LaTeXStrings, Nemo
-import LinearAlgebra
-import Plots
-include( "lecture_00_utils.jl" )
-using .lecture_00_utils: to_numeric
-include( "lecture_00.jl" )
-using .lecture_00: ChangeOfVariable, PlotPolynomialBasis, PolynomialBasisFunction
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
 ```
 
 # Change of Basis
@@ -244,30 +239,31 @@ Within our mnemonic, $\Matrix{T} \equiv \Matrix{V}$, $\Matrix{F} \equiv \Matrix{
 
 We can write a routine for computing the change of basis between two vectors
 
-```{julia}
-#| output: false
-function VectorChangeOfBasis( from_basis, to_basis, from_coeffs )
+```{matlab}
+%| output: false
+function [to_coeffs, R] = VectorChangeOfBasis( from_basis, to_basis, from_coeffs )
     basis_dimension = length( from_coeffs )
-    D = fill( Symbolics.zero( Symbolics.Num ), basis_dimension, basis_dimension )
-    C = fill( Symbolics.zero( Symbolics.Num ), basis_dimension, basis_dimension )
-    for i = 1 : basis_dimension
-        for j = 1 : basis_dimension
-            D[i,j] = LinearAlgebra.dot( to_basis[:,i], to_basis[:, j] )
-            C[i,j] = LinearAlgebra.dot( to_basis[:,i], from_basis[:,j] )
+    D = sym( zeros( basis_dimension ) );
+    C = sym( zeros( basis_dimension ) );
+    for ii = 1 : basis_dimension
+        for jj = 1 : basis_dimension
+            D(ii,jj) = dot( to_basis(:,ii), to_basis(:, jj) );
+            C(ii,jj) = dot( to_basis(:,ii), from_basis(:,jj) );
         end
     end
-    R = D \ C
-    to_coeffs = R * from_coeffs
-    return to_coeffs, R
+    R = D \ C;
+    to_coeffs = R * from_coeffs;
 end
 ```
+
 Which we can use to evaluate the example in this section
-```{julia}
-#| output: false
-U = Symbolics.Num.( [ [1//1, 0//1] [0//1, 1//1] ] )
-V = Symbolics.Num.( [ [1//1, 1//5] [1//5, 4//5] ] )
-u = Symbolics.Num.( [3//2, 5//4] )
-v, R = VectorChangeOfBasis( U, V, u )
+
+```{matlab}
+%| output: false
+U =sym( [ [1; 0],   [0; 1] ] );
+V =sym( [ [1; 1/5], [1/5; 4/5] ] );
+u =sym( [3/2; 5/4] );
+[v, R] = VectorChangeOfBasis( U, V, u );
 ```
 
 ```{=latex}
@@ -290,33 +286,49 @@ v, R = VectorChangeOfBasis( U, V, u )
 \end{equation*}
 ```
 
-```{julia}
-#| echo: false
-U = to_numeric( Float64, U )
-u = to_numeric( Float64, u )
+```{matlab}
+%| echo: false
 u_vec = U * u
-V = to_numeric( Float64, V )
-v = to_numeric( Float64, v )
-R = to_numeric( Float64, R )
 v_vec = V * v
 
-# PLOT "FROM"
-Plots.plot(  [ 0, U[1,1] * u[1] ],    [0, U[2,1] * u[1] ],            label="", linewidth=4, arrow=true,  linecolor=:dodgerblue1, aspect_ratio=:equal, linealpha=0.5 )
-Plots.plot!( [ 0, U[1,2] * u[2] ],    [0, U[2,2] * u[2] ],            label="", linewidth=4, arrow=true,  linecolor=:dodgerblue1, aspect_ratio=:equal, linealpha=0.5 )
-Plots.plot!( [ U[1,1] * u[1], u_vec[1] ], [U[2,1] * u[1], u_vec[2] ], label="", linewidth=4, arrow=false, linecolor=:dodgerblue2, aspect_ratio=:equal, linealpha=0.5, linestyle=:dot )
-Plots.plot!( [ U[1,2] * u[2], u_vec[1] ], [U[2,2] * u[2], u_vec[2] ], label="", linewidth=4, arrow=false, linecolor=:dodgerblue2, aspect_ratio=:equal, linealpha=0.5, linestyle=:dot )
-Plots.plot!( [ 0, u_vec[1] ],   [0, u_vec[2] ],                       label="", linewidth=6, arrow=true,  linecolor=:dodgerblue1, aspect_ratio=:equal )
-Plots.plot!( [ 0, U[1,1] ], [0, U[2,1] ],                             label="", linewidth=8, arrow=true,  linecolor=:dodgerblue,  aspect_ratio=:equal )
-Plots.plot!( [ 0, U[1,2] ], [0, U[2,2] ],                             label="", linewidth=8, arrow=true,  linecolor=:dodgerblue,  aspect_ratio=:equal )
 
-# PLOT "TO"
-Plots.plot!( [ 0, V[1,1] * v[1] ],    [0, V[2,1] * v[1] ],            label="", linewidth=4, arrow=true,  linecolor=:goldenrod1, aspect_ratio=:equal, linealpha=0.5 )
-Plots.plot!( [ 0, V[1,2] * v[2] ],    [0, V[2,2] * v[2] ],            label="", linewidth=4, arrow=true,  linecolor=:goldenrod1, aspect_ratio=:equal, linealpha=0.5 )
-Plots.plot!( [ V[1,1] * v[1], v_vec[1] ], [V[2,1] * v[1], v_vec[2] ], label="", linewidth=4, arrow=false, linecolor=:goldenrod2, aspect_ratio=:equal, linealpha=0.5, linestyle=:dot )
-Plots.plot!( [ V[1,2] * v[2], v_vec[1] ], [V[2,2] * v[2], v_vec[2] ], label="", linewidth=4, arrow=false, linecolor=:goldenrod2, aspect_ratio=:equal, linealpha=0.5, linestyle=:dot )
-Plots.plot!( [ 0, v_vec[1] ],   [0, v_vec[2] ],                       label="", linewidth=4, arrow=true,  linecolor=:goldenrod1, aspect_ratio=:equal )
-Plots.plot!( [ 0, V[1,1] ], [0, V[2,1] ],                             label="", linewidth=8, arrow=true,  linecolor=:goldenrod,  aspect_ratio=:equal )
-Plots.plot!( [ 0, V[1,2] ], [0, V[2,2] ],                             label="", linewidth=8, arrow=true,  linecolor=:goldenrod,  aspect_ratio=:equal )
+fig = figure;
+ax = gca;
+cmap = colormap( "lines" );
+hold on
+axis equal
+grid on
+ax.XLim = [-0.25, 1.75];
+ax.YLim = [-0.25, 1.50];
+ax.XTick = [-0.25 : .25 : 1.75];
+ax.YTick = [-0.25 : .25 : 1.50];
+ax.FontSize = 12;
+
+vector_color = cmap(1,:);
+vector_color_hsl = colorspace( 'RGB->HSL', vector_color );
+basis_color = colorspace( 'HSL->RGB', [vector_color_hsl(1:2), vector_color_hsl(3) + (1 - vector_color_hsl(3) )/4 ] );
+scaled_basis_color = colorspace( 'HSL->RGB', [vector_color_hsl(1:2), vector_color_hsl(3) + 2*(1 - vector_color_hsl(3) )/4 ] );
+
+p{1} = arrows( 0, 0, double( U(1,1) * u(1) ), double( U(2,1) * u(1) ), [.05 .05 .0375 .0125], 'Cartesian', 'LineWidth', 1, 'FaceColor', scaled_basis_color, 'FaceAlpha',0.25, 'EdgeColor', cmap(1,:) );
+p{2} = arrows( 0, 0, double( U(1,2) * u(2) ), double( U(2,2) * u(2) ), [.05 .05 .0375 .0125], 'Cartesian', 'LineWidth', 1, 'FaceColor', scaled_basis_color, 'FaceAlpha',0.25, 'EdgeColor', cmap(1,:) );
+p{3} = plot( [ U(1,1) * u(1), u_vec(1) ], [U(2,1) * u(1), u_vec(2) ], LineWidth=2, LineStyle=":", Color=vector_color );
+p{4} = plot( [ U(1,2) * u(2), u_vec(1) ], [U(2,2) * u(2), u_vec(2) ], LineWidth=2, LineStyle=":", Color=vector_color );
+p{5} = arrows( 0, 0, double( U(1,1) ), double( U(2,1) ), [.1 .1 .075 .035], 'Cartesian', 'LineWidth', 1, 'FaceColor', basis_color, 'FaceAlpha',1, 'EdgeColor', "k" );
+p{6} = arrows( 0, 0, double( U(1,2) ), double( U(2,2) ), [.1 .1 .075 .035], 'Cartesian', 'LineWidth', 1, 'FaceColor', basis_color, 'FaceAlpha',1, 'EdgeColor', "k" );
+p{7} = arrows( 0, 0, double( u_vec(1) ), double( u_vec(2) ), [.05 .05 .0375 .0125], 'Cartesian', 'LineWidth', 1, 'FaceColor', vector_color, 'EdgeColor', "k" );
+
+vector_color = cmap(2,:);
+vector_color_hsl = colorspace( 'RGB->HSL', vector_color );
+basis_color = colorspace( 'HSL->RGB', [vector_color_hsl(1:2), vector_color_hsl(3) + (1 - vector_color_hsl(3) )/4 ] );
+scaled_basis_color = colorspace( 'HSL->RGB', [vector_color_hsl(1:2), vector_color_hsl(3) + 2*(1 - vector_color_hsl(3) )/4 ] );
+
+p{8}  = arrows( 0, 0, double( V(1,1) * v(1) ), double( V(2,1) * v(1) ), [.05 .05 .0375 .0125], 'Cartesian', 'LineWidth', 1, 'FaceColor', scaled_basis_color, 'FaceAlpha',0.25, 'EdgeColor', cmap(2,:) );
+p{9}  = arrows( 0, 0, double( V(1,2) * v(2) ), double( V(2,2) * v(2) ), [.05 .05 .0375 .0125], 'Cartesian', 'LineWidth', 1, 'FaceColor', scaled_basis_color, 'FaceAlpha',0.25, 'EdgeColor', cmap(2,:) );
+p{10} = plot( [ V(1,1) * v(1), v_vec(1) ], [V(2,1) * v(1), v_vec(2) ], LineWidth=2, LineStyle=":", Color=vector_color );
+p{11} = plot( [ V(1,2) * v(2), v_vec(1) ], [V(2,2) * v(2), v_vec(2) ], LineWidth=2, LineStyle=":", Color=vector_color );
+p{12} = arrows( 0, 0, double( V(1,1) ), double( V(2,1) ), [.1 .1 .075 .035], 'Cartesian', 'LineWidth', 1, 'FaceColor', basis_color, 'FaceAlpha',1, 'EdgeColor', "k" );
+p{13} = arrows( 0, 0, double( V(1,2) ), double( V(2,2) ), [.1 .1 .075 .035], 'Cartesian', 'LineWidth', 1, 'FaceColor', basis_color, 'FaceAlpha',1, 'EdgeColor', "k" );
+p{14} = arrows( 0, 0, double( v_vec(1) ), double( v_vec(2) ), [.05 .05 .0375 .0125], 'Cartesian', 'LineWidth', 1, 'FaceColor', vector_color, 'EdgeColor', "k" );
 ```
 
 ## Example: Polynomial Change of Basis
@@ -328,27 +340,28 @@ We wish to represent this polynomial in the Lagrange basis.
 Within our mnemonic, $\Matrix{T} \equiv \Matrix{M}$, $\Matrix{F} \equiv \Matrix{L}$, $\Vector{f} \equiv \Vector{m}$, and the representation we wish to find is $\Vector{t} \equiv \Vector{\ell}$.
 
 
-```{julia}
-using SymbolicNumericIntegration: integrate
-function PolynomialChangeOfBasis( from_basis, to_basis, from_coeffs, domain )
-    basis_dim = length( from_coeffs )
-    variate = Symbolics.get_variables( from_basis[end] )[1]
-    var_tuple = fill( ( variate, domain[1], domain[2] ), ( length( from_basis ), length( from_basis ) ) )
-    D = integrate.( to_basis * transpose( to_basis ), var_tuple; detailed=false )
-    C = integrate.( to_basis * transpose( from_basis ), var_tuple; detailed=false )
-    R = D \ C
-    to_coeffs = R * from_coeffs
-    return to_coeffs, R
+```{matlab}
+%| output: false
+function [to_coeffs, R] = PolynomialChangeOfBasis( from_basis, to_basis, from_coeffs, domain )
+    basis_dim = length( from_coeffs );
+    variate = symvar( from_basis(end) );
+    if isempty( variate )
+        variate = sym( "x", "real" );
+    end
+    D = int( to_basis * transpose( to_basis ), domain );
+    C = int( to_basis * transpose( from_basis ), domain );
+    R = D \ C;
+    to_coeffs = R * from_coeffs;
 end
 ```
 
-```{julia}
-Symbolics.@variables x
-domain = [ 0//1, 1//1 ]
-m_coeffs = [-1//1, 1//1, 4//1, 0//1, -1//1]
-M = PolynomialBasisFunction( "Monomial", 4, x, domain )
-L = PolynomialBasisFunction( "Lagrange", 4, x, domain )
-l_coeffs, R = PolynomialChangeOfBasis( M, L, m_coeffs, domain )
+```{matlab}
+x = sym( "x", "real" );
+domain = sym( [ 0, 1 ] );
+m_coeffs = sym( [-1; 1; 4; 0; -1] );
+M = PolynomialBasisFunction( "Monomial", 4, x, domain );
+L = PolynomialBasisFunction( "Lagrange", 4, x, domain );
+[l_coeffs, R] = PolynomialChangeOfBasis( M, L, m_coeffs, domain );
 display( l_coeffs )
 display( R )
 ```

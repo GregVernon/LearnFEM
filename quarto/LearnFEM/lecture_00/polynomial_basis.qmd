@@ -460,18 +460,17 @@ To simplify accessing the various basis polynomials later in this text, let's de
 
 ```{matlab}
 %| output: false
-function PolynomialBasisFunction( basis_name, degree, variate, domain )
+function basis = PolynomialBasisFunction( basis_name, degree, variate, domain )
         if basis_name == "Bernstein"
-            basis = BernsteinBasis( degree, variate, domain )
+            basis = BernsteinBasis( degree, variate, domain );
         elseif basis_name == "Chebyshev"
-            basis = ChebyshevBasis( degree, variate, domain )
+            basis = ChebyshevBasis( degree, variate, domain );
         elseif basis_name == "Lagrange"
-            basis = LagrangeBasis( degree, variate, domain )
+            basis = LagrangeBasis( degree, variate, domain );
         elseif basis_name == "Legendre"
-            basis = LegendreBasis( degree, variate, domain )
+            basis = LegendreBasis( degree, variate, domain );
         elseif basis_name == "Monomial"
-            basis = MonomialBasis( degree, variate, domain )
+            basis = MonomialBasis( degree, variate, domain );
         end
-        return basis
     end
 ```

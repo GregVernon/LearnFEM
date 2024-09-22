@@ -1,0 +1,73 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+```
+
+# Incorporating Boundary Conditions in Galerkin's Method
+
+
+```{matlab}
+%| output: false
+
+function [u, D, F, basis, d] = ScalarProjection( target_fun, basis_name, degree, domain )
+
+    function D = AssembleGramMatrix()
+        D = int( basis * transpose( basis ), domain );
+    end
+
+    function F = AssembleForceVector()
+        F = int( basis * target_fun, domain );
+    end
+
+    function [D, F] = ApplyBoundaryConditions( D, F )
+        function [D, F] = LeftFunctionValue( D, F )
+            D = D + subs( basis .* transpose( basis ), variate, domain(1) );
+            F = F + subs( basis * target_fun, variate, domain(1) );
+        end
+        function [D, F] = RightFunctionValue( D, F )
+            D = D + subs( basis .* transpose( basis ), variate, domain(2) );
+            F = F + subs( basis * target_fun, variate, domain(2) );
+        end
+        [D, F] = LeftFunctionValue( D, F );
+        [D, F] = RightFunctionValue( D, F );
+    end
+
+    variate = symvar( target_fun );
+    if isempty( variate )
+        variate = sym( "x", "real" );
+    end
+    basis = PolynomialBasisFunction( basis_name, degree, variate, domain );
+    D = AssembleGramMatrix();
+    F = AssembleForceVector();
+    [D, F] = ApplyBoundaryConditions( D, F );
+    d = D \ F;
+    u = transpose( d ) * basis;
+end
+```
+
+```{matlab}
+x = sym( "x", "real" );
+domain = sym( [0, 1] );
+target_fun = sin( pi * x )^2 + cos( x ) - 1;
+domain = sym( [0, 1] );
+degree = 2;
+basis_name = "Monomial";
+
+[u, M, F, basis, d] = ScalarProjection( target_fun, basis_name, degree, domain );
+```
+
+```{matlab}
+%| echo: false
+figure
+hold on
+fplot( target_fun, double( domain ), linewidth=4, DisplayName="$f(x)$" )
+fplot( u, double( domain ),          linewidth=3, DisplayName="$\tilde{f}(x)$" )
+legend()
+```

@@ -1,0 +1,518 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+```
+
+# The Poisson Equation
+## Definition
+Let's consider the Poisson differential equation, which is used to describe a wide variety of physics including heat transfer, electrostatics, and gravity.
+
+```{=latex}
+\begin{equation}
+    \frac{d^2 u}{dx^2} + f = 0
+\end{equation}
+```
+
+We'll define this equation over a finite domain and impose conditions for the solution on the boundaries of the domain -- this is often called a *boundary value problem*.
+
+```{=latex}
+\begin{align*}
+    \mathrm{Let} \ \Omega &= [0, 1] \\
+    u(1) &= g \\
+    \frac{du}{dx}(0) &= h
+\end{align*}
+```
+
+## An Exact Solution
+Now, *this* boundary value problem is simple enough that we are able to solve it exactly using Matlab's `dsolve` routine.
+
+```{matlab}
+%| output: false
+function exactSolution = ExactPoissonSolution( f, g, h, domain )
+    syms u(x)
+    eqn = diff( u, x, 2 ) + f == 0;
+    D1u = diff( u, x, 1 );
+    cond = [   u( domain(2) ) == g, ...
+             D1u( domain(1) ) == h ];
+    U(x) = dsolve( eqn, cond );
+
+    exactSolution.f = f;
+    exactSolution.eqn = eqn;
+    exactSolution.cond = cond;
+    exactSolution.domain = domain;
+    exactSolution.U = simplify( U, Steps=10 );
+end
+```
+
+Which we can then solve as
+
+```{matlab}
+syms x f(x) g h
+boundaries = sym( "X", [1, 2] );
+u = ExactPoissonSolution( f, g, h, boundaries ).U;
+```
+
+```{=latex}
+\begin{equation*}
+    g - h \left( X_{2} - x \right) - \left( X_{2} - x \right) \int_{X_{2}}^{X_{1}}{f(y) \ dy} + \int_{X_{2}}^{x} \left( -\int_{X_{2}}^{v} f(y) \ dy \right) \ dv
+\end{equation*}
+```
+
+Into which we can then plug values corresponding to a specific configuration we might be investigating into and recover the solution to the configuration:
+
+```{matlab}
+f1 = x^2;
+g1 = 0;
+h1 = 0;
+domain = [0, 1];
+
+U(x) = subs( u, [f, g, h, boundaries], [f1, g1, h1, domain] );
+```
+
+```{=latex}
+\begin{equation*}
+    U(x) = \frac{1 - x^4}{12}
+\end{equation*}
+```
+
+Or, if we want to skip the intermediary step of constructing the general solution and directly compute the solution of our configuration, we can simply pass these parameters directly into our exact solver:
+
+```{matlab}
+U(x) = ExactPoissonSolution( f1, g1, h1, domain ).U;
+```
+
+```{=latex}
+\begin{equation*}
+    U(x) = \frac{1 - x^4}{12}
+\end{equation*}
+```
+
+```{matlab}
+figure
+fplot( U, [0 1], LineWidth=4, Color="k" )
+```
+## The Galerkin Approach
+
+We can rearrange the strong form of the Poisson equation as:
+
+```{=latex}
+\begin{equation}
+    \frac{d^2 u}{dx^2} = -f
+\end{equation}
+```
+
+We'll interpret this statement as "*find the best representation of in the second derivative of* $u$" or "*find* $u$ *such that it's second derivative is the best representation of* $-f$."
+We recognize these statements as being similar to those regarding the change of basis operator for which we derived the mnemonic device "*To To to, To From from*" or: $\Inner{\Matrix{T}}{\Matrix{T}}\Vector{t} = \Inner{\Matrix{T}}{\Matrix{F}}\Vector{f}$.
+Following this mnemonic, or at least the $\Inner{\Matrix{T}}{\Matrix{T}} = \Inner{\Matrix{T}}{\Matrix{F}}$ portion we compose a weak form as:
+
+```{=latex}
+\begin{equation}
+    \Inner{\frac{d^2 u}{dx^2}}{\frac{d^2 u}{dx^2}} = \Inner{\frac{d^2 u}{dx^2}}{-f}
+\end{equation}
+```
+
+But recognize that the mnemonic isn't rigorous, it's just a memory-device or a tool to aid us.
+In fact, the more accurate statement is to say that in order to determine how well $-f$ is represented in the second derivative of $u$, we need to be able to make a measurement i.e., compare inner products.
+So we take the inner product between $-f$ and $\frac{d^2 u}{dx^2}$ and compare it to the inner product of $\frac{d^2 u}{dx^2}$ and itself (i.e., $\frac{d^2 u}{dx^2}$ ).
+But for now, let's just use the mnemonic device of this being similar to a change of basis to aid us in formulating weak forms.
+
+Now let's introduce an approximation of the solution, $\tilde{u}(x) \approx u(x)$, that we define to be a polynomial function i.e., $\tilde{u}(x) = a_0 x^0 + a_1 x^1 + \cdots + a_{n-1} x^{n-1} + a_n x^n$.
+Recall that the derivative of a polynomial function is also a polynomial function and that we can that we can represent these polynomials in basis form:
+
+```{=latex}
+\begin{align*}
+    \tilde{u}(x) &= \sum_{i=0}^{n}{\Vector{a}_i \Matrix{A}_i } \\
+    %
+    \frac{d^2 \tilde{u}(x)}{dx^2} &= \sum_{i=0}^{n}{\Vector{a}_i \left( \frac{d^2 \Matrix{A}_i}{dx^2} \right) } = \sum_{i=0}^{n}{\Vector{c}_i \Matrix{C}_i}
+\end{align*}
+```
+
+Thus we can rewrite the weak form as:
+
+```{=latex}
+\begin{align*}
+    % EQN 1
+    \Inner{ \sum_{i=0}^{m}{\Vector{c}_i \Matrix{C}_i} }{ \sum_{j=0}^{n}{\Vector{c}_j \Matrix{C}_j} }
+    &=
+    \Inner{ \sum_{i=0}^{m}{\Vector{c}_i \Matrix{C}_i} }{ -f } \\
+    % EQN 2
+    \sum_{i=0}^{m}{\Vector{c}_i \Inner{ \Matrix{C}_i }{ \sum_{j=0}^{n}{\Vector{c}_j \Matrix{C}_j} } }
+    &=
+    \sum_{i=0}^{m}{\Vector{c}_i \Inner{\Matrix{C}_i}{ -f } } \\
+    % EQN 3
+    \Inner{ \Matrix{C}_i }{ \sum_{j=0}^{n}{\Vector{c}_j \Matrix{C}_j} }
+    &=
+    \Inner{\Matrix{C}_i}{ -f } \\
+    % EQN 4
+    \sum_{i=0,\ j=0}^{m,\ n}{\Inner{ \Matrix{C}_i }{ \sum_{j=0}^{n}{\Vector{c}_j \Matrix{C}_j} } }
+    &=
+    -\Inner{\Matrix{C}_i}{ f } \\
+\end{align*}
+```
+
+Or, written in matrix form:
+
+```{=latex}
+\begin{equation}
+    \begin{bmatrix}
+        \Inner{\Matrix{C}_1}{\Matrix{C}_1} & \cdots & \Inner{\Matrix{C}_1}{\Matrix{C}_n} \\
+        \vdots                             & \ddots & \vdots \\
+        \Inner{\Matrix{C}_m}{\Matrix{C}_1} & \cdots & \Inner{\Matrix{C}_m}{\Matrix{C}_n} \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        \Vector{c}_1 \\
+        \vdots \\
+        \Vector{c}_n
+    \end{bmatrix}
+    =
+    -\begin{bmatrix}
+        \Inner{\Matrix{C}_1}{f} \\
+        \vdots \\
+        \Inner{\Matrix{C}_n}{f}
+    \end{bmatrix}
+\end{equation}
+```
+
+Next we consider the Neumann boundary condition, $\frac{du}{dx}(0) = h$, which we can again represent in our approximate form $\frac{d\tilde{u}}{dx}(0) = h$ and in weak form as:
+
+```{=latex}
+\begin{equation}
+    \Inner{\frac{du}{dx}(0)}{\frac{du}{dx}(0)} = \Inner{\frac{du}{dx}(0)}{h}
+\end{equation}
+```
+
+And again, in matrix form:
+
+```{=latex}
+\begin{equation}
+    \begin{bmatrix}
+        \Inner{\Matrix{B}_1}{\Matrix{B}_1} & \cdots & \Inner{\Matrix{B}_1}{\Matrix{B}_n} \\
+        \vdots                             & \ddots & \vdots \\
+        \Inner{\Matrix{B}_m}{\Matrix{B}_1} & \cdots & \Inner{\Matrix{B}_m}{\Matrix{B}_n} \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        \Vector{b}_1 \\
+        \vdots \\
+        \Vector{b}_n
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        \Inner{\Matrix{B}_1}{h} \\
+        \vdots \\
+        \Inner{\Matrix{B}_n}{h}
+    \end{bmatrix}
+\end{equation}
+```
+
+Finally we consider the Dirichlet boundary condition, $u(1)=g$, which we can, once again, represent in our approximate form $\tilde{u}(1)=g$ and in weak form as:
+
+```{=latex}
+\begin{equation}
+    \Inner{u(1)}{u(1)} = \Inner{u(1)}{g}
+\end{equation}
+```
+
+And again, in matrix form:
+
+```{=latex}
+\begin{equation}
+    \begin{bmatrix}
+        \Inner{\Matrix{A}_1}{\Matrix{A}_1} & \cdots & \Inner{\Matrix{A}_1}{\Matrix{A}_n} \\
+        \vdots                             & \ddots & \vdots \\
+        \Inner{\Matrix{A}_m}{\Matrix{A}_1} & \cdots & \Inner{\Matrix{A}_m}{\Matrix{A}_n} \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        \Vector{a}_1 \\
+        \vdots \\
+        \Vector{a}_n
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        \Inner{\Matrix{A}_1}{g} \\
+        \vdots \\
+        \Inner{\Matrix{A}_n}{g}
+    \end{bmatrix}
+\end{equation}
+```
+
+Now we have three weak form systems:
+
+```{=latex}
+\begin{align*}
+    \Inner{\frac{d^2 u}{dx^2}}{\frac{d^2 u}{dx^2}} &= \Inner{\frac{d^2 u}{dx^2}}{-f} \\
+    %
+    \Inner{\frac{du}{dx}(0)}{\frac{du}{dx}(0)} &= \Inner{\frac{du}{dx}(0)}{h} \\
+    %
+    \Inner{u(1)}{u(1)} &= \Inner{u(1)}{g}
+\end{align*}
+```
+
+Which we can combine into a single equation as:
+
+```{=latex}
+\begin{equation}
+    \Inner{\frac{d^2 u}{dx^2}}{\frac{d^2 u}{dx^2}}
+    +
+    \Inner{\frac{du}{dx}(0)}{\frac{du}{dx}(0)}
+    +
+    \Inner{u(1)}{u(1)}
+    =
+    \Inner{\frac{d^2 u}{dx^2}}{-f}
+    +
+    \Inner{\frac{du}{dx}(0)}{h}
+    +
+    \Inner{u(1)}{g}
+\end{equation}
+```
+
+Or, equivalently, in matrix form:
+
+```{=latex}
+\begin{equation}
+    \begin{bmatrix}
+        \Inner{\Matrix{C}_1}{\Matrix{C}_1} & \cdots & \Inner{\Matrix{C}_1}{\Matrix{C}_n} \\
+        \vdots                             & \ddots & \vdots \\
+        \Inner{\Matrix{C}_m}{\Matrix{C}_1} & \cdots & \Inner{\Matrix{C}_m}{\Matrix{C}_n} \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        \Vector{c}_1 \\
+        \vdots \\
+        \Vector{c}_n
+    \end{bmatrix}
+    +
+    \begin{bmatrix}
+        \Inner{\Matrix{B}_1}{\Matrix{B}_1} & \cdots & \Inner{\Matrix{B}_1}{\Matrix{B}_n} \\
+        \vdots                             & \ddots & \vdots \\
+        \Inner{\Matrix{B}_m}{\Matrix{B}_1} & \cdots & \Inner{\Matrix{B}_m}{\Matrix{B}_n} \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        \Vector{b}_1 \\
+        \vdots \\
+        \Vector{b}_n
+    \end{bmatrix}
+    +
+    \begin{bmatrix}
+        \Inner{\Matrix{A}_1}{\Matrix{A}_1} & \cdots & \Inner{\Matrix{A}_1}{\Matrix{A}_n} \\
+        \vdots                             & \ddots & \vdots \\
+        \Inner{\Matrix{A}_m}{\Matrix{A}_1} & \cdots & \Inner{\Matrix{A}_m}{\Matrix{A}_n} \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        \Vector{a}_1 \\
+        \vdots \\
+        \Vector{a}_n
+    \end{bmatrix}
+    =
+    -\begin{bmatrix}
+        \Inner{\Matrix{C}_1}{f} \\
+        \vdots \\
+        \Inner{\Matrix{C}_n}{f}
+    \end{bmatrix}
+    +
+    \begin{bmatrix}
+        \Inner{\Matrix{B}_1}{h} \\
+        \vdots \\
+        \Inner{\Matrix{B}_n}{h}
+    \end{bmatrix}
+    +
+    \begin{bmatrix}
+        \Inner{\Matrix{A}_1}{g} \\
+        \vdots \\
+        \Inner{\Matrix{A}_n}{g}
+    \end{bmatrix}
+\end{equation}
+```
+
+And recall that since the basis functions for each of the weak forms are simply derivatives of the same basis we have $\Vector{a}_i \equiv \Vector{b}_i \equiv \Vector{c}_i$:
+
+```{=latex}
+\begin{align*}
+    \tilde{u} &= \Vector{a}_0 \Matrix{A}_0 + \Vector{a}_1 \Matrix{A}_1 + \cdots + \Vector{a}_{n-1} \Matrix{A}_{n-1} + \Vector{a}_n \Matrix{A}_n \\
+    %
+    \frac{d\tilde{u}}{dx} &= \Vector{a}_0 \left( \frac{d}{dx} \Matrix{A}_0 \right) + \Vector{a}_1 \left( \frac{d}{dx} \Matrix{A}_1 \right) + \cdots + \Vector{a}_{n-1} \left( \frac{d}{dx} \Matrix{A}_{n-1} \right) + \Vector{a}_n \left( \frac{d}{dx} \Matrix{A}_n \right) \\
+    %
+    \frac{d^2 \tilde{u}}{dx^2} &= \Vector{a}_0 \left( \frac{d^2}{dx^2} \Matrix{A}_0 \right) + \Vector{a}_1 \left( \frac{d^2}{dx^2} \Matrix{A}_1 \right) + \cdots + \Vector{a}_{n-1} \left( \frac{d^2}{dx^2} \Matrix{A}_{n-1} \right) + \Vector{a}_n \left( \frac{d^2}{dx^2} \Matrix{A}_n \right) \\
+\end{align*}
+```
+
+We can, therefore, simplify our matrix equation:
+
+```{=latex}
+\begin{equation}
+    \left(
+        \begin{bmatrix}
+            \Inner{\Matrix{C}_1}{\Matrix{C}_1} & \cdots & \Inner{\Matrix{C}_1}{\Matrix{C}_n} \\
+            \vdots                             & \ddots & \vdots \\
+            \Inner{\Matrix{C}_m}{\Matrix{C}_1} & \cdots & \Inner{\Matrix{C}_m}{\Matrix{C}_n} \\
+        \end{bmatrix}
+        +
+        \begin{bmatrix}
+            \Inner{\Matrix{B}_1}{\Matrix{B}_1} & \cdots & \Inner{\Matrix{B}_1}{\Matrix{B}_n} \\
+            \vdots                             & \ddots & \vdots \\
+            \Inner{\Matrix{B}_m}{\Matrix{B}_1} & \cdots & \Inner{\Matrix{B}_m}{\Matrix{B}_n} \\
+        \end{bmatrix}
+        +
+        \begin{bmatrix}
+            \Inner{\Matrix{A}_1}{\Matrix{A}_1} & \cdots & \Inner{\Matrix{A}_1}{\Matrix{A}_n} \\
+            \vdots                             & \ddots & \vdots \\
+            \Inner{\Matrix{A}_m}{\Matrix{A}_1} & \cdots & \Inner{\Matrix{A}_m}{\Matrix{A}_n} \\
+        \end{bmatrix}
+    \right)
+    \begin{bmatrix}
+        \Vector{a}_1 \\
+        \vdots \\
+        \Vector{a}_n
+    \end{bmatrix}
+    =
+    -\begin{bmatrix}
+        \Inner{\Matrix{C}_1}{f} + \Inner{\Matrix{B}_1}{h} + \Inner{\Matrix{A}_1}{g}\\
+        \vdots \\
+        \Inner{\Matrix{C}_n}{f} + \Inner{\Matrix{B}_n}{h} + \Inner{\Matrix{A}_n}{g}
+    \end{bmatrix}
+\end{equation}
+```
+
+```{=latex}
+\begin{equation}
+    \begin{bmatrix}
+        \Inner{\Matrix{C}_1}{\Matrix{C}_1} + \Inner{\Matrix{B}_1}{\Matrix{B}_1} + \Inner{\Matrix{A}_1}{\Matrix{A}_1} & \cdots & \Inner{\Matrix{C}_1}{\Matrix{C}_n} + \Inner{\Matrix{B}_1}{\Matrix{B}_n} + \Inner{\Matrix{A}_1}{\Matrix{A}_n} \\
+        \vdots                             & \ddots & \vdots \\
+        \Inner{\Matrix{C}_m}{\Matrix{C}_1} + \Inner{\Matrix{B}_m}{\Matrix{B}_1} + \Inner{\Matrix{A}_m}{\Matrix{A}_1} & \cdots & \Inner{\Matrix{C}_m}{\Matrix{C}_n} + \Inner{\Matrix{B}_m}{\Matrix{B}_n} + \Inner{\Matrix{A}_m}{\Matrix{A}_n} \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        \Vector{a}_1 \\
+        \vdots \\
+        \Vector{a}_n
+    \end{bmatrix}
+    =
+    -\begin{bmatrix}
+        \Inner{\Matrix{C}_1}{f} + \Inner{\Matrix{B}_1}{h} + \Inner{\Matrix{A}_1}{g}\\
+        \vdots \\
+        \Inner{\Matrix{C}_n}{f} + \Inner{\Matrix{B}_n}{h} + \Inner{\Matrix{A}_n}{g}
+    \end{bmatrix}
+\end{equation}
+```
+
+```{matlab}
+%| output: false
+function [u, M, F, basis, d] = PoissonEquation( basis_family, degree, domain, f, g, h )
+
+    function [M, F] = ApplyGoverningEquation()
+        M = int( basis(2) .* transpose( basis(2) ), domain );
+        F = -int( basis(2) * f, domain );
+    end
+
+    function [M, F] = ApplyBoundaryConditions( M, F )
+        function [M, F] = DirichletBoundaryCondition()
+            M = subs( basis(0) .* transpose( basis(0) ), symvar( basis(0) ), domain(2) );
+            F = subs( basis(0) * g, symvar( basis(0) ), domain(2) );
+        end
+
+        function [M, F] = NeumannBoundaryCondition()
+            M = subs( basis(1) .* transpose( basis(1) ), symvar( basis(1) ), domain(1) );
+            F = subs( basis(1) * h, symvar( basis(1) ), domain(1) );
+        end
+
+        [MD, FD] = DirichletBoundaryCondition();
+        [MN, FN] = NeumannBoundaryCondition();
+        M = M + MD + MN;
+        F = F + FD + FN;
+    end
+
+    variate = symvar( f );
+    if isempty( variate )
+        variate = sym( "x", "real" );
+    end
+    basis = @(deriv) diff( PolynomialBasisFunction( basis_family, degree, variate, domain ), variate, deriv );
+    [M, F] = ApplyGoverningEquation();
+    [M, F] = ApplyBoundaryConditions( M, F );
+    d = M \ F;
+    u = transpose( d ) * basis(0);
+    u = symfun( u, variate );
+end
+```
+
+Take a moment to notice how concise the above routine is, again thanks to our use of symbolic computations.
+
+```{matlab}
+x = sym( "x" );
+f(x) = 5*x^0;
+g = 1;
+h = 1;
+basis_family = "Monomial";
+degree = 2;
+domain = [0, 1];
+u(x) = PoissonEquation( basis_family, degree, domain, f, g, h )
+```
+
+Note that in the previous example we were able to arrive at the exact solution because the exact solution happens to be polynomial and the polynomial basis we used was of sufficiently high degree to recover the polynomial solution.
+If, for example, the polynomial basis degree was too low the Galerkin method would only produce the closest polynomial of that degree to the exact solution.
+Or if the forcing function was not polynomial then the exact solution wouldn't be polynomial either and the Galerkin method would only produce the closest polynomial of our chosen degree to the exact solution, i.e., the best approximation of the solution within our chosen basis.
+
+Let's demonstrate a case where the polynomial degree is too low to recover an exact polynomial solution.
+
+```{matlab}
+x = sym( "x", "real" );
+f(x) = 5*x^0;
+g = 1;
+h = 1;
+domain = [0, 1];
+degree = 1;
+basis_family = "Monomial";
+
+U = ExactPoissonSolution( f, g, h, domain ).U;
+u = PoissonEquation( basis_family, degree, domain, f, g, h );
+
+l2_error = ComputeL2Error( U, u, domain, "exact" );
+l2_error = vpa( l2_error, 16 );
+```
+
+```{matlab}
+%| echo: false
+figure
+subplot( 2, 1, 1 )
+hold on
+fplot( U, domain, LineWidth=4, Color="k" )
+fplot( u, domain, LineWidth=3, SeriesIndex=1 )
+
+subplot( 2, 1, 2 )
+fplot( sqrt( ( U - u )^2 ), domain, LineWidth=2, Color="r" )
+```
+
+Note that while our approximation looks completely wrong, remember that we're enforcing the boundary conditions, $\frac{du}{dx}(0)=1$ and $u(1)=1$, which we can see are being respected in the solution.
+Next we consider an example of a non-polynomial forcing function, resulting in a non-polynomial solution:
+
+```{matlab}
+x = sym( "x", "real" );
+f(x) = sin(2*pi*x);
+g = 1;
+h = 0;
+domain = [0, 1];
+degree = 3;
+basis_family = "Monomial";
+
+U = ExactPoissonSolution( f, g, h, domain ).U;
+u = PoissonEquation( basis_family, degree, domain, f, g, h );
+
+l2_error = ComputeL2Error( U, u, domain, "exact" );
+l2_error = vpa( l2_error, 16 );
+```
+
+```{matlab}
+%| echo: false
+figure
+subplot( 2, 1, 1 )
+hold on
+fplot( U, domain, LineWidth=4, Color="k" )
+fplot( u, domain, LineWidth=3, SeriesIndex=1 )
+
+subplot( 2, 1, 2 )
+fplot( sqrt( ( U - u )^2 ), domain, LineWidth=2, Color="r" )
+```

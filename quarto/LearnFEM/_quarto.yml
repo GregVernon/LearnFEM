@@ -41,13 +41,10 @@ book:
       chapters: 
         - lecture_02/galerkin_poisson_equation.qmd
         - lecture_02/galerkin_heat_equation.qmd
+        - lecture_02/euler_bernoulli_beam_equation.qmd
+        - lecture_02/damped_harmonic_oscillator_equation.qmd
     # - summary.qmd
     # - references.qmd
-
-# loader: {
-#           load: ['[tex]/breqn']
-# },
-# packages: {'[+]': ['breqn']},
 
 format:
   html:
@@ -89,7 +86,6 @@ format:
         \usepackage{mathpazo}
         \usepackage{mathtools}
         \usepackage{bm}
-        %\usepackage{breqn}
         \newcommand{\Real}{\mathbb{R}}
         \newcommand{\Inner}[2]{\left\langle #1, #2 \right\rangle}
         \newcommand{\Vector}[1]{\mathbf{\mathit{#1}}}

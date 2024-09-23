@@ -1,0 +1,268 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+```
+
+# The Euler–Bernoulli Equation
+## Definition
+Next we consider the Euler–Bernoulli equation, which models the (small) deflection of beams subjected to lateral loads:
+
+```{=latex}
+\begin{equation}
+    \mathrm{EI} \frac{d^4 u}{dx^4} + f = 0
+\end{equation}
+```
+
+Where $\mathrm{E}$ is the *elastic modulus*, $\mathrm{I}$ is the *second moment of inertia* of the beam, and $f$ is a distributed load acting laterally on the beam.
+
+Next we define the boundary value problem as
+
+```{=latex}
+\begin{align*}
+    \mathrm{Let} \ \Omega &= [0, 1] \\
+    u(0) &= 0 \\
+    \frac{du}{dx}(0) &= 0 \\
+    \frac{d^2 u}{dx^2}(1) = \frac{M}{\mathrm{EI}}
+    \frac{d^3 u}{dx^3}(1) = -\frac{Q}{\mathrm{EI}}
+\end{align*}
+```
+
+Where $M$ is an applied *moment* and $Q$ is an applied $shear$
+
+## An Exact Solution
+
+```matlab
+classdef EulerBernoulliBeamBVP
+    properties
+        variate
+        domain
+        elastic_modulus
+        second_moment_inertia
+        distributed_load
+        moment_load
+        shear_load
+        prescribed_displacement
+        prescribed_slope
+    end
+end
+```
+
+```{matlab}
+%| output: false
+function exactSolution = ExactEulerBernoulliBeamSolution( bvp )
+    % Unpack BVP parameters
+    syms u(x)
+    domain = bvp.domain;
+    E = bvp.elastic_modulus;
+    I = bvp.second_moment_inertia;
+    f = bvp.distributed_load;
+    M = bvp.moment_load;
+    Q = bvp.shear_load;
+    g = bvp.prescribed_displacement;
+    h = bvp.prescribed_slope;
+
+    % Precompute derivatives
+    D0u = diff( u, x, 0 );
+    D1u = diff( u, x, 1 );
+    D2u = diff( u, x, 2 );
+    D3u = diff( u, x, 3 );
+    D4u = diff( u, x, 4 );
+
+    % Define BVP
+    eqn = ( ( E * I ) * D4u ) + f == 0;
+    cond = [ D0u( domain(1) ) == 0, ...
+             D1u( domain(1) ) == 0, ...
+             D2u( domain(2) ) == M / ( E * I ), ...
+             D3u( domain(2) ) == -Q / ( E * I ) ];
+
+    % Solve the BVP
+    U(x) = dsolve( eqn, cond );
+
+    % Package the solution for output
+    exactSolution.f = f;
+    exactSolution.eqn = eqn;
+    exactSolution.cond = cond;
+    exactSolution.domain = domain;
+    exactSolution.U = simplify( U, Steps=10 );
+end
+```
+
+## The Galerkin Approach
+
+Again we construct our weak form by describing what we want to do:
+
+> Find $u$ such that $\mathrm{EI}\frac{d^4 u}{dx^4}$ is the best representation of $-f(x)$...
+
+```{=latex}
+\begin{equation}
+    \Inner{\mathrm{EI}\frac{d^4 u}{dx^4}}{\mathrm{EI}\frac{d^4 u}{dx^4}}
+    =
+    \Inner{\mathrm{EI}\frac{d^4 u}{dx^4}}{-f}
+\end{equation}
+```
+
+> ... while subject to the condition that $\mathrm{EI}\frac{d^3 u}{dx^3}(1)$ is the best representation of $-Q$...
+
+```{=latex}
+\begin{equation}
+    \Inner{\mathrm{EI}\frac{d^3 u}{dx^3}(1)}{\mathrm{EI}\frac{d^3 u}{dx^3}(1)}
+    =
+    \Inner{\mathrm{EI}\frac{d^3 u}{dx^3}(1)}{-Q}
+\end{equation}
+```
+
+> ... and subject to the condition that $\mathrm{EI}\frac{d^2 u}{dx^2}(1)$ is the best representation of $M$...
+
+```{=latex}
+\begin{equation}
+    \Inner{\mathrm{EI}\frac{d^2 u}{dx^2}(1)}{\mathrm{EI}\frac{d^2 u}{dx^2}(1)}
+    =
+    \Inner{\mathrm{EI}\frac{d^2 u}{dx^2}(1)}{M}
+\end{equation}
+```
+
+> ... and subject to the condition that $\frac{d u}{dx}(0)$ is the best representation of $h$...
+
+```{=latex}
+\begin{equation}
+    \Inner{\mathrm{EI}\frac{d u}{dx}(0)}{\mathrm{EI}\frac{d u}{dx}(0)}
+    =
+    \Inner{\mathrm{EI}\frac{d u}{dx}(0)}{M}
+\end{equation}
+```
+
+> ... and subject to the condition that $u(0)$ is the best representation of $g$.
+
+```{=latex}
+\begin{equation}
+    \Inner{u(0)}{u(0)}
+    =
+    \Inner{u(0)}{g}
+\end{equation}
+```
+
+```{matlab}
+%| output: false
+function [u, A, B, basis, d] = EulerBernoulliBeamEquation( sol_space, bvp )
+
+    % Subroutines
+    function [A, B] = ApplyGoverningEquation()
+        A = int( ( ( E * I ) * basis(4) ) .* ( ( E * I ) * transpose( basis(4) ) ), domain );
+        B = -int( ( ( E * I ) * basis(4) ) * f, domain );
+    end
+
+    function [A, B] = ApplyBoundaryConditions( A, B )
+
+        function [A, B] = DisplacementBoundaryCondition()
+            A = subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
+            B = subs( basis(0) .* g, variate, domain(1) );
+        end
+
+        function [A, B] = SlopeBoundaryCondition()
+            A = subs( basis(1) .* transpose( basis(1) ), variate, domain(1) );
+            B = subs( basis(1) .* h, variate, domain(1) );
+        end
+
+        function [A, B] = MomentBoundaryCondition()
+            A = subs( basis(2) * ( E * I ) .* transpose( basis(2) ), variate, domain(2) );
+            B = subs( basis(2) .* M, variate, domain(2) );
+        end
+
+        function [A, B] = ShearBoundaryCondition()
+            A = subs( basis(3) * ( E * I ) .* transpose( basis(3) ), variate, domain(2) );
+            B = -subs( basis(3) .* Q, variate, domain(2) );
+        end
+
+        [AD, BD] = DisplacementBoundaryCondition();
+        [AN, BN] = SlopeBoundaryCondition();
+        [AM, BM] = MomentBoundaryCondition();
+        [AS, BS] = ShearBoundaryCondition();
+        A = A + AD + AN + AM + AS;
+        B = B + BD + BN + BM + BS;
+    end
+
+    % Unpack the solution space
+    variate = sol_space.variate;
+    basis_name = sol_space.basis_name;
+    degree = sol_space.degree;
+    sol_domain = sol_space.domain;
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    E = bvp.elastic_modulus;
+    I = bvp.second_moment_inertia;
+    f = bvp.distributed_load;
+    M = bvp.moment_load;
+    Q = bvp.shear_load;
+    g = bvp.prescribed_displacement;
+    h = bvp.prescribed_slope;
+
+    % Solve the BVP
+    basis = @(deriv) diff( PolynomialBasisFunction( basis_name, degree, variate, domain ), variate, deriv );
+    [A, B] = ApplyGoverningEquation();
+    [A, B] = ApplyBoundaryConditions( A, B );
+    d = A \ B;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = simplify( u, Steps=10 );
+    u = symfun( u, variate );
+end
+```
+
+And an example:
+
+```{matlab}
+%| echo: true
+%| output: true
+x = sym( "x", "real" );
+sol_space = PolynomialSolutionSpace;
+sol_space.variate = x;
+sol_space.domain = [0, 1];
+sol_space.degree = 5;
+sol_space.basis_name = "Monomial";
+
+bvp.variate = x;
+bvp.domain = sym( [0, 1] );
+bvp.elastic_modulus = sym( 200e9 );
+bvp.second_moment_inertia = sym( 0.1 ) * sym( 0.1^3 ) / sym( 12 );
+bvp.distributed_load = 1e3 * x^1;
+bvp.moment_load = sym( 3e3 );
+bvp.shear_load = sym( -5e3 );
+bvp.prescribed_displacement = sym( 0 );
+bvp.prescribed_slope = sym( 0 );
+
+U = ExactEulerBernoulliBeamSolution( bvp ).U;
+u = EulerBernoulliBeamEquation( sol_space, bvp );
+
+l2_error = ComputeL2Error( U, u, bvp.domain, "exact" );
+l2_error = vpa( simplify( abs( l2_error ) ), 16 );
+```
+
+```{=latex}
+\begin{align*}
+            u(x) &= -\frac{x^5}{200\times10^3} + \frac{11x^3}{20\times10^3} - \frac{7x^2}{10\times10^3} \\
+    \tilde{u}(x) &= -\frac{x^5}{200\times10^3} + \frac{11x^3}{20\times10^3} - \frac{7x^2}{10\times10^3} \\
+\end{align*}
+```
+
+```{matlab}
+%| echo: false
+figure
+
+subplot( 2, 1, 1 )
+hold on
+fplot( U, double( bvp.domain ), Color="k"    , LineWidth=4, DisplayName="$f(x)$")
+fplot( u, double( bvp.domain ), SeriesIndex=1, LineWidth=3, DisplayName="$\tilde{f}(x)$")
+
+subplot( 2, 1, 2 )
+fplot( simplify( sqrt( ( U - u )^2 ) ), double( bvp.domain ), Color="r", LineWidth=4 )
+```

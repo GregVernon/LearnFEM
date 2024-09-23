@@ -414,7 +414,8 @@ basis(2); % The 2nd derivative
 ```{matlab}
 %| output: false
 function [u, M, F, basis, d] = PoissonEquation( basis_name, degree, domain, f, g, h )
-
+    
+    % Subroutines
     function [M, F] = ApplyGoverningEquation()
         M = int( basis(2) .* transpose( basis(2) ), domain );
         F = -int( basis(2) * f, domain );
@@ -437,6 +438,7 @@ function [u, M, F, basis, d] = PoissonEquation( basis_name, degree, domain, f, g
         F = F + FD + FN;
     end
 
+    % Solve the BVP
     variate = symvar( f );
     if isempty( variate )
         variate = sym( "x", "real" );
@@ -446,6 +448,9 @@ function [u, M, F, basis, d] = PoissonEquation( basis_name, degree, domain, f, g
     [M, F] = ApplyBoundaryConditions( M, F );
     d = M \ F;
     u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = simplify( u, Steps=10 );
     u = symfun( u, variate );
 end
 ```
@@ -460,7 +465,13 @@ h = 1;
 basis_name = "Monomial";
 degree = 2;
 domain = [0, 1];
-u(x) = PoissonEquation( basis_name, degree, domain, f, g, h )
+u(x) = PoissonEquation( basis_name, degree, domain, f, g, h );
+```
+
+```{=latex}
+\begin{equation*}
+    \tilde{u}(x) = -\frac{5x^2}{2} + x + \frac{5}{2}
+\end{equation*}
 ```
 
 Note that in the previous example we were able to arrive at the exact solution because the exact solution happens to be polynomial and the polynomial basis we used was of sufficiently high degree to recover the polynomial solution.
@@ -501,6 +512,7 @@ Note that while our approximation looks completely wrong, remember that we're en
 Next we consider an example of a non-polynomial forcing function, resulting in a non-polynomial solution:
 
 ```{matlab}
+%| output: false
 x = sym( "x", "real" );
 f(x) = sin(2*pi*x);
 g = 1;

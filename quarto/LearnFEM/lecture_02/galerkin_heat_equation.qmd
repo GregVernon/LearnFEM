@@ -51,26 +51,32 @@ classdef HeatEquationBVP
 end
 ```
 
-Then we can write our function to compute the exact solution as solution is:
+Then we can write our function to compute the exact solution:
 
 ```{matlab}
 function exactSolution = ExactHeatSolution( bvp )
-    x = bvp.variate;
+    % Unpack BVP parameters
     syms u(x)
+    domain = bvp.domain;
     k = bvp.thermal_conductivity;
     q = bvp.distributed_heat_load;
     g = bvp.prescribed_temperature;
     h = bvp.prescribed_heat_flux;
 
+    % Precompute derivatives
     D0u = diff( u, x, 0 );
     D1u = diff( u, x, 1 );
     D2u = diff( u, x, 2 );
 
+    % Define BVP
     eqn = ( k * D2u ) + q == 0;
     cond = [ D0u( domain(2) ) == g, ...
              D1u( domain(1) ) == h ];
+    
+    % Solve the BVP
     U(x) = dsolve( eqn, cond );
 
+    % Package the solution for output
     exactSolution.f = q;
     exactSolution.eqn = eqn;
     exactSolution.cond = cond;
@@ -122,6 +128,7 @@ end
 %| output: false
 function [u, M, F, basis, d] = HeatEquation( sol_space, bvp )
 
+    % Subroutines
     function [M, F] = ApplyGoverningEquation()
         M = int( ( k * basis(2) ) .* transpose( k * basis(2) ), domain );
         F = -int( ( k * basis(2) ) * q, domain );
@@ -129,13 +136,13 @@ function [u, M, F, basis, d] = HeatEquation( sol_space, bvp )
 
     function [M, F] = ApplyBoundaryConditions( M, F )
         function [M, F] = DirichletBoundaryCondition()
-            M = subs( basis(0) .* transpose( basis(0) ), symvar( basis(0) ), domain(2) );
-            F = subs( basis(0) * g, symvar( basis(0) ), domain(2) );
+            M = subs( basis(0) .* transpose( basis(0) ), variate, domain(2) );
+            F = subs( basis(0) * g, variate, domain(2) );
         end
 
         function [M, F] = NeumannBoundaryCondition()
-            M = subs( basis(1) .* transpose( basis(1) ), symvar( basis(1) ), domain(1) );
-            F = subs( basis(1) * h, symvar( basis(1) ), domain(1) );
+            M = subs( basis(1) .* transpose( basis(1) ), variate, domain(1) );
+            F = subs( basis(1) * h, variate, domain(1) );
         end
 
         [MD, FD] = DirichletBoundaryCondition();
@@ -144,22 +151,28 @@ function [u, M, F, basis, d] = HeatEquation( sol_space, bvp )
         F = F + FD + FN;
     end
 
+    % Unpack the solution space
     variate = sol_space.variate;
     basis_name = sol_space.basis_name;
     degree = sol_space.degree;
     sol_domain = sol_space.domain;
-    basis = @(deriv) diff( PolynomialBasisFunction( basis_name, degree, variate, sol_domain ), variate, deriv );
 
+    % Unpack the BVP parameters
     domain = bvp.domain;
     q = bvp.distributed_heat_load;
     k = bvp.thermal_conductivity;
     g = bvp.prescribed_temperature;
     h = bvp.prescribed_heat_flux;
 
+    % Solve the BVP
+    basis = @(deriv) diff( PolynomialBasisFunction( basis_name, degree, variate, sol_domain ), variate, deriv );
     [M, F] = ApplyGoverningEquation();
     [M, F] = ApplyBoundaryConditions( M, F );
     d = M \ F;
     u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = simplify( u, Steps=10 );
     u = symfun( u, variate );
 end
 ```
@@ -167,6 +180,7 @@ end
 And an example:
 
 ```{matlab}
+%| output: false
 x = sym( "x", "real" );
 sol_space = PolynomialSolutionSpace;
 sol_space.variate = x;
@@ -181,11 +195,18 @@ bvp.distributed_heat_load = 5 * x^0;
 bvp.prescribed_temperature = 293.15;
 bvp.prescribed_heat_flux = 0;
 
-T = ExactHeatSolution( bvp ).U
-t = HeatEquation( sol_space, bvp )
+T = ExactHeatSolution( bvp ).U;
+t = HeatEquation( sol_space, bvp );
 
 l2_error = ComputeL2Error( T, t, bvp.domain, "exact" );
-l2_error = vpa( simplify( abs( l2_error ) ), 16 )
+l2_error = vpa( simplify( abs( l2_error ) ), 16 );
+```
+
+```{=latex}
+\begin{align*}
+    T(x) = -\frac{x^2}{40} - \frac{3x}{5} + \frac{6079}{20} \\
+    \tilde{T}(x) = -\frac{x^2}{40} - \frac{3x}{5} + \frac{6079}{20}
+\end{align*}
 ```
 
 ```{matlab}
@@ -194,9 +215,9 @@ figure
 
 subplot( 2, 1, 1 )
 hold on
-fplot( T, bvp.domain, Color="k" )
-fplot( t, bvp.domain, SeriesIndex=1 )
+fplot( T, bvp.domain, Color="k"    , LineWidth=4 )
+fplot( t, bvp.domain, SeriesIndex=1, LineWidth=3 )
 
 subplot( 2, 1, 2 )
-fplot( simplify( T - t )^2, bvp.domain )
+fplot( simplify( sqrt( ( T - t )^2 ) ), bvp.domain, Color="r", LineWidth=4 )
 ```

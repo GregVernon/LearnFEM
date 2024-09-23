@@ -1,0 +1,308 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+```
+
+# The Damped Harmonic Oscillator Equation
+## Definition
+Let's consider one last system.
+Thus far we have only explored differential equations that involve a single differential in the governing equation.
+But what about differential equations with multiple differentials, such as the second-order linear (ordinary) differental equation that is often a focal point of an undergraduate-level differential equations course:
+
+```{=latex}
+\begin{equation}
+    au'' + bu' + cu = f
+\end{equation}
+```
+
+Which can be used to model the behavior of a damped harmonic oscillator.
+This specific case is inspired by a piece of weightlifting equipment wherein Olympic plates are loaded onto a frame that is able to slide along two vertical bars.
+When not being actively lifted, the frame sits upon two springs.
+If the frame is released suddenly by the weightlifter, the frame will oscillate on the springs until the internal friction of the springs and other frictional interactions within the assembly damp the system and it comes to rest.
+For convenience we will refer to this damped harmonic oscillator problem as a *spring-dashpot system*.
+
+![Spring-Dashpot System](spring-dashpot-system.png)
+
+We can reformat the governing equation into one that more clearly relates the physical quantities: mass, $m$; damping coefficient, $c$; spring stiffness, $k$; and weight, $w$:
+
+```{=latex}
+\begin{equation}
+    m\frac{d^2 y}{dt^2} + b\frac{dy}{dt} + ky = w
+\end{equation}
+```
+
+In this idealized system we are making a few assumptions:
+
+1. The mass of the object is constant
+   i) $m$ is a constant
+2. The dashpot has a constant damping coefficient
+    i) $c$ is a constant
+3. The spring is a linear elastic spring
+   i) $k$ is a constant
+4. The spring and dashpot are themselves of negligible mass compared to the object and their coefficients
+   i) The spring and dashpot do not contribute the weight of the system
+5. The overall size and displacement of the system, located on Earth's surface, is small
+   i) Constant gravitational field, $w$ is constant
+
+And we will assume the following conditions regarding the system's initial state:
+
+1. The object is placed gently upon the spring-dashpot system
+   i) $\frac{dy}{dt}(0) = 0$
+2. The spring-dashpot system was in a steady-state prior to the object being placed on the system
+   i) $y(0) = 0$
+
+Finally, let's assume the following physical properties of the system:
+
+1. The object is a 45 lbf Olympic plate
+   i) $m = 20.4 \mathrm{kg}$
+2. System is located at ground-level in Provo, UT
+   i) $a_g = 9.80 \frac{\mathrm{m}}{\mathrm{s}^2}; w = 21.6 \mathrm{N}$
+3. The spring's stiffness
+   i) $k = 29.5 \times 10^3 \frac{N}{m}$
+4. The damping coefficient
+   i) $c = 200 \times 10^3 \frac{\mathrm{N}\cdot \mathrm{s}}{\mathrm{m}}$
+
+## An Exact Solution
+
+```matlab
+classdef SpringDashpotBVP
+    properties
+        variate
+        domain
+        mass
+        damping_coefficient
+        spring_stiffness
+        weight
+        initial_displacement
+        initial_velocity
+    end
+end
+```
+
+Then we can write our function to compute the exact solution:
+
+```{matlab}
+%| output: false
+function exactSolution = ExactSpringDashpotSystem( bvp )
+    % Unpack BVP parameters
+    syms y(t)
+    domain = bvp.domain;
+    m = bvp.mass;
+    c = bvp.damping_coefficient;
+    k = bvp.spring_stiffness;
+    w = bvp.weight;
+    g = bvp.initial_displacement;
+    h = bvp.initial_velocity;
+
+    % Precompute derivatives
+    D0y = diff( y, t, 0 );
+    D1y = diff( y, t, 1 );
+    D2y = diff( y, t, 2 );
+
+    % Define BVP
+    eqn = m*D2y + c*D1y + k*D0y == w;
+    cond = [ D0y( domain(1) ) == g, ...
+             D1y( domain(1) ) == h ];
+
+    % Solve the BVP
+    U(t) = dsolve( eqn, cond );
+
+    % Package the solution for output
+    exactSolution.f = w;
+    exactSolution.eqn = eqn;
+    exactSolution.cond = cond;
+    exactSolution.domain = domain;
+    exactSolution.U = simplify( U, Steps=10 );
+end
+```
+
+## The Galerkin Approach
+
+The weak form for this problem is a bit trickier than it was for the others, but this is where our previous notion of "change of basis" can help us in the construction.
+Consider how we might construct the weak forms in these cases:
+
+* $c = 0, k = 0$
+
+> Find $y$ such that $\frac{d^2 y}{dt^2}$ is the best representation of $w$
+
+```{=latex}
+\begin{equation}
+    \Inner{m \frac{d^2 y}{dt^2}}{m \frac{d^2 y}{dt^2}} = \Inner{m \frac{d^2 y}{dt^2}}{w}
+\end{equation}
+```
+
+* $c = 0, w = 0$
+
+> Find $y$ such that $\frac{d^2 y}{dt^2}$ is the best representation of $-ky$
+
+```{=latex}
+\begin{align*}
+    &\Inner{m \frac{d^2 y}{dt^2}}{m \frac{d^2 y}{dt^2}} = \Inner{m \frac{d^2 y}{dt^2}}{-ky} \\
+    &\Inner{m \frac{d^2 y}{dt^2}}{m \frac{d^2 y}{dt^2}} + \Inner{m \frac{d^2 y}{dt^2}}{ky} = 0
+\end{align*}
+```
+
+* $k = 0, w = 0$
+
+> Find $y$ such that $\frac{d^2 y}{dt^2}$ is the best representation of $-c\frac{dy}{dt}$
+
+```{=latex}
+\begin{align*}
+    &\Inner{m \frac{d^2 y}{dt^2}}{m \frac{d^2 y}{dt^2}} = \Inner{m \frac{d^2 y}{dt^2}}{-c\frac{dy}{dt}} \\
+    &\Inner{m \frac{d^2 y}{dt^2}}{m \frac{d^2 y}{dt^2}} + \Inner{m \frac{d^2 y}{dt^2}}{c\frac{dy}{dt}} = 0
+\end{align*}
+```
+
+Combining the terms we then have
+
+```{=latex}
+\begin{equation}
+    \Inner{m \frac{d^2 y}{dt^2}}{m \frac{d^2 y}{dt^2}}
+    +
+    \Inner{m \frac{d^2 y}{dt^2}}{ky}
+    +
+    \Inner{m \frac{d^2 y}{dt^2}}{c\frac{dy}{dt}}
+    =
+    \Inner{m \frac{d^2 y}{dt^2}}{w}
+\end{equation}
+```
+
+And then we can consider the initial conditions:
+
+> While subject to the condition that $\frac{dy}{dt}(0)$ is the best representation of $y'_0$...
+
+```{=latex}
+\begin{equation}
+    \Inner{\frac{dy}{dt}}{\frac{dy}{dt}} = \Inner{\frac{dy}{dt}}{y'_0}
+\end{equation}
+```
+
+> and while subject to the condition that $y(0)$ is the best representation of $y_0$.
+
+```{=latex}
+\begin{equation}
+    \Inner{y}{y} = \Inner{y}{y_0}
+\end{equation}
+```
+
+```{matlab}
+%| output: false
+function [u, A, F, basis, d] = SpringDashpotSystem( sol_space, bvp )
+
+    function [A, F] = ApplyGoverningEquations()
+        M = int( ( m * basis(2) ) .* ( m * transpose( basis(2) ) ), domain );
+        C = int( ( m * basis(2) ) .* ( c * transpose( basis(1) ) ), domain );
+        K = int( ( m * basis(2) ) .* ( k * transpose( basis(0) ) ), domain );
+        A = M + C + K;
+        F = int( ( m * basis(2) ) * w, domain );
+    end
+
+    function [A, F] = ApplyBoundaryConditions( A, F )
+        function [A, F] = DisplacementBoundaryCondition()
+            A = subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
+            F = subs( basis(0) * g, variate, domain(1) );
+        end
+
+        function [A, F] = SlopeBoundaryCondition()
+            A = subs( basis(1) .* transpose( basis(1) ), variate, domain(1) );
+            F = subs( basis(1) * h, variate, domain(1) );
+        end
+
+        [AD, FD] = DisplacementBoundaryCondition();
+        [AN, FN] = SlopeBoundaryCondition();
+        A = A + AD + AN;
+        F = F + FD + FN;
+    end
+
+    % Unpack the solution space
+    variate = sol_space.variate;
+    basis_name = sol_space.basis_name;
+    degree = sol_space.degree;
+    sol_domain = sol_space.domain;
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    m = bvp.mass;
+    c = bvp.damping_coefficient;
+    k = bvp.spring_stiffness;
+    w = bvp.weight;
+    g = bvp.initial_displacement;
+    h = bvp.initial_velocity;
+
+    % Solve the BVP
+    basis = @(deriv) diff( PolynomialBasisFunction( basis_name, degree, variate, domain ), variate, deriv );
+    [A, F] = ApplyGoverningEquations();
+    [A, F] = ApplyBoundaryConditions( A, F );
+    d = A \ F;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = symfun( u, variate );
+    u = simplify( u, Steps=10 );
+end
+```
+
+And now we solve the problem.
+Note that we are now using a basis of significantly-higher order (degree-21 !!) than we used in previous problems.
+
+```{matlab}
+%| output: true
+t = sym( "t", "real" );
+sol_space = PolynomialSolutionSpace;
+sol_space.variate = t;
+sol_space.domain = sym( [0, 1] );
+sol_space.degree = 21;
+sol_space.basis_name = "Legendre";
+
+bvp.variate = t;
+bvp.domain = sym( [0, 1] );
+bvp.mass = sym( 20.4 );
+bvp.damping_coefficient = sym( 250 );
+bvp.spring_stiffness = sym( 29.5e3 );
+bvp.weight = -sym( 21.6 );
+bvp.initial_displacement = sym( 0 );
+bvp.initial_velocity = sym( 0 );
+
+Y = ExactSpringDashpotSystem( bvp ).U;
+y = SpringDashpotSystem( sol_space, bvp );
+
+l2_error = ComputeL2Error( Y, y, bvp.domain, "fast" );
+l2_error = vpa( abs( l2_error ), 32 );
+```
+
+```{matlab}
+%| echo: false
+%| output: true
+figure
+
+subplot( 2, 1, 1 )
+hold on
+fplot( Y, double( bvp.domain ), Color="k"    , LineWidth=4 )
+fplot( y, double( bvp.domain ), SeriesIndex=1, LineWidth=3 )
+
+subplot( 2, 1, 2 )
+X = linspace( 0, 1, 1e4 );
+plot( X, subs( sqrt( ( Y - y ).^2 ), t, X ), Color="r", LineWidth=1 )
+```
+
+While not perfect, our approach has yielded a fairly accurate solution to this problem.
+We observe, however, that it's not yet quite clear what value of deflection our system will settle at and we're already at a quite high polynomial degree.
+Already this calculation is quite expensive, on my computer taking around ten seconds:
+
+```{matlab}
+time_fun = @()SpringDashpotSystem( sol_space, bvp );
+t_elapsed = timeit( time_fun, 1 );
+disp( "Elapsed time: " + num2str( t_elapsed, 2 ) + " seconds" )
+```
+
+Now, one or two seconds may not seem like a long time, but consider the simplicity of this problem: a single mass on a single spring and dashpot and we've not even really solved the problem!
+So how might we be able to improve upon our method?
+Let's start looking at that in the next lecture!

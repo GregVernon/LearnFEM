@@ -40,6 +40,7 @@ book:
     - part: lecture_02/intro.qmd
       chapters: 
         - lecture_02/galerkin_poisson_equation.qmd
+        - lecture_02/galerkin_heat_equation.qmd
     # - summary.qmd
     # - references.qmd
 

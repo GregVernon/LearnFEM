@@ -21,7 +21,7 @@ Let's consider the Poisson differential equation, which is used to describe a wi
 \end{equation}
 ```
 
-We'll define this equation over a finite domain and impose conditions for the solution on the boundaries of the domain -- this is often called a *boundary value problem*.
+We'll define this equation over a finite domain and impose conditions for the solution on the boundaries of the domain -- this is often called a *boundary value problem* --- "BVP" for short.
 
 ```{=latex}
 \begin{align*}
@@ -400,9 +400,20 @@ We can, therefore, simplify our matrix equation:
 \end{equation}
 ```
 
+:::{.callout-note}
+In Matlab we can write anonymous functions to provide us a simple method for accessing the derivative of our basis functions:
+```{matlab}
+%| eval: false
+basis = @(deriv) PolynomialBasisFunction( "Monomial", degree, x, domain ), x, deriv );
+basis(0); % The 0th derivative
+basis(1); % The 1st derivative
+basis(2); % The 2nd derivative
+```
+:::
+
 ```{matlab}
 %| output: false
-function [u, M, F, basis, d] = PoissonEquation( basis_family, degree, domain, f, g, h )
+function [u, M, F, basis, d] = PoissonEquation( basis_name, degree, domain, f, g, h )
 
     function [M, F] = ApplyGoverningEquation()
         M = int( basis(2) .* transpose( basis(2) ), domain );
@@ -430,7 +441,7 @@ function [u, M, F, basis, d] = PoissonEquation( basis_family, degree, domain, f,
     if isempty( variate )
         variate = sym( "x", "real" );
     end
-    basis = @(deriv) diff( PolynomialBasisFunction( basis_family, degree, variate, domain ), variate, deriv );
+    basis = @(deriv) diff( PolynomialBasisFunction( basis_name, degree, variate, domain ), variate, deriv );
     [M, F] = ApplyGoverningEquation();
     [M, F] = ApplyBoundaryConditions( M, F );
     d = M \ F;
@@ -446,10 +457,10 @@ x = sym( "x" );
 f(x) = 5*x^0;
 g = 1;
 h = 1;
-basis_family = "Monomial";
+basis_name = "Monomial";
 degree = 2;
 domain = [0, 1];
-u(x) = PoissonEquation( basis_family, degree, domain, f, g, h )
+u(x) = PoissonEquation( basis_name, degree, domain, f, g, h )
 ```
 
 Note that in the previous example we were able to arrive at the exact solution because the exact solution happens to be polynomial and the polynomial basis we used was of sufficiently high degree to recover the polynomial solution.
@@ -465,10 +476,10 @@ g = 1;
 h = 1;
 domain = [0, 1];
 degree = 1;
-basis_family = "Monomial";
+basis_name = "Monomial";
 
 U = ExactPoissonSolution( f, g, h, domain ).U;
-u = PoissonEquation( basis_family, degree, domain, f, g, h );
+u = PoissonEquation( basis_name, degree, domain, f, g, h );
 
 l2_error = ComputeL2Error( U, u, domain, "exact" );
 l2_error = vpa( l2_error, 16 );
@@ -496,10 +507,10 @@ g = 1;
 h = 0;
 domain = [0, 1];
 degree = 3;
-basis_family = "Monomial";
+basis_name = "Monomial";
 
 U = ExactPoissonSolution( f, g, h, domain ).U;
-u = PoissonEquation( basis_family, degree, domain, f, g, h );
+u = PoissonEquation( basis_name, degree, domain, f, g, h );
 
 l2_error = ComputeL2Error( U, u, domain, "exact" );
 l2_error = vpa( l2_error, 16 );
@@ -516,3 +527,5 @@ fplot( u, domain, LineWidth=3, SeriesIndex=1 )
 subplot( 2, 1, 2 )
 fplot( sqrt( ( U - u )^2 ), domain, LineWidth=2, Color="r" )
 ```
+
+With this solution framework in place, we find it's almost trivial to solve other partial differential equations.

@@ -1,0 +1,202 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+```
+
+# The Steady-state Heat Equation
+## Definition
+We next consider the steady-state heat equation, which is only slightly different from the Poisson equation:
+
+```{=latex}
+\begin{equation}
+    k \frac{d^2 T}{dx^2} = -q
+\end{equation}
+```
+
+Where $T$ is *temperature* and $k$ is a material property known as the *thermal conductivity*.
+While $k$ can, and in the real-world often does, vary with position (i.e., $k(x)$), here we will assume it is a constant value -- we're representing a uniform solid with this constant value.
+
+Next we define the boundary value problem as
+
+```{=latex}
+\begin{align*}
+    \mathrm{Let} \ \Omega &= [0, 1] \\
+    T(1) &= g \\
+    \frac{dT}{dx}(0) &= h
+\end{align*}
+```
+
+Note that, other than using different symbols for some variables, this problem is identical to the Poisson BVP we solved previously in all respects save one: the multiplication of the differential term by a constant ($k$).
+
+## An Exact Solution
+
+```matlab
+classdef HeatEquationBVP
+    properties
+        variate
+        domain
+        thermal_conductivity
+        distributed_heat_load
+        prescribed_temperature
+        prescribed_heat_flux
+    end
+end
+```
+
+Then we can write our function to compute the exact solution as solution is:
+
+```{matlab}
+function exactSolution = ExactHeatSolution( bvp )
+    x = bvp.variate;
+    syms u(x)
+    k = bvp.thermal_conductivity;
+    q = bvp.distributed_heat_load;
+    g = bvp.prescribed_temperature;
+    h = bvp.prescribed_heat_flux;
+
+    D0u = diff( u, x, 0 );
+    D1u = diff( u, x, 1 );
+    D2u = diff( u, x, 2 );
+
+    eqn = ( k * D2u ) + q == 0;
+    cond = [ D0u( domain(2) ) == g, ...
+             D1u( domain(1) ) == h ];
+    U(x) = dsolve( eqn, cond );
+
+    exactSolution.f = q;
+    exactSolution.eqn = eqn;
+    exactSolution.cond = cond;
+    exactSolution.domain = domain;
+    exactSolution.U = simplify( U, Steps=10 );
+end
+```
+
+## The Galerkin Approach
+To construct our weak form we again think about what we want to do: "*find $T$ such that $k\frac{d^2 T}{dx^2}$ is the best representation of $-q$*".
+So again, using our mnemonic, we have:
+
+```{=latex}
+\begin{equation}
+    \Inner{k\frac{d^2 T}{dx^2}}{k\frac{d^2 T}{dx^2}} = \Inner{k\frac{d^2 T}{dx^2}}{-q}
+\end{equation}
+```
+
+And similarly for the boundary conditions:
+
+> "find $T$ such that $\frac{dT}{dx}$ is the best representation of $h$ at $x=0$."
+
+```{=latex}
+\begin{equation}
+    \Inner{\frac{d T}{dx}}{\frac{d T}{dx}}_{x=0} = \Inner{k\frac{d T}{dx}}{h}_{x=0}
+\end{equation}
+```
+
+> "find $T$ such that $T$ is the best representation of $g$ at $x=1$."
+
+```{=latex}
+\begin{equation}
+    \Inner{T}{T}_{x=1} = \Inner{T}{g}_{x=1}
+\end{equation}
+```
+
+```matlab
+classdef PolynomialSolutionSpace
+    properties
+        basis_name
+        degree
+        variate
+        domain
+    end
+end
+```
+
+```{matlab}
+%| output: false
+function [u, M, F, basis, d] = HeatEquation( sol_space, bvp )
+
+    function [M, F] = ApplyGoverningEquation()
+        M = int( ( k * basis(2) ) .* transpose( k * basis(2) ), domain );
+        F = -int( ( k * basis(2) ) * q, domain );
+    end
+
+    function [M, F] = ApplyBoundaryConditions( M, F )
+        function [M, F] = DirichletBoundaryCondition()
+            M = subs( basis(0) .* transpose( basis(0) ), symvar( basis(0) ), domain(2) );
+            F = subs( basis(0) * g, symvar( basis(0) ), domain(2) );
+        end
+
+        function [M, F] = NeumannBoundaryCondition()
+            M = subs( basis(1) .* transpose( basis(1) ), symvar( basis(1) ), domain(1) );
+            F = subs( basis(1) * h, symvar( basis(1) ), domain(1) );
+        end
+
+        [MD, FD] = DirichletBoundaryCondition();
+        [MN, FN] = NeumannBoundaryCondition();
+        M = M + MD + MN;
+        F = F + FD + FN;
+    end
+
+    variate = sol_space.variate;
+    basis_name = sol_space.basis_name;
+    degree = sol_space.degree;
+    sol_domain = sol_space.domain;
+    basis = @(deriv) diff( PolynomialBasisFunction( basis_name, degree, variate, sol_domain ), variate, deriv );
+
+    domain = bvp.domain;
+    q = bvp.distributed_heat_load;
+    k = bvp.thermal_conductivity;
+    g = bvp.prescribed_temperature;
+    h = bvp.prescribed_heat_flux;
+
+    [M, F] = ApplyGoverningEquation();
+    [M, F] = ApplyBoundaryConditions( M, F );
+    d = M \ F;
+    u = transpose( d ) * basis(0);
+    u = symfun( u, variate );
+end
+```
+
+And an example:
+
+```{matlab}
+x = sym( "x", "real" );
+sol_space = PolynomialSolutionSpace;
+sol_space.variate = x;
+sol_space.domain = [-12, 12];
+sol_space.degree = 3;
+sol_space.basis_name = "Monomial";
+
+bvp.variate = x;
+bvp.domain = [-12, 12];
+bvp.thermal_conductivity = 100;
+bvp.distributed_heat_load = 5 * x^0;
+bvp.prescribed_temperature = 293.15;
+bvp.prescribed_heat_flux = 0;
+
+T = ExactHeatSolution( bvp ).U
+t = HeatEquation( sol_space, bvp )
+
+l2_error = ComputeL2Error( T, t, bvp.domain, "exact" );
+l2_error = vpa( simplify( abs( l2_error ) ), 16 )
+```
+
+```{matlab}
+%| echo: false
+figure
+
+subplot( 2, 1, 1 )
+hold on
+fplot( T, bvp.domain, Color="k" )
+fplot( t, bvp.domain, SeriesIndex=1 )
+
+subplot( 2, 1, 2 )
+fplot( simplify( T - t )^2, bvp.domain )
+```

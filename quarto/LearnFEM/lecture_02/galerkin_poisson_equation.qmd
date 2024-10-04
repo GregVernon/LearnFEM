@@ -36,8 +36,14 @@ Now, *this* boundary value problem is simple enough that we are able to solve it
 
 ```{matlab}
 %| output: false
-function exactSolution = ExactPoissonSolution( f, g, h, domain )
+function exactSolution = ExactPoissonSolution( bvp )
+    % Unpack BVP parameters
     syms u(x)
+    domain = bvp.domain;
+    f = bvp.distributed_load;
+    g = bvp.prescribed_value;
+    h = bvp.prescribed_slope;
+
     eqn = diff( u, x, 2 ) + f == 0;
     D1u = diff( u, x, 1 );
     cond = [   u( domain(2) ) == g, ...
@@ -56,8 +62,12 @@ Which we can then solve as
 
 ```{matlab}
 syms x f(x) g h
-boundaries = sym( "X", [1, 2] );
-u = ExactPoissonSolution( f, g, h, boundaries ).U;
+bvp = PoissonEquationBVP;
+bvp.distributed_load = f;
+bvp.prescribed_value = g;
+bvp.prescribed_slope = h;
+bvp.domain = sym( "X", [1, 2] );
+u = ExactPoissonSolution( bvp ).U;
 ```
 
 ```{=latex}
@@ -74,7 +84,7 @@ g1 = 0;
 h1 = 0;
 domain = [0, 1];
 
-U(x) = subs( u, [f, g, h, boundaries], [f1, g1, h1, domain] );
+U(x) = subs( u, [f, g, h, bvp.domain], [f1, g1, h1, domain] );
 ```
 
 ```{=latex}
@@ -86,7 +96,13 @@ U(x) = subs( u, [f, g, h, boundaries], [f1, g1, h1, domain] );
 Or, if we want to skip the intermediary step of constructing the general solution and directly compute the solution of our configuration, we can simply pass these parameters directly into our exact solver:
 
 ```{matlab}
-U(x) = ExactPoissonSolution( f1, g1, h1, domain ).U;
+bvp = PoissonEquationBVP;
+bvp.distributed_load = x^2;
+bvp.prescribed_value = 0;
+bvp.prescribed_slope = 0;
+bvp.domain = [0, 1];
+
+U(x) = ExactPoissonSolution( bvp ).U;
 ```
 
 ```{=latex}
@@ -413,7 +429,7 @@ basis(2); % The 2nd derivative
 
 ```{matlab}
 %| output: false
-function [u, M, F, basis, d] = PoissonEquation( basis_name, degree, domain, f, g, h )
+function [u, M, F, basis, d] = PoissonEquation( sol_space, bvp )
     
     % Subroutines
     function [M, F] = ApplyGoverningEquation()
@@ -438,11 +454,19 @@ function [u, M, F, basis, d] = PoissonEquation( basis_name, degree, domain, f, g
         F = F + FD + FN;
     end
 
+    % Unpack the solution space
+    variate = sol_space.variate;
+    basis_name = sol_space.basis_name;
+    degree = sol_space.degree;
+    sol_domain = sol_space.domain;
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    f = bvp.distributed_load;
+    g = bvp.prescribed_value;
+    h = bvp.prescribed_slope;
+
     % Solve the BVP
-    variate = symvar( f );
-    if isempty( variate )
-        variate = sym( "x", "real" );
-    end
     basis = @(deriv) diff( PolynomialBasisFunction( basis_name, degree, variate, domain ), variate, deriv );
     [M, F] = ApplyGoverningEquation();
     [M, F] = ApplyBoundaryConditions( M, F );
@@ -482,15 +506,20 @@ Let's demonstrate a case where the polynomial degree is too low to recover an ex
 
 ```{matlab}
 x = sym( "x", "real" );
-f(x) = 5*x^0;
-g = 1;
-h = 1;
-domain = [0, 1];
-degree = 1;
-basis_name = "Monomial";
+bvp = PoissonEquationBVP;
+bvp.distributed_load = 5 * x^0;
+bvp.prescribed_value = 1;
+bvp.prescribed_slope = 1;
+bvp.domain = [0, 1];
 
-U = ExactPoissonSolution( f, g, h, domain ).U;
-u = PoissonEquation( basis_name, degree, domain, f, g, h );
+sol_space = PolynomialSolutionSpace;
+sol_space.variate = x;
+sol_space.domain = [0, 1];
+sol_space.degree = 1;
+sol_space.basis_name = "Monomial";
+
+U = ExactPoissonSolution( bvp ).U;
+u = PoissonEquation( sol_space, bvp );
 
 l2_error = ComputeL2Error( U, u, domain, "exact" );
 l2_error = vpa( l2_error, 16 );
@@ -514,15 +543,20 @@ Next we consider an example of a non-polynomial forcing function, resulting in a
 ```{matlab}
 %| output: false
 x = sym( "x", "real" );
-f(x) = sin(2*pi*x);
-g = 1;
-h = 0;
-domain = [0, 1];
-degree = 3;
-basis_name = "Monomial";
+bvp = PoissonEquationBVP;
+bvp.distributed_load = sin(2*pi*x);
+bvp.prescribed_value = 1;
+bvp.prescribed_slope = 0;
+bvp.domain = [0, 1];
 
-U = ExactPoissonSolution( f, g, h, domain ).U;
-u = PoissonEquation( basis_name, degree, domain, f, g, h );
+sol_space = PolynomialSolutionSpace;
+sol_space.variate = x;
+sol_space.domain = [0, 1];
+sol_space.degree = 3;
+sol_space.basis_name = "Monomial";
+
+U = ExactPoissonSolution( bvp ).U;
+u = PoissonEquation( sol_space, bvp );
 
 l2_error = ComputeL2Error( U, u, domain, "exact" );
 l2_error = vpa( l2_error, 16 );

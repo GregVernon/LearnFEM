@@ -1,0 +1,38 @@
+## The Continuous Spline
+
+```{matlab}
+x = sym( "x", "real" );
+domain = sym( [0, 3] );
+degree = 1;
+num_elements = 3;
+vertices = sym( [0, 0.5, 1.5, 3] );
+basis_name = "Lagrange";
+
+spline_basis = sym( [] );
+for e = 1 : num_elements
+    elem_domain = [vertices(e), vertices(e+1)];
+    elem_basis = PolynomialBasisFunction( basis_name, degree, x, elem_domain );
+    for n = 1 : degree + 1;
+        if n == 1 && e > 1
+            spline_basis(end,1) = piecewise( elem_domain(1)<=x & x<elem_domain(2), elem_basis(n), spline_basis(end,1) );
+        else
+            spline_basis(end+1,1) = piecewise( elem_domain(1)<=x & x<elem_domain(2), elem_basis(n), 0 );
+        end
+    end
+end
+display( spline_basis )
+```
+
+```{matlab}
+%| echo: false
+figure
+fplot( spline_basis, double( domain ), LineWidth=2 )
+axis equal
+```
+
+```{matlab}
+%| echo: false
+figure
+c = randi( [1, 9], size( spline_basis ) )
+fplot( transpose( c ) * spline_basis, double( domain ), LineWidth=2 )
+```

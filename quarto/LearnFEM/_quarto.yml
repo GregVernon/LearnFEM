@@ -43,12 +43,17 @@ book:
         - lecture_02/galerkin_heat_equation.qmd
         - lecture_02/euler_bernoulli_beam_equation.qmd
         - lecture_02/damped_harmonic_oscillator_equation.qmd
+    - part: lecture_03/intro.qmd
+      chapters:
+        - lecture_03\piecewise_polynomials.qmd
     # - summary.qmd
     # - references.qmd
 
 format:
   html:
     theme: darkly
+    mainfont: "Open Sans"
+    monofont: "Intel One Mono"
     # html-math-method: mathjax
     css: styles.css
     include-in-header:

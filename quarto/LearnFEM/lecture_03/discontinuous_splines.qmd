@@ -1,0 +1,390 @@
+## The Discontinuous Spline
+Perhaps the simplest type of spline to implement is the discontinuous spline.
+To build a discontinuous spline we simply construct a unique polynomial basis defined over each piece of the spline --- we call each piece of the spline an *element*.
+
+```{matlab}
+x = sym( "x", "real" );
+domain = sym( [0, 3] );
+degree = 1;
+num_elements = 3;
+vertices = sym( linspace( domain(1), domain(2), num_elements + 1 ) );
+basis_name = "Monomial";
+
+spline_basis = sym( [] );
+for e = 1 : num_elements
+    elem_domain = [vertices(e), vertices(e+1)];
+    elem_basis = PolynomialBasisFunction( basis_name, degree, x, elem_domain );
+    for n = 1 : degree + 1
+        spline_basis(end+1,1) = piecewise( elem_domain(1)<=x & x<elem_domain(2), elem_basis(n), 0 );
+    end
+end
+```
+
+```{=latex}
+\begin{equation}
+    \Matrix{N} =
+    \left[
+        \begin{array}{l}
+            \begin{cases}
+                x^0 & \text{if} \ 0 \leq x < 1 \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                x^1 & \text{if} \ 0 \leq x < 1 \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( x - 1 \right)^0 & \text{if} \ 1 \leq x < 2 \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( x - 1 \right)^1 & \text{if} \ 1 \leq x < 2 \\
+                0       & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( x - 2 \right)^0 & \text{if} \ 2 \leq x < 3 \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( x - 2 \right)^1 & \text{if} \ 2 \leq x < 3 \\
+                0       & \text{otherwise}
+            \end{cases}
+        \end{array}
+    \right]
+\end{equation}
+```
+
+```{matlab}
+%| echo: false
+figure
+fplot( spline_basis, double( domain ), LineWidth=2 )
+axis equal
+```
+
+And, of course, each element can have different sizes:
+
+```{matlab}
+x = sym( "x", "real" );
+domain = sym( [0, 3] );
+degree = 1;
+num_elements = 3;
+vertices = sym( [0, 0.5, 1.5, 3] );
+basis_name = "Monomial";
+
+spline_basis = sym( [] );
+for e = 1 : num_elements
+    elem_domain = [vertices(e), vertices(e+1)];
+    elem_basis = PolynomialBasisFunction( basis_name, degree, x, elem_domain );
+    for n = 1 : degree + 1
+        spline_basis(end+1,1) = piecewise( elem_domain(1)<=x & x<elem_domain(2), elem_basis(n), 0 );
+    end
+end
+```
+
+```{=latex}
+\begin{equation}
+    \Matrix{N} =
+    \left[
+        \begin{array}{l}
+            \begin{cases}
+                x^0 & \text{if} \ 0 \leq x < \frac{1}{2} \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                2x^1 & \text{if} \ 0 \leq x < \frac{1}{2} \\
+                0    & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( x - \frac{1}{2} \right)^0 & \text{if} \ \frac{1}{2} \leq x < \frac{3}{2} \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( x - \frac{1}{2} \right)^1 & \text{if} \ \frac{1}{2} \leq x < \frac{3}{2} \\
+                0                 & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( \frac{2}{3}x - 1 \right)^0 & \text{if} \ \frac{3}{2} \leq x < 3 \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( \frac{2}{3}x - 1 \right)^1 & \text{if} \ \frac{3}{2} \leq x < 3 \\
+                0                  & \text{otherwise}
+            \end{cases}
+        \end{array}
+    \right]
+\end{equation}
+```
+
+```{matlab}
+%| echo: false
+figure
+fplot( spline_basis, double( domain ), LineWidth=2 )
+axis equal
+```
+
+And each element can be assigned a unique degree for its basis:
+
+```{matlab}
+x = sym( "x", "real" );
+domain = sym( [0, 3] );
+degree = [1, 2, 3];
+num_elements = 3;
+vertices = sym( [0, 0.5, 1.5, 3] );
+basis_name = "Monomial";
+
+spline_basis = sym( [] );
+for e = 1 : num_elements
+    elem_domain = [vertices(e), vertices(e+1)];
+    elem_degree = degree(e);
+    elem_basis = PolynomialBasisFunction( basis_name, elem_degree, x, elem_domain );
+    for n = 1 : elem_degree + 1;
+        spline_basis(end+1,1) = piecewise( elem_domain(1)<=x & x<elem_domain(2), elem_basis(n), 0 );
+    end
+end
+```
+
+```{=latex}
+\begin{equation}
+    \Matrix{N} =
+    \left[
+        \begin{array}{l}
+            \begin{cases}
+                x^0 & \text{if} \ 0 \leq x < \frac{1}{2} \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                2x^1 & \text{if} \ 0 \leq x < \frac{1}{2} \\
+                0    & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( x - \frac{1}{2} \right)^0 & \text{if} \ \frac{1}{2} \leq x < \frac{3}{2} \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( x - \frac{1}{2} \right)^1 & \text{if} \ \frac{1}{2} \leq x < \frac{3}{2} \\
+                0       & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( x - \frac{1}{2} \right)^2 & \text{if} \ \frac{1}{2} \leq x < \frac{3}{2} \\
+                0       & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( \frac{2}{3}x - 1 \right)^0 & \text{if} \ \frac{3}{2} \leq x < 3 \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( \frac{2}{3}x - 1 \right)^1 & \text{if} \ \frac{3}{2} \leq x < 3 \\
+                0       & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( \frac{2}{3}x - 1 \right)^2 & \text{if} \ \frac{3}{2} \leq x < 3 \\
+                0       & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \left( \frac{2}{3}x - 1 \right)^3 & \text{if} \ \frac{3}{2} \leq x < 3 \\
+                0       & \text{otherwise}
+            \end{cases}
+        \end{array}
+    \right]
+\end{equation}
+```
+
+```{matlab}
+%| echo: false
+figure
+fplot( spline_basis, double( domain ), LineWidth=2 )
+axis equal
+```
+
+And each element can even have it's own unique basis polynomial:
+
+```{matlab}
+x = sym( "x", "real" );
+domain = sym( [0, 3] );
+degree = [1, 2, 3];
+num_elements = 3;
+vertices = sym( [0, 0.5, 1.5, 3] );
+basis_name = ["Monomial", "Lagrange", "Bernstein"];
+
+spline_basis = sym( [] );
+for e = 1 : num_elements
+    elem_domain = [vertices(e), vertices(e+1)];
+    elem_degree = degree(e);
+    elem_basis_name = basis_name(e);
+    elem_basis = PolynomialBasisFunction( elem_basis_name, elem_degree, x, elem_domain );
+    for n = 1 : elem_degree + 1;
+        spline_basis(end+1,1) = piecewise( elem_domain(1)<=x & x<elem_domain(2), elem_basis(n), 0 );
+    end
+end
+```
+
+```{=latex}
+\begin{equation}
+    \Matrix{N} =
+    \left[
+        \begin{array}{l}
+            \begin{cases}
+                x^0 & \text{if} \ 0 \leq x < \frac{1}{2} \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                2x^1 & \text{if} \ 0 \leq x < \frac{1}{2} \\
+                0    & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                2x^2 - 5x + 3 & \text{if} \ \frac{1}{2} \leq x < \frac{3}{2} \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                -4x^2 + 8x - 3 & \text{if} \ \frac{1}{2} \leq x < \frac{3}{2} \\
+                0       & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                2x^2 - 3x + 1 & \text{if} \ \frac{1}{2} \leq x < \frac{3}{2} \\
+                0       & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                -\frac{8}{27}x^3 + \frac{8}{3}x^2 - 8x + 8 & \text{if} \ \frac{3}{2} \leq x < 3 \\
+                0   & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                -\frac{2}{9}x^3 - 3x^2 + 12x -12 & \text{if} \ \frac{3}{2} \leq x < 3 \\
+                0       & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                -\frac{4}{9}x^3 + 4x^2 - 9x + 6 & \text{if} \ \frac{3}{2} \leq x < 3 \\
+                0       & \text{otherwise}
+            \end{cases}
+            \\
+            \begin{cases}
+                \frac{8}{27}x^3 - \frac{4}{3}x^2 + 2x -1 & \text{if} \ \frac{3}{2} \leq x < 3 \\
+                0       & \text{otherwise}
+            \end{cases}
+        \end{array}
+    \right]
+\end{equation}
+```
+
+```{matlab}
+%| echo: false
+figure
+fplot( spline_basis, double( domain ), LineWidth=2 )
+axis equal
+ax = gca;
+ax.XAxisLocation = "origin";
+```
+
+We can solve problems
+
+```{matlab}
+%| output: false
+function [u, D, F, basis, d] = ScalarProjection( sol_space, bvp )
+
+    function [D, F] = ApplyGoverningEquations()
+        D = int( basis(0) * transpose( basis(0) ), domain );
+        F = int( basis(0) * target_fun, domain );
+    end
+
+    function [D, F] = ApplyBoundaryConditions( D, F )
+        function [D, F] = LeftFunctionValue( D, F )
+            D = D + subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
+            F = F + subs( basis(0) * target_fun, variate, domain(1) );
+        end
+        function [D, F] = RightFunctionValue( D, F )
+            D = D + subs( basis(0) .* transpose( basis(0) ), variate, domain(2) );
+            F = F + subs( basis(0) * target_fun, variate, domain(2) );
+        end
+        [D, F] = LeftFunctionValue( D, F );
+        [D, F] = RightFunctionValue( D, F );
+    end
+    
+    % Unpack the solution space
+    variate = sol_space.variate;
+    spline = Spline( sol_space );
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    target_fun = bvp.target_fun;
+
+    % Solve the BVP
+    basis = @(deriv) diff( spline.basis, variate, deriv );
+    [D, F] = ApplyGoverningEquations();
+    [D, F] = ApplyBoundaryConditions( D, F );
+    d = D \ F;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = symfun( u, variate );
+    u = simplify( u, Steps=10 );
+end
+```
+
+```{matlab}
+x = sym( "x", "real" );
+bvp = ScalarProjectionBVP;
+bvp.target_fun = sin( pi * x )^2 + cos( x ) - 1;
+bvp.domain = sym( [0, 1.5] );
+
+basis_name = "Bernstein";
+degree = [ 3, 3 ];
+continuity = [-1, -1, -1];
+vertices = linspace( bvp.domain(1), bvp.domain(2), length( degree ) + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+
+[u, M, F, basis, d] = ScalarProjection( spline_space, bvp );
+```
+
+```{matlab}
+%| echo: false
+figure
+subplot( 2, 1, 1 )
+hold on
+fplot( bvp.target_fun, double( bvp.domain ), LineWidth=4, Color="k" )
+fplot( u, double( bvp.domain ), LineWidth=3, SeriesIndex=1 )
+
+subplot( 2, 1, 2 )
+fplot( sqrt( ( bvp.target_fun - u )^2 ), double( bvp.domain ), LineWidth=2, Color="r" )
+```
+
+One problem with using discontinuous splines in the Galerkin method can be seen in the middle of the solution shown in the previous figure: discontinuity.
+Specifically, we are not able to use the discontinuous spline in problems that require integration of the spline's derivative.
+Recall that in the inner product calculation we 
+While the spline itself is *square-integrable* its derivative *is not* square-integrable.
+
+```{matlab}
+%| echo: false
+spline = Spline( spline_space );
+domain = spline.GetSplineDomain();
+
+figure
+subplot( 2, 1, 1 )
+fplot( spline.basis, double( domain ), LineWidth=2 )
+
+subplot( 2, 1, 2 )
+fplot( diff( spline.basis, 1 ), double( domain ), LineWidth=2 )
+```

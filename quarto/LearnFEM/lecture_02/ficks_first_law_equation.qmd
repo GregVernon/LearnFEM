@@ -1,0 +1,193 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+```
+
+# Steady State Diffusion
+## Definition
+Next we consider steady-state diffusion as described in Fick's first law of diffusion:
+
+```{=latex}
+\begin{equation}
+    \mathrm{D} \frac{du}{dx} = -J
+\end{equation}
+```
+
+Where $\mathrm{D}$ is the *diffusion coefficient* of the substance, $\mathrm{J}$ is the *diffusion flux* of the beam, and $u$ is is the concentration of the substance.
+
+Next we define the boundary value problem as
+
+```{=latex}
+\begin{align*}
+    \mathrm{Let} \ \Omega &= [0, 1] \\
+    u(0) &= 1 \\
+    J(1) &= 0.1
+\end{align*}
+```
+
+## An Exact Solution
+
+```matlab
+classdef SteadyStateDiffusionBVP
+    properties
+        variate
+        domain
+        diffusion_coefficient
+        diffusion_flux
+        prescribed_concentration
+    end
+end
+```
+
+```{matlab}
+%| output: false
+function exactSolution = ExactSteadyStateDiffuctionSolution( bvp )
+    % Unpack BVP parameters
+    syms u(x)
+    domain = bvp.domain;
+    D = bvp.diffusion_coefficient;
+    J = bvp.diffusion_flux;
+    g = bvp.prescribed_concentration;
+
+    % Precompute derivatives
+    D0u = diff( u, x, 0 );
+    D1u = diff( u, x, 1 );
+
+    % Define BVP
+    eqn = ( D * D1u ) == -J;
+    cond = [ D0u( domain(1) ) == g ];
+
+    % Solve the BVP
+    U(x) = dsolve( eqn, cond );
+
+    % Package the solution for output
+    exactSolution.eqn = eqn;
+    exactSolution.cond = cond;
+    exactSolution.domain = domain;
+    exactSolution.U = simplify( U, Steps=10 );
+end
+```
+
+## The Galerkin Approach
+
+Again we construct our weak form by describing what we want to do:
+
+> Find $u$ such that $\mathrm{D}\frac{d u}{dx}$ is the best representation of $-\mathrm{J}(x)$...
+
+```{=latex}
+\begin{equation}
+    \Inner{\mathrm{D}\frac{d u}{dx}}{\mathrm{D}\frac{d u}{dx}}
+    =
+    \Inner{\mathrm{D}\frac{d u}{dx}}{-\mathrm{J}}
+\end{equation}
+```
+
+> ... while subject to the condition that $\mathrm{D}\cdot u(0)$ is the best representation of $g$...
+
+```{=latex}
+\begin{equation}
+    \Inner{\mathrm{D} \cdot u(0)}{\mathrm{D} \cdot u(0)}
+    =
+    \Inner{\mathrm{D} \cdot u(1)}{g}
+\end{equation}
+```
+
+```{matlab}
+%| output: false
+function [u, A, B, basis, d] = SteadyStateDiffusionEquation( sol_space, bvp )
+
+    % Subroutines
+    function [A, B] = ApplyGoverningEquation()
+        A = int( ( D * basis(1) ) .* transpose( D * basis(1) ), domain );
+        B = -int( ( D * basis(1) ) * J, domain );
+    end
+
+    function [A, B] = ApplyBoundaryConditions( A, B )
+
+        function [A, B] = ConcentrationBoundaryCondition()
+            A = subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
+            B = subs( basis(0) .* g, variate, domain(1) );
+        end
+
+        [AC, BC] = ConcentrationBoundaryCondition();
+        A = A + AC;
+        B = B + BC;
+    end
+
+    % Unpack the solution space
+    variate = sol_space.variate;
+    basis_name = sol_space.basis_name;
+    degree = sol_space.degree;
+    sol_domain = sol_space.domain;
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    D = bvp.diffusion_coefficient;
+    J = bvp.diffusion_flux;
+    g = bvp.prescribed_concentration;
+
+    % Solve the BVP
+    basis = @(deriv) diff( PolynomialBasisFunction( basis_name, degree, variate, domain ), variate, deriv );
+    [A, B] = ApplyGoverningEquation();
+    [A, B] = ApplyBoundaryConditions( A, B );
+    d = A \ B;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = simplify( u, Steps=10 );
+    u = symfun( u, variate );
+end
+```
+
+And an example:
+
+```{matlab}
+%| echo: true
+%| output: true
+x = sym( "x", "real" );
+sol_space = PolynomialSolutionSpace;
+sol_space.variate = x;
+sol_space.domain = [0, 1];
+sol_space.degree = 2;
+sol_space.basis_name = "Monomial";
+
+bvp.variate = x;
+bvp.domain = sym( [0, 1] );
+bvp.diffusion_coefficient = sym( 1e-9 );
+bvp.diffusion_flux = x * 1e-6;
+bvp.prescribed_concentration = 1e4;
+
+U = ExactSteadyStateDiffuctionSolution( bvp ).U;
+u = SteadyStateDiffusionEquation( sol_space, bvp );
+
+l2_error = ComputeL2Error( U, u, bvp.domain, "exact" );
+l2_error = vpa( simplify( abs( l2_error ) ), 16 );
+```
+
+```{=latex}
+\begin{align*}
+            u(x) &= -\frac{x^5}{200\times10^3} + \frac{11x^3}{20\times10^3} - \frac{7x^2}{10\times10^3} \\
+    \tilde{u}(x) &= -\frac{x^5}{200\times10^3} + \frac{11x^3}{20\times10^3} - \frac{7x^2}{10\times10^3} \\
+\end{align*}
+```
+
+```{matlab}
+%| echo: false
+figure
+
+subplot( 2, 1, 1 )
+hold on
+fplot( U, double( bvp.domain ), Color="k"    , LineWidth=4, DisplayName="$f(x)$")
+fplot( u, double( bvp.domain ), SeriesIndex=1, LineWidth=3, DisplayName="$\tilde{f}(x)$")
+
+subplot( 2, 1, 2 )
+fplot( simplify( sqrt( ( U - u )^2 ) ), double( bvp.domain ), Color="r", LineWidth=4 )
+```

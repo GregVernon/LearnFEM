@@ -49,7 +49,7 @@ end
 
 ```{matlab}
 %| output: false
-function exactSolution = ExactSteadyStateDiffuctionSolution( bvp )
+function exactSolution = ExactSteadyStateDiffusionSolution( bvp )
     % Unpack BVP parameters
     syms u(x)
     domain = bvp.domain;
@@ -159,13 +159,14 @@ sol_space.domain = [0, 1];
 sol_space.degree = 2;
 sol_space.basis_name = "Monomial";
 
+bvp = SteadyStateDiffusionBVP;
 bvp.variate = x;
 bvp.domain = sym( [0, 1] );
 bvp.diffusion_coefficient = sym( 1e-9 );
 bvp.diffusion_flux = x * 1e-6;
 bvp.prescribed_concentration = 1e4;
 
-U = ExactSteadyStateDiffuctionSolution( bvp ).U;
+U = ExactSteadyStateDiffusionSolution( bvp ).U;
 u = SteadyStateDiffusionEquation( sol_space, bvp );
 
 l2_error = ComputeL2Error( U, u, bvp.domain, "exact" );

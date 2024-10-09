@@ -41,11 +41,15 @@ book:
       chapters: 
         - lecture_02/galerkin_poisson_equation.qmd
         - lecture_02/galerkin_heat_equation.qmd
+        - lecture_02/ficks_first_law_equation.qmd
         - lecture_02/euler_bernoulli_beam_equation.qmd
         - lecture_02/damped_harmonic_oscillator_equation.qmd
     - part: lecture_03/intro.qmd
       chapters:
         - lecture_03\piecewise_polynomials.qmd
+        - lecture_03\discontinuous_splines.qmd
+        - lecture_03\continuous_splines.qmd
+        - lecture_03\smooth_splines.qmd
     # - summary.qmd
     # - references.qmd
 

@@ -1,2 +1,2 @@
-# Improving Performance of the Galerkin Method
+# Enhancing the Galerkin Method: Splines
 

@@ -305,4 +305,4 @@ disp( "Elapsed time: " + num2str( t_elapsed, 2 ) + " seconds" )
 
 Now, one or two seconds may not seem like a long time, but consider the simplicity of this problem: a single mass on a single spring and dashpot and we've not even really solved the problem!
 So how might we be able to improve upon our method?
-Let's start looking at that in the next lecture!
+Let's start looking into that in the next lecture!

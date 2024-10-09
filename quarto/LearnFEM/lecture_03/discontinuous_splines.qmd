@@ -1,3 +1,17 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+addpath( "../lecture_02/" )
+```
+
 ## The Discontinuous Spline
 Perhaps the simplest type of spline to implement is the discontinuous spline.
 To build a discontinuous spline we simply construct a unique polynomial basis defined over each piece of the spline --- we call each piece of the spline an *element*.
@@ -388,3 +402,164 @@ fplot( spline.basis, double( domain ), LineWidth=2 )
 subplot( 2, 1, 2 )
 fplot( diff( spline.basis, 1 ), double( domain ), LineWidth=2 )
 ```
+
+```{matlab}
+%| output: false
+function [u, A, B, basis, d] = SteadyStateDiffusionEquation( sol_space, bvp )
+
+    % Subroutines
+    function [A, B] = ApplyGoverningEquation()
+        A = int( ( D * basis(1) ) .* transpose( D * basis(1) ), domain );
+        B = -int( ( D * basis(1) ) * J, domain );
+    end
+
+    function [A, B] = ApplyBoundaryConditions( A, B )
+
+        function [A, B] = ConcentrationBoundaryCondition()
+            A = subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
+            B = subs( basis(0) .* g, variate, domain(1) );
+        end
+
+        [AC, BC] = ConcentrationBoundaryCondition();
+        A = A + AC;
+        B = B + BC;
+    end
+
+    % Unpack the solution space
+    variate = sol_space.variate;
+    spline = Spline( sol_space );
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    D = bvp.diffusion_coefficient;
+    J = bvp.diffusion_flux;
+    g = bvp.prescribed_concentration;
+
+    % Solve the BVP
+    basis = @(deriv) diff( spline.basis, variate, deriv );
+    [A, B] = ApplyGoverningEquation();
+    [A, B] = ApplyBoundaryConditions( A, B );
+    d = A \ B;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = simplify( u, Steps=10 );
+    u = symfun( u, variate );
+end
+```
+
+```{matlab}
+x = sym( "x", "real" );
+bvp = SteadyStateDiffusionBVP;
+bvp.variate = x;
+bvp.domain = sym( [0, 1] );
+bvp.diffusion_coefficient = sym( 1e-9 );
+bvp.diffusion_flux = x * 1e-6;
+bvp.prescribed_concentration = 1e4;
+
+basis_name = "Bernstein";
+degree = [ 2, 2 ];
+continuity = [-1, -1 -1];
+vertices = linspace( bvp.domain(1), bvp.domain(2), length( degree ) + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+
+[u, M, F, basis, d] = SteadyStateDiffusionEquation( spline_space, bvp );
+```
+
+```{matlab}
+%| echo: false
+U(x) = ExactSteadyStateDiffusionSolution( bvp ).U;
+
+figure
+subplot( 2, 1, 1 )
+hold on
+fplot( U, double( bvp.domain ), LineWidth=4, Color="k" )
+fplot( u, double( bvp.domain ), LineWidth=3, SeriesIndex=1 )
+
+subplot( 2, 1, 2 )
+fplot( basis(1), double( bvp.domain ), LineWidth=2 )
+```
+
+And Poisson's equation
+
+```{matlab}
+%| output: false
+function [u, M, F, basis, d] = PoissonEquation( sol_space, bvp )
+    
+    % Subroutines
+    function [M, F] = ApplyGoverningEquation()
+        M = int( basis(2) .* transpose( basis(2) ), domain );
+        F = -int( basis(2) * f, domain );
+    end
+
+    function [M, F] = ApplyBoundaryConditions( M, F )
+        function [M, F] = DirichletBoundaryCondition()
+            M = subs( basis(0) .* transpose( basis(0) ), variate, domain(2) );
+            F = subs( basis(0) * g, variate, domain(2) );
+        end
+
+        function [M, F] = NeumannBoundaryCondition()
+            M = limit( basis(1), variate, domain(1), "right" ) .* transpose( limit( basis(1), variate, domain(1), "right" ) );
+            F = limit( basis(1), variate, domain(1), "right" ) * h;
+        end
+
+        [MD, FD] = DirichletBoundaryCondition();
+        [MN, FN] = NeumannBoundaryCondition();
+        M = M + MD + MN;
+        F = F + FD + FN;
+    end
+
+    % Unpack the solution space
+    variate = sol_space.variate;
+    spline = Spline( sol_space );
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    f = bvp.distributed_load;
+    g = bvp.prescribed_value;
+    h = bvp.prescribed_slope;
+
+    % Solve the BVP
+    basis = @(deriv) diff( spline.basis, variate, deriv );
+    [M, F] = ApplyGoverningEquation();
+    [M, F] = ApplyBoundaryConditions( M, F );
+    d = M \ F;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = simplify( u, Steps=10 );
+    u = symfun( u, variate );
+end
+```
+
+```{matlab}
+x = sym( "x", "real" );
+bvp = PoissonEquationBVP;
+bvp.distributed_load = 5*x^0;
+bvp.prescribed_value = 1;
+bvp.prescribed_slope = 1;
+bvp.domain = sym( [0, 1] );
+
+basis_name = "Bernstein";
+degree = [ 2, 2 ];
+continuity = [-1, -1 -1];
+vertices = linspace( bvp.domain(1), bvp.domain(2), length( degree ) + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+
+[u, M, F, basis, d] = PoissonEquation( spline_space, bvp );
+```
+
+```{matlab}
+%| echo: false
+U(x) = ExactPoissonSolution( bvp ).U;
+
+figure
+subplot( 2, 1, 1 )
+hold on
+fplot( U, double( bvp.domain ), LineWidth=4, Color="k" )
+fplot( u, double( bvp.domain ), LineWidth=3, SeriesIndex=1 )
+
+subplot( 2, 1, 2 )
+fplot( basis(1), double( bvp.domain ), LineWidth=2 )
+```
+

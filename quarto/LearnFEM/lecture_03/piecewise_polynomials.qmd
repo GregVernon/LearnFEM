@@ -8,6 +8,8 @@ clear
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
 addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+addpath( "../lecture_02/" )
 ```
 
 # Piecewise Polynomials
@@ -17,15 +19,7 @@ In the previous lecture we showed that polynomials, while they are able to accur
 1. It can be difficult to predict what polynomial degree will be necessary to accurately approximate a given boundary value problem's solution.
 2. The more oscillations a solution has, the less efficiently it is approximated by polynomials, requiring ever increasing polynomial degree to approximate.
 3. Using high-order polynomials in the Galerkin method increases the condition number of the resulting linear system of equations. This can result in numerically-singular systems that necessitate slower symbolic or variable-precision arithmetic in their solution.
-
 One solution to these issues is to use multiple, relatively low-order polynomial "pieces" as the basis rather than a single monolithic polynomial.
-These *piecewise-polynomials*, also known as *splines*, are the foundation of modern numerical methods such as the finite element and finite volume methods, although this fact is perhaps not widely understood by many practitioners.
+These *piecewise-polynomials*, also known as *splines*, are the foundation of modern numerical methods such as the finite element and *finite volume* methods, although this fact is perhaps not widely understood by many practitioners.
 
-{{< include discontinuous_splines.qmd >}}
-
-{{< include continuous_splines.qmd >}}
-
-{{< include smooth_splines.qmd >}}
-
-## Spline Extraction Operators
 

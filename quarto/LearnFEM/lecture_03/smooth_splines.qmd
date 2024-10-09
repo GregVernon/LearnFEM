@@ -1,1 +1,601 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+addpath( "../lecture_02/" )
+```
+
 ## The Smooth Spline
+
+The final category of spline that we need to develop is the *smooth* spline.
+A general approach to building smooth splines, which we will discuss later, is to define constraint equations between the basis functions across the element boundaries.
+This is, in general, a *very* difficult approach to building smooth splines as solving the global system of constraint equations is *NP-hard*.
+Because of the need for smooth splines in analysis, coupled with the difficulty of a general solution, several specialized constructions were developed that produce sub-classes of smooth splines.
+Because of their historic importance, we will describe them here, however we will not use them after their introductions.
+
+### The Cubic Hermite Spline
+
+The first of these constructions is the cubic Hermite spline.
+Our goal will be to construct each elements' basis piece-by-piece, and then connect them logically to their respective basis functions in the neighboring elements.
+The algorithm begins by considering a general cubic polynomial, e.g., in the monomial basis:
+
+```{=latex}
+\begin{align*}
+    f(x) &= c_0 x^0 + c_1 x^1 + c_2 x^2 + c_3 x^3 \\
+    \frac{df}{dx}(x) &= c_1 x^0 + 2 c_2 x^1 + 3 c_3 x^2 \\
+\end{align*}
+```
+
+We know that our cubic basis will have four basis functions over each element.
+For each of these basis functions we need four constraints in order to determine the coefficients of the general cubic polynomial.
+
+For example, the first basis function can be defined by the constraint system:
+
+```{=latex}
+\begin{align*}
+    f(0)             &= 1 \\
+    \frac{df}{dx}(0) &= 0 \\
+    f(1)             &= 0 \\
+    \frac{df}{dx}(1) &= 0 \\
+\end{align*}
+```
+
+Performing the substitions into the polynomial forms:
+
+```{=latex}
+\begin{align*}
+    c_0 (0)^0 + c_1 (0)^1 + c_2 (0)^2 + c_3 (0)^3 &= 1 \\
+                c_1 (0)^0 + c_2 (0)^1 + c_3 (0)^2 &= 0 \\
+    c_0 (1)^0 + c_1 (1)^1 + c_2 (1)^2 + c_3 (1)^3 &= 0 \\
+                c_1 (1)^0 + c_2 (1)^1 + c_3 (1)^2 &= 0 \\
+\end{align*}
+```
+
+or in matrix form:
+
+```{=latex}
+\begin{align*}
+    %% EQN 1
+    \begin{bmatrix}
+         1 &  0 &  0 &  0 \\
+         0 &  1 &  0 &  0 \\
+        -3 & -2 &  3 & -1 \\
+         2 &  1 & -2 &  1 \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        c_0 \\ c_1 \\ c_2 \\ c_3
+    \end{bmatrix}
+    &=
+    \begin{bmatrix}
+        1 \\ 0 \\ 0 \\ 0
+    \end{bmatrix} \\
+    %% EQN 2
+    c &= 
+    \begin{bmatrix}
+        1 \\ 0 \\ -3 \\ 2
+    \end{bmatrix}
+\end{align*}
+```
+
+And then the first basis function is:
+
+```{=latex}
+\begin{align*}
+    H_0^3(x) = ( 2x + 1 )( x - 1 )^2
+\end{align*}
+```
+
+We repeat this process for each of the different basis functions until we arrive at the basis functions for an element of the Hermite spline.
+
+
+```{matlab}
+%| output: false
+function basis = HermiteBasis( degree, variate, domain )
+    continuity = ceil( degree / 3 );
+    M = MonomialBasis( degree, variate, domain );
+    c = sym( "c", [degree + 1, 1] );
+    poly = transpose( c ) * M;
+    basis = sym( zeros( degree + 1, 1) );
+    for ii = 1 : degree + 1
+        RHS = sym( zeros( degree + 1, 1 ) );
+        RHS(ii) = 1;
+        EQN = sym( zeros( degree + 1, 1 ) );
+        n = 0;
+        for kk = 0 : continuity
+            n = n + 1;
+            EQN(n,:) = subs( diff( poly,  variate, kk ), variate, domain(1) ) == RHS(n);
+            n = n + 1;
+            EQN(n,:) = subs( diff( poly,  variate, kk ), variate, domain(2) ) == RHS(n);
+        end
+        LHS = equationsToMatrix( EQN );
+        C = LHS \ RHS;
+        basis(ii) = transpose( C ) * M;
+    end
+    basis = simplify( basis, Steps=10 );
+end
+```
+
+```{matlab}
+syms x
+degree = 3;
+domain = sym( [0, 1] );
+H = HermiteBasis( degree, x, domain );
+```
+
+```{matlab}
+%| echo: false
+figure
+fplot( H, double( domain ), LineWidth=2 )
+```
+
+```{matlab}
+x = sym( "x", "real" );
+domain = sym( [0, 3] );
+degree = 3;
+num_elements = 3;
+vertices = sym( [0, 1, 2, 3] );
+
+spline_basis = sym( [] );
+for e = 1 : num_elements
+    elem_domain = [vertices(e), vertices(e+1)];
+    elem_basis = HermiteBasis( degree, x, elem_domain );
+    for n = 1 : degree + 1;
+        if n == 1 && e == 1
+            spline_basis(1,1) = piecewise( elem_domain(1)<=x & x<elem_domain(2), elem_basis(n), 0 );
+        elseif n == 1
+            continue
+        elseif n == 2 && e < num_elements
+            next_elem_domain = [vertices(e+1), vertices(e+2)];
+            next_elem_basis = HermiteBasis( degree, x, next_elem_domain );
+            spline_basis(end+1,1) = piecewise( elem_domain(1)<=x & x<elem_domain(2), elem_basis(n), 0 );
+            spline_basis(end,1) = piecewise( next_elem_domain(1)<=x & x<next_elem_domain(2), next_elem_basis(1), spline_basis(end,1) );
+        elseif n == 2 && e == num_elements
+            spline_basis(end+1,1) = piecewise( elem_domain(1)<=x & x<=elem_domain(2), elem_basis(n), 0 );
+        elseif n == 3 && e > 1
+            continue
+        elseif n == 4 && e < num_elements
+            next_elem_domain = [vertices(e+1), vertices(e+2)];
+            next_elem_basis = HermiteBasis( degree, x, next_elem_domain );
+            spline_basis(end+1,1) = piecewise( elem_domain(1)<=x & x<elem_domain(2), elem_basis(n), 0 );
+            spline_basis(end,1) = piecewise( next_elem_domain(1)<=x & x<next_elem_domain(2), next_elem_basis(3), spline_basis(end,1) );
+        else
+            spline_basis(end+1,1) = piecewise( elem_domain(1)<=x & x<elem_domain(2), elem_basis(n), 0 );
+        end
+    end
+end
+```
+
+```{matlab}
+%| echo: false
+figure
+fplot( spline_basis, double( domain ), LineWidth=2 )
+```
+
+While the Hermite spline is useful in certain applications, a deficiency it has is that in order to increase the interelement continuity by one, the degree must increase by two: a $C^2$ Hermite spline requires a degree-5 basis, a $C^3$ Hermite spline requires a degree-7 basis -- it is not a very efficient method for building smooth splines.
+
+### The B-spline
+
+The second of these splines is the B-spline, perhaps the most widely recognized spline by name.
+It and its variations, Bezier splines and non-uniform rational B-splines (NURBS), are ubiquitous in fields and applications as widely varying as machine-learning, computer fonts, and computer-aided design (CAD).
+Initially conceived of by Isaac Schoenberg, the primary algorithm used for evaluating B-spline basis functions is *de Boor's algorithm*.
+The algorithm assumes the spline space is encoded in a form known as a *knot vector*.
+The knot vector communicates element boundary locations as a list of floats, while the continuity of each element boundary is equivalent to the B-spline's degree minus the multiplicity ($\mathcal{m}$) of the boundary location in the vector (e.g., $\mathcal{m}(1) \rightarrow C^{p-1}$, $\mathcal{m}(2) \rightarrow C^{p-2}$), and thus degree of the B-spline is equivalent to the one less than the multiplicity of the extremal boundaries (i.e., $p = \mathcal{m}_0 - 1$ ).
+
+For example, a cubic B-spline comprised of four equal-sized elements on the domain $x\in[0,1]$ with continuities on the internal boundaries of $k = [0, 1, 2]$ would be encoded as the knot vector $\Vector{k_v} = [0, 0, 0, 0, \frac{1}{4}, \frac{1}{2}, \frac{1}{2}, \frac{3}{4}, \frac{3}{4}, \frac{3}{4}, 1, 1, 1, 1]$.
+For our purposes however, we will define a Matlab class, `SplineSpace.m` that more explicitly encodes a spline space and provides a function that computes the associated knot vector:
+
+```matlab
+classdef SplineSpace
+    properties
+        vertices
+        degree
+        continuity
+        variate
+        basis_name
+    end
+
+    methods
+        function knot_vector = ComputeKnotVector( obj )
+            degree = obj.degree;
+            vertices = obj.vertices;
+            continuity = obj.continuity;
+            knot_vector = cell( 1,length( vertices ) );
+            for ii = 1:length( vertices )
+                knot_vector{ii} = repmat( vertices(ii), 1, degree - continuity(ii) );
+            end
+            knot_vector = [knot_vector{:}];
+        end
+    end
+    % Rest of class
+end
+```
+
+The Cox--de Boor recursion foumla is provided in the equation
+
+```{=latex}
+\begin{equation}
+    \Vector{N}(\xi) =
+    \begin{cases}
+        % Constants
+        N_{i,0}(\xi) = \begin{cases}
+                    1 & \mathrm{if} \ \xi_i \leq \xi < xi_{i+1} \\
+                    0 & \mathrm{otherwise}
+                  \end{cases}
+        & p = 0 \\
+        % Higher order
+        N_{i,p}(\xi) = \frac{\xi - \xi_i}{\xi_{i+p} - \xi_i}N_{i,p-1}(\xi) +
+                       \frac{\xi_{i+p+1} - \xi}{\xi_{i+p+1} - \xi_{i+1}}N_{i+1,p-1}(\xi)
+        & p = 1, 2, 3, ... \\
+    \end{cases}
+\end{equation}
+```
+
+Where $\xi_i$ is an element of the knot vector.
+
+```{matlab}
+%| output: false
+function basis = BSplineBasis( spline_space )
+    degree = spline_space.degree;
+    assert( length( unique( degree ) ) == 1 )
+    degree = unique( degree );
+    variate = spline_space.variate;
+    kV = spline_space.ComputeKnotVector();
+    N = cell( degree + 1, 1 );
+    for p = 0 : degree
+        N{p+1} = sym( zeros( length( kV ) - ( p + 1 ), 1 ) );
+        for ii = 1:length(kV)-(p+1)
+            if p == 0
+                N{p+1}(ii) = piecewise(kV(ii) <= variate & variate < kV(ii+1), sym(1), sym(0) );
+            else
+                divisor(1) = (kV(ii+p)-kV(ii));
+                if divisor(1) == 0
+                    term(1) = sym(0);
+                else
+                    term(1) = ((variate - kV(ii))/(kV(ii+p)-kV(ii)));
+                end
+
+                divisor(2) = (kV(ii+p+1)-kV(ii+1));
+                if divisor(2) == 0
+                    term(2) = sym(0);
+                else
+                    term(2) = ((kV(ii+p+1) - variate)/(kV(ii+p+1)-kV(ii+1)));
+                end
+                N{p+1}(ii) = term(1)*N{p}(ii) + term(2)*N{p}(ii+1);
+            end
+            
+        end
+    end
+    basis = simplify(N{end});
+    basis(end) = piecewise( variate == kV(end), sym(1), basis(end) );
+end
+```
+
+Here we produce the B-spline basis from above, which has mixed continuity:
+
+```{matlab}
+clear
+
+x = sym( "x", "real" );
+degree = [3, 3, 3, 3];
+continuity = [-1, 0, 1, 2, -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
+spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
+
+basis = BSplineBasis( spline_space );
+```
+
+```{matlab}
+%| echo: false
+figure
+fplot( basis, double( domain ), LineWidth=2, MeshDensity=23 * length( degree ) )
+```
+
+While here we produce a uniform continuity cubic B-spline basis:
+
+```{matlab}
+clear
+
+x = sym( "x", "real" );
+degree = [3, 3, 3, 3, 3, 3];
+continuity = [-1, 2, 2, 2, 2, 2, -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
+spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
+
+basis = BSplineBasis( spline_space );
+```
+
+```{matlab}
+%| echo: false
+figure
+fplot( basis, double( domain ), LineWidth=2, MeshDensity=23 * length( degree ) )
+```
+
+
+Because of the ubiquitousness of B-splines, and of the utility of de Boor's algorithm, the use of knot vectors in subsequent splines and spline algorithms has itself become ubiquitous.
+The main takeaway for the reader is that knot vectors are simply an encoding of the spline space that is compatible with de Boor's and other algorithms.
+
+### The U-spline
+
+In the late 2010s a new method for constructing splines was developed by Coreform that, due to its general approach, enables the construction of splines of mixed degree and in higher-dimensions permits construction over unstructured meshes.
+The construction of higher-dimensional U-splines is beyond the scope of this text however, unlike B-splines, the exact same algorithmic approach is used regardless of dimension.
+Here we will introduce the basics of U-splines in one-dimension.
+
+Consider the Bernstein basis polynomials.
+For a given degree and interelement continuity we can describe *constraint* equations that satisfy the desired continuity.
+
+Consider a spline consisting of two linear elements of equal length on the domain $x\in[0,2]$.
+The respective Bernstein basis functions for each element are
+
+```{=latex}
+\begin{align*}
+    \Vector{B}_1 &= \begin{bmatrix} 1 - x \\ x \end{bmatrix} \\
+    \Vector{B}_2 &= \begin{bmatrix} 2 - x \\ x - 1 \end{bmatrix}
+\end{align*}
+```
+
+We plot these basis functions below and include markers below them that represent the indices of the functions.
+Within the markers we also draw a box that indicates the basis functions that must be involved in the continuity constraint.
+For the Bernstein basis, due to its *ordered derivatives* property, it can be shown that as the continuity increases, the basis functions involved in the constraint can be found by "flooding" from the interface to capture the nearest $k+1$ basis functions to the interface.
+
+```{matlab}
+%| echo: false
+clear
+x = sym( "x", "real" );
+
+left_domain = sym( [0, 1] );
+right_domain = sym( [1, 2] );
+left_degree = 1;
+right_degree = 1;
+left_vertices = linspace( left_domain(1), left_domain(2), left_degree + 1 );
+right_vertices = linspace( right_domain(1), right_domain(2), right_degree + 1 );
+global_id{1} = 1 : left_degree + 1;
+global_id{2} = global_id{1}(end) + 1 : global_id{1}(end) + 1 + left_degree;
+continuity = 0;
+left_basis = PolynomialBasisFunction( "Bernstein", left_degree, x, left_domain );
+right_basis = PolynomialBasisFunction( "Bernstein", right_degree, x, right_domain );
+
+figure
+cmap = lines();
+t = tiledlayout(5, 1);
+
+nexttile([4, 1])
+hold on
+fplot( left_basis, double( left_domain ), LineWidth=2 )
+fplot( right_basis, double( right_domain ), LineWidth=2 )
+
+nexttile()
+hold on
+
+patch( [1.75, 3.25, 3.25, 1.75, 1.75], [-0.01, -0.01 0.01, 0.01, -0.01], [0.6, 0.6, 0.6] )
+
+for ii = 0 : continuity
+    for jj = 1 : length( global_id{1} )
+        scatter( global_id{1}(jj), ii, MarkerFaceColor="flat", MarkerEdgeColor="k", SizeData=72 )
+    end
+    for jj = 1 : length( global_id{2} )
+        scatter( global_id{2}(jj), ii, MarkerFaceColor="flat", MarkerEdgeColor="k", SizeData=72 )
+    end
+end
+
+ax = gca;
+ax.XLim = [0.5, global_id{end}(end) + 0.5];
+ax.YDir = "reverse";
+ax.Visible = "off";
+```
+
+The constraint equation for this system, then, is:
+
+```{=latex}
+\begin{equation}
+    B_2 = B_3
+\end{equation}
+```
+
+Or, equivalently,
+
+```{=latex}
+\begin{equation}
+    B_2 - B_3 = 0
+\end{equation}
+```
+
+Putting this into matrix notation we have
+
+```{=latex}
+\begin{equation}
+    \begin{bmatrix}
+        0 & 1 & -1 & 0
+    \end{bmatrix}
+    \begin{bmatrix}
+        c_1 \\ c_2 \\ c_3 \\ c_4
+    \end{bmatrix}
+    = \Vector{0}
+\end{equation}
+```
+
+which we recognize as a *nullspace problem*.
+Also, we note that the operator has a rank of one, thus this is a *rank-one nullspace problem*.
+Solving this problem means finding nontrivial, orthogonal vectors that satisfy the nullspace problem. 
+Due to the simplicity of this example, it's straightforward to solve using the `null()` function
+
+```{matlab}
+S = sym( [0 1 1 0] );
+c = null( S );
+```
+
+```{=latex}
+\begin{equation}
+    \Vector{c}
+    =
+    \left(
+        \begin{Bmatrix} 1 \\ 0 \\ 0 \\ 0 \end{Bmatrix},
+        \begin{Bmatrix} 0 \\ 1 \\ 1 \\ 0 \end{Bmatrix},
+        \begin{Bmatrix} 0 \\ 0 \\ 0 \\ 1 \end{Bmatrix}
+    \right)
+\end{equation}
+```
+
+If we use these vectors as the rows of a matrix they form an operator that transforms the Bernstein basis functions into the global spline basis functions.[^1]
+
+```{=latex}
+\begin{equation}
+    \begin{bmatrix} 
+        1 & 0 & 0 & 0 \\
+        0 & 1 & 1 & 0 \\
+        0 & 0 & 0 & 1 \\
+    \end{bmatrix}
+    \left[
+        \begin{array}{l}
+            \begin{cases}
+                1 - x & \text{if} \ x \in [0, 1) \\
+                0 & \text{otherwise}
+            \end{cases} \\
+            \begin{cases}
+                x & \text{if} \ x \in [0, 1) \\
+                0 & \text{otherwise}
+            \end{cases} \\
+            \begin{cases}
+                2 - x & \text{if} \ x \in [1, 2) \\
+                0 & \text{otherwise}
+            \end{cases} \\
+            \begin{cases}
+                x - 1 & \text{if} \ x \in [1, 2) \\
+                0 & \text{otherwise}
+            \end{cases} \\
+        \end{array}
+    \right]
+    =
+    \left[
+        \begin{array}{l}
+            \begin{cases}
+                1 - x & \text{if} \ x \in [0, 1) \\
+                0 & \text{otherwise}
+            \end{cases} \\
+            \begin{cases}
+                x & \text{if} \ x \in [0, 1) \\
+                2 - x & \text{if} \ x \in [1, 2) \\
+                0 & \text{otherwise}
+            \end{cases} \\
+            \begin{cases}
+                x - 1 & \text{if} \ x \in [1, 2) \\
+                0 & \text{otherwise}
+            \end{cases} \\
+        \end{array}
+    \right]
+\end{equation}
+```
+
+There are several additional details that we've not discussed here, but the basic idea for building U-splines has been presented here.
+We provide a more detailed description, and worked examples, of the U-spline algorithm, limited to one-dimension, in the appendix.
+For now, we will move forward treating the construction of U-splines as a "black-box" operation wherein we provide the desired spline space and we are provided with the respective spline basis.
+
+#### Example 1
+```{matlab}
+x = sym( "x", "real" );
+basis_name = "Bernstein";
+degree = [2, 2];
+continuity = [-1, 1, -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
+
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+spline = Spline( spline_space );
+
+ext_op = spline.ComputeSplineAssemblyOperator();
+spline_basis = spline.ComputeSplineBasis();
+```
+
+```{matlab}
+%| echo: false
+figure
+subplot( 2, 1, 1 )
+fplot( spline.dc_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+subplot( 2, 1, 2 )
+fplot( spline_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+```
+
+#### Example 2
+```{matlab}
+x = sym( "x", "real" );
+basis_name = "Bernstein";
+degree = [3, 3, 3, 3, 3];
+continuity = [-1, 2, 2, 2, 2, -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
+
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+spline = Spline( spline_space );
+
+ext_op = spline.ComputeSplineAssemblyOperator();
+spline_basis = spline.ComputeSplineBasis();
+```
+
+```{matlab}
+%| echo: false
+figure
+subplot( 2, 1, 1 )
+fplot( spline.dc_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+subplot( 2, 1, 2 )
+fplot( spline_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+```
+
+#### Example 3
+```{matlab}
+x = sym( "x", "real" );
+basis_name = "Bernstein";
+degree = [3, 3, 3, 3, 3];
+continuity = [-1, 0, 2, 1, 0, -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
+
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+spline = Spline( spline_space );
+
+ext_op = spline.ComputeSplineAssemblyOperator();
+spline_basis = spline.ComputeSplineBasis();
+```
+
+```{matlab}
+%| echo: false
+figure
+subplot( 2, 1, 1 )
+fplot( spline.dc_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+subplot( 2, 1, 2 )
+fplot( spline_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+```
+
+#### Example 4
+```{matlab}
+x = sym( "x", "real" );
+basis_name = "Bernstein";
+degree = [1, 2, 3, 4, 3, 2, 1];
+continuity = [-1, 0, 1, 2, 2, 1, 0, -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
+
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+spline = Spline( spline_space );
+
+ext_op = spline.ComputeSplineAssemblyOperator();
+spline_basis = spline.ComputeSplineBasis();
+```
+
+```{matlab}
+%| echo: false
+figure
+subplot( 2, 1, 1 )
+fplot( spline.dc_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+subplot( 2, 1, 2 )
+fplot( spline_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+```
+
+[^1]: Many classical texts on the finite element method call this operator the *assembly operator*.

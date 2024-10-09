@@ -1,3 +1,17 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+addpath( "../lecture_02/" )
+```
+
 ## The Continuous Spline
 
 ```{matlab}
@@ -5,7 +19,7 @@ x = sym( "x", "real" );
 domain = sym( [0, 3] );
 degree = 1;
 num_elements = 3;
-vertices = sym( [0, 0.5, 1.5, 3] );
+vertices = sym( [0, 1, 2, 3] );
 basis_name = "Lagrange";
 
 spline_basis = sym( [] );
@@ -20,19 +34,65 @@ for e = 1 : num_elements
         end
     end
 end
-display( spline_basis )
+```
+
+```{=latex}
+\begin{equation}
+    \Matrix{N} =
+    \left[
+        \begin{array}{l}
+            \begin{cases}
+                1 - x & \text{if} \ 0 \leq x < 1 \\
+                0     & \text{otherwise}
+            \end{cases} \\
+            \begin{cases}
+                x     & \text{if} \ 0 \leq x < 1 \\
+                2 - x & \text{if} \ 1 \leq x < 2 \\
+                0 & \text{otherwise}
+            \end{cases} \\
+            \begin{cases}
+                x - 1 & \text{if} \ 1 \leq x < 2 \\
+                3 - x & \text{if} \ 2 \leq x < 3 \\
+                0 & \text{otherwise}
+            \end{cases} \\
+            \begin{cases}
+                x - 2 & \text{if} \ 2 \leq x < 3 \\
+                0     & \text{otherwise}
+            \end{cases} \\
+        \end{array}
+    \right]
+\end{equation}
+```
+
+
+
+```{matlab}
+x = sym( "x", "real" );
+bvp = PoissonEquationBVP;
+bvp.distributed_load = 5*x^0;
+bvp.prescribed_value = 1;
+bvp.prescribed_slope = 1;
+bvp.domain = sym( [0, 1] );
+
+basis_name = "Bernstein";
+degree = [ 2, 2 ];
+continuity = [-1, 0 -1];
+vertices = linspace( bvp.domain(1), bvp.domain(2), length( degree ) + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+
+[u, M, F, basis, d] = PoissonEquation( spline_space, bvp );
 ```
 
 ```{matlab}
 %| echo: false
-figure
-fplot( spline_basis, double( domain ), LineWidth=2 )
-axis equal
-```
+U(x) = ExactPoissonSolution( bvp ).U;
 
-```{matlab}
-%| echo: false
 figure
-c = randi( [1, 9], size( spline_basis ) )
-fplot( transpose( c ) * spline_basis, double( domain ), LineWidth=2 )
+subplot( 2, 1, 1 )
+hold on
+fplot( U, double( bvp.domain ), LineWidth=4, Color="k" )
+fplot( u, double( bvp.domain ), LineWidth=3, SeriesIndex=1 )
+
+subplot( 2, 1, 2 )
+fplot( basis(1), double( bvp.domain ), LineWidth=2 )
 ```

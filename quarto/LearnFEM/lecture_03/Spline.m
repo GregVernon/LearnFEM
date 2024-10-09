@@ -130,18 +130,23 @@ classdef Spline
         end
 
         function spline_assembly_operator = ComputeSplineAssemblyOperator( obj )
-            global_constraint_matrix = obj.ComputeGlobalInterfaceConstraintMatrix();
-            contiguous_index_sets = obj.ComputeGlobalContiguousIndexSets();
-            for ii = 1 : length( contiguous_index_sets )
-                A = global_constraint_matrix( :, contiguous_index_sets{ii} );
-                add_vec = obj.generate_independent_unit_vector( A );
-                A = [add_vec; A];
-                b = [1; zeros( size( A, 1) - 1, 1)];
-                c = A \ b;
-                N(ii, contiguous_index_sets{ii} ) = c;
+            if obj.GetNumElements == 1
+                num_dc_basis = obj.ComputeNumDCBasis();
+                spline_assembly_operator = sym( eye( num_dc_basis ) );
+            else
+                global_constraint_matrix = obj.ComputeGlobalInterfaceConstraintMatrix();
+                contiguous_index_sets = obj.ComputeGlobalContiguousIndexSets();
+                for ii = 1 : length( contiguous_index_sets )
+                    A = global_constraint_matrix( :, contiguous_index_sets{ii} );
+                    add_vec = obj.generate_independent_unit_vector( A );
+                    A = [add_vec; A];
+                    b = [1; zeros( size( A, 1) - 1, 1)];
+                    c = A \ b;
+                    N(ii, contiguous_index_sets{ii} ) = c;
+                end
+                normalize_cols = ( N * transpose( N ) ) \ ( N * ones( size( global_constraint_matrix, 2 ), 1 ) );
+                spline_assembly_operator = normalize_cols .* N;
             end
-            normalize_cols = ( N * transpose( N ) ) \ ( N * ones( size( global_constraint_matrix, 2 ), 1 ) );
-            spline_assembly_operator = normalize_cols .* N;
         end
         
         function interface_index_sets = ComputeLocalInterfaceIndexSets( obj, interface_id )

@@ -86,11 +86,11 @@ classdef SplineSpace
     % Compute information about the spline space
     methods
         function knot_vector = ComputeKnotVector( obj )
-            knot_vector = cell( 1,length(obj.vertices) );
+            knot_vector = cell( 1, length( obj.vertices ) );
             for ii = 1:length(obj.vertices)
                 knot_vector{ii} = repmat( obj.vertices(ii), 1, obj.degree(1) - obj.continuity(ii) );
             end
-            knot_vector = cell2mat( knot_vector );
+            knot_vector = [knot_vector{:}];
         end
 
         function num_dc_basis = ComputeNumDCBasis( obj )

@@ -52,6 +52,18 @@ The term "quadrature" comes the historic process of finding the *quadrilaterals*
 The form of quadrature that most students encounter first is *Riemann quadrature* wherein the domain is divided into segments that will serve as the widths of rectangles and then the function is evaluated at the center of each segment, and these values serve as the height of their respective rectangle.
 
 ```{matlab}
+function [qp, weights] = RiemannQuadrature( domain, num_qp )
+    bin_nodes = linspace( domain(1), domain(2), num_qp + 1 );
+    weights = zeros( num_qp, 1, "like", domain );
+    qp = zeros( num_qp, 1, "like", domain );
+    for ii = 1 : length( bin_nodes ) - 1
+        weights(ii) = bin_nodes(ii+1) - bin_nodes(ii);
+        qp(ii) = mean( bin_nodes(ii:ii+1) );
+    end
+end
+```
+
+```{matlab}
 clear
 x = sym( "x", "real" );
 f(x) = sin( x.^2 );

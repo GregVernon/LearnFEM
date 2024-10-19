@@ -9,7 +9,7 @@
 ### Create a Virtual Environment
 ```
 python3.12.exe -m venv env
-python3.12.exe -m pip install -r requirements.txt
+python3.12.exe -m pip install -r mkernel_python_requirements.txt
 ```
 #### Activate Python Environment (Powershell)
 ```
@@ -22,6 +22,7 @@ env\Scripts\Activate.ps1
 The Matlab Engine for version 24.1.2 requires 3.9<= ver <3.12.
 ```
 python3.11.exe -m venv mkernel_python_env
+python3.12.exe -m pip install -r requirements.txt
 ```
 
 ### Activate Python Environment (Powershell)

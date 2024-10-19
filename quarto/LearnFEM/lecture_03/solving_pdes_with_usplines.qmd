@@ -1,0 +1,385 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+addpath( "../lecture_02/" )
+```
+
+## Solving Physics Problems with U-splines
+
+### Scalar Projection
+
+```{matlab}
+%| output: false
+function [u, D, F, basis, d] = ScalarProjection( sol_space, bvp )
+
+    function [D, F] = ApplyGoverningEquations()
+        D = int( basis(0) * transpose( basis(0) ), domain );
+        F = int( basis(0) * target_fun, domain );
+    end
+
+    function [D, F] = ApplyBoundaryConditions( D, F )
+        function [D, F] = LeftFunctionValue( D, F )
+            D = D + subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
+            F = F + subs( basis(0) * target_fun, variate, domain(1) );
+        end
+        function [D, F] = RightFunctionValue( D, F )
+            D = D + subs( basis(0) .* transpose( basis(0) ), variate, domain(2) );
+            F = F + subs( basis(0) * target_fun, variate, domain(2) );
+        end
+        [D, F] = LeftFunctionValue( D, F );
+        [D, F] = RightFunctionValue( D, F );
+    end
+    
+    % Unpack the solution space
+    variate = sol_space.variate;
+    spline = Spline( sol_space );
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    target_fun = bvp.target_fun;
+
+    % Solve the BVP
+    basis = @(deriv) diff( spline.basis, variate, deriv );
+    [D, F] = ApplyGoverningEquations();
+    [D, F] = ApplyBoundaryConditions( D, F );
+    d = D \ F;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = symfun( u, variate );
+    u = simplify( u, Steps=10 );
+end
+```
+
+### Poisson Equation
+```{matlab}
+%| output: false
+function [u, M, F, basis, d] = PoissonEquation( sol_space, bvp )
+    
+    % Subroutines
+    function [M, F] = ApplyGoverningEquation()
+        M = int( basis(2) .* transpose( basis(2) ), domain );
+        F = -int( basis(2) * f, domain );
+    end
+
+    function [M, F] = ApplyBoundaryConditions( M, F )
+        function [M, F] = DirichletBoundaryCondition()
+            M = subs( basis(0) .* transpose( basis(0) ), variate, domain(2) );
+            F = subs( basis(0) * g, variate, domain(2) );
+        end
+
+        function [M, F] = NeumannBoundaryCondition()
+            M = limit( basis(1), variate, domain(1), "right" ) .* transpose( limit( basis(1), variate, domain(1), "right" ) );
+            F = limit( basis(1), variate, domain(1), "right" ) * h;
+        end
+
+        [MD, FD] = DirichletBoundaryCondition();
+        [MN, FN] = NeumannBoundaryCondition();
+        M = M + MD + MN;
+        F = F + FD + FN;
+    end
+
+    % Unpack the solution space
+    variate = sol_space.variate;
+    spline = Spline( sol_space );
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    f = bvp.distributed_load;
+    g = bvp.prescribed_value;
+    h = bvp.prescribed_slope;
+
+    % Solve the BVP
+    basis = @(deriv) diff( spline.basis, variate, deriv );
+    [M, F] = ApplyGoverningEquation();
+    [M, F] = ApplyBoundaryConditions( M, F );
+    d = M \ F;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = simplify( u, Steps=10 );
+    u = symfun( u, variate );
+end
+```
+
+### Steady-state Heat Transfer
+```{matlab}
+function [u, M, F, basis, d] = HeatEquation( sol_space, bvp )
+
+    % Subroutines
+    function [M, F] = ApplyGoverningEquation()
+        M = int( ( k * basis(2) ) .* transpose( k * basis(2) ), domain );
+        F = -int( ( k * basis(2) ) * q, domain );
+    end
+
+    function [M, F] = ApplyBoundaryConditions( M, F )
+        function [M, F] = DirichletBoundaryCondition()
+            M = subs( basis(0) .* transpose( basis(0) ), variate, domain(2) );
+            F = subs( basis(0) * g, variate, domain(2) );
+        end
+
+        function [M, F] = NeumannBoundaryCondition()
+            M = subs( basis(1) .* transpose( basis(1) ), variate, domain(1) );
+            F = subs( basis(1) * h, variate, domain(1) );
+        end
+
+        [MD, FD] = DirichletBoundaryCondition();
+        [MN, FN] = NeumannBoundaryCondition();
+        M = M + MD + MN;
+        F = F + FD + FN;
+    end
+
+    % Unpack the solution space
+    variate = sol_space.variate;
+    spline = Spline( sol_space );
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    q = bvp.distributed_heat_load;
+    k = bvp.thermal_conductivity;
+    g = bvp.prescribed_temperature;
+    h = bvp.prescribed_heat_flux;
+
+    % Solve the BVP
+    basis = @(deriv) diff( spline.basis, variate, deriv );
+    [M, F] = ApplyGoverningEquation();
+    [M, F] = ApplyBoundaryConditions( M, F );
+    d = M \ F;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = simplify( u, Steps=10 );
+    u = symfun( u, variate );
+end
+```
+
+### Steady-state Diffusion
+```{matlab}
+%| output: false
+function [u, A, B, basis, d] = SteadyStateDiffusionEquation( sol_space, bvp )
+
+    % Subroutines
+    function [A, B] = ApplyGoverningEquation()
+        A = int( ( D * basis(1) ) .* transpose( D * basis(1) ), domain );
+        B = -int( ( D * basis(1) ) * J, domain );
+    end
+
+    function [A, B] = ApplyBoundaryConditions( A, B )
+
+        function [A, B] = ConcentrationBoundaryCondition()
+            A = subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
+            B = subs( basis(0) .* g, variate, domain(1) );
+        end
+
+        [AC, BC] = ConcentrationBoundaryCondition();
+        A = A + AC;
+        B = B + BC;
+    end
+
+    % Unpack the solution space
+    variate = sol_space.variate;
+    spline = Spline( sol_space );
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    D = bvp.diffusion_coefficient;
+    J = bvp.diffusion_flux;
+    g = bvp.prescribed_concentration;
+
+    % Solve the BVP
+    basis = @(deriv) diff( spline.basis, variate, deriv );
+    [A, B] = ApplyGoverningEquation();
+    [A, B] = ApplyBoundaryConditions( A, B );
+    d = A \ B;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = simplify( u, Steps=10 );
+    u = symfun( u, variate );
+end
+```
+
+### Euler-Bernoulli Beam Equation
+
+```{matlab}
+function [u, A, B, basis, d] = EulerBernoulliBeamEquation( sol_space, bvp )
+
+    % Subroutines
+    function [A, B] = ApplyGoverningEquation()
+        A = int( ( ( E * I ) * basis(4) ) .* ( ( E * I ) * transpose( basis(4) ) ), domain );
+        B = -int( ( ( E * I ) * basis(4) ) * f, domain );
+    end
+
+    function [A, B] = ApplyBoundaryConditions( A, B )
+
+        function [A, B] = DisplacementBoundaryCondition()
+            A = subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
+            B = subs( basis(0) .* g, variate, domain(1) );
+        end
+
+        function [A, B] = SlopeBoundaryCondition()
+            A = subs( basis(1) .* transpose( basis(1) ), variate, domain(1) );
+            B = subs( basis(1) .* h, variate, domain(1) );
+        end
+
+        function [A, B] = MomentBoundaryCondition()
+            A = subs( basis(2) * ( E * I ) .* transpose( basis(2) ), variate, domain(2) );
+            B = subs( basis(2) .* M, variate, domain(2) );
+        end
+
+        function [A, B] = ShearBoundaryCondition()
+            A = subs( basis(3) * ( E * I ) .* transpose( basis(3) ), variate, domain(2) );
+            B = -subs( basis(3) .* Q, variate, domain(2) );
+        end
+
+        [AD, BD] = DisplacementBoundaryCondition();
+        [AN, BN] = SlopeBoundaryCondition();
+        [AM, BM] = MomentBoundaryCondition();
+        [AS, BS] = ShearBoundaryCondition();
+        A = A + AD + AN + AM + AS;
+        B = B + BD + BN + BM + BS;
+    end
+
+    % Unpack the solution space
+    variate = sol_space.variate;
+    spline = Spline( sol_space );
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    E = bvp.elastic_modulus;
+    I = bvp.second_moment_inertia;
+    f = bvp.distributed_load;
+    M = bvp.moment_load;
+    Q = bvp.shear_load;
+    g = bvp.prescribed_displacement;
+    h = bvp.prescribed_slope;
+
+    % Solve the BVP
+    basis = @(deriv) diff( spline.basis, variate, deriv );
+    [A, B] = ApplyGoverningEquation();
+    [A, B] = ApplyBoundaryConditions( A, B );
+    d = A \ B;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = simplify( u, Steps=10 );
+    u = symfun( u, variate );
+end
+```
+
+### Damped Harmonic Oscillator
+```{matlab}
+function [u, A, F, basis, d] = SpringDashpotSystem( sol_space, bvp )
+
+    function [A, F] = ApplyGoverningEquations()
+        M = int( ( m * basis(2) ) .* ( m * transpose( basis(2) ) ), domain );
+        C = int( ( m * basis(2) ) .* ( c * transpose( basis(1) ) ), domain );
+        K = int( ( m * basis(2) ) .* ( k * transpose( basis(0) ) ), domain );
+        A = M + C + K;
+        F = int( ( m * basis(2) ) * w, domain );
+    end
+
+    function [A, F] = ApplyBoundaryConditions( A, F )
+        function [A, F] = DisplacementBoundaryCondition()
+            A = subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
+            F = subs( basis(0) * g, variate, domain(1) );
+        end
+
+        function [A, F] = SlopeBoundaryCondition()
+            A = limit( basis(1), variate, domain(1), "right" ) .* transpose( limit( basis(1), variate, domain(1), "right" ) );
+            F = limit( basis(1), variate, domain(1), "right" ) * h;
+        end
+
+        [AD, FD] = DisplacementBoundaryCondition();
+        [AN, FN] = SlopeBoundaryCondition();
+        A = A + AD + AN;
+        F = F + FD + FN;
+    end
+
+    % Unpack the solution space
+    variate = sol_space.variate;
+    spline = Spline( sol_space );
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    m = bvp.mass;
+    c = bvp.damping_coefficient;
+    k = bvp.spring_stiffness;
+    w = bvp.weight;
+    g = bvp.initial_displacement;
+    h = bvp.initial_velocity;
+
+    % Solve the BVP
+    basis = @(deriv) diff( spline.basis, variate, deriv );
+    [A, F] = ApplyGoverningEquations();
+    [A, F] = ApplyBoundaryConditions( A, F );
+    d = A \ F;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = symfun( u, variate );
+    u = simplify( u, Steps=10 );
+end
+```
+
+```{matlab}
+%| output: true
+t = sym( "t", "real" );
+basis_name = "Bernstein";
+num_elements = 40;
+degree = 2 * ones( 1, num_elements );
+continuity = [-1, 1 * ones( 1, num_elements - 1 ) -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), num_elements + 1 );
+spline_space = SplineSpace( basis_name, t, degree, vertices, continuity );
+spline = Spline( spline_space );
+
+bvp.variate = t;
+bvp.domain = sym( [0, 1] );
+bvp.mass = sym( 20.4 );
+bvp.damping_coefficient = sym( 250 );
+bvp.spring_stiffness = sym( 29.5e3 );
+bvp.weight = -sym( 21.6 );
+bvp.initial_displacement = sym( 0 );
+bvp.initial_velocity = sym( 0 );
+
+Y = ExactSpringDashpotSystem( bvp ).U;
+y = SpringDashpotSystem( spline_space, bvp );
+
+D0y = diff( y, 0 );
+D1y = diff( y, 1 );
+D2y = diff( y, 2 );
+m = bvp.mass;
+c = bvp.damping_coefficient;
+k = bvp.spring_stiffness;
+w = bvp.weight;
+err_fun = m * D2y + c * D1y + k * D0y - w;
+approx_error = sqrt( int( err_fun^2, domain ) )
+double( vpa( approx_error, 16 ) )
+
+%l2_error = ComputeL2Error( Y, y, bvp.domain, "fast" );
+%l2_error = vpa( abs( l2_error ), 32 );
+```
+
+```{matlab}
+%| echo: false
+%| output: true
+figure
+
+subplot( 2, 1, 1 )
+hold on
+fplot( Y, double( bvp.domain ), Color="k"    , LineWidth=4 )
+fplot( y, double( bvp.domain ), SeriesIndex=1, LineWidth=3 )
+
+subplot( 2, 1, 2 )
+%fplot( spline.basis, double( bvp.domain ), LineWidth=1 )
+fplot( sqrt( err_fun^2 ), double( bvp.domain ) )
+```

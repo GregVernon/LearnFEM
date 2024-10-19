@@ -369,8 +369,8 @@ t = tiledlayout(5, 1);
 
 nexttile([4, 1])
 hold on
-fplot( left_basis, double( left_domain ), LineWidth=2 )
-fplot( right_basis, double( right_domain ), LineWidth=2 )
+fplot( left_basis, double( left_domain ), LineWidth=2, MeshDensity=23 * length( degree ) )
+fplot( right_basis, double( right_domain ), LineWidth=2, MeshDensity=23 * length( degree ) )
 
 nexttile()
 hold on
@@ -444,7 +444,7 @@ c = null( S );
 \end{equation}
 ```
 
-If we use these vectors as the rows of a matrix they form an operator that transforms the Bernstein basis functions into the global spline basis functions.[^1]
+If we use these vectors as the rows of a matrix they form an operator[^1] that transforms the Bernstein basis functions into the global spline basis functions.
 
 ```{=latex}
 \begin{equation}
@@ -518,9 +518,9 @@ spline_basis = spline.ComputeSplineBasis();
 %| echo: false
 figure
 subplot( 2, 1, 1 )
-fplot( spline.dc_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+fplot( spline.dc_basis, double( spline.GetSplineDomain() ), LineWidth=2, MeshDensity=23 * length( degree ) )
 subplot( 2, 1, 2 )
-fplot( spline_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+fplot( spline_basis, double( spline.GetSplineDomain() ), LineWidth=2, MeshDensity=23 * length( degree ) )
 ```
 
 #### Example 2
@@ -543,9 +543,9 @@ spline_basis = spline.ComputeSplineBasis();
 %| echo: false
 figure
 subplot( 2, 1, 1 )
-fplot( spline.dc_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+fplot( spline.dc_basis, double( spline.GetSplineDomain() ), LineWidth=2, MeshDensity=23 * length( degree ) )
 subplot( 2, 1, 2 )
-fplot( spline_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+fplot( spline_basis, double( spline.GetSplineDomain() ), LineWidth=2, MeshDensity=23 * length( degree ) )
 ```
 
 #### Example 3
@@ -568,9 +568,9 @@ spline_basis = spline.ComputeSplineBasis();
 %| echo: false
 figure
 subplot( 2, 1, 1 )
-fplot( spline.dc_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+fplot( spline.dc_basis, double( spline.GetSplineDomain() ), LineWidth=2, MeshDensity=23 * length( degree ) )
 subplot( 2, 1, 2 )
-fplot( spline_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+fplot( spline_basis, double( spline.GetSplineDomain() ), LineWidth=2, MeshDensity=23 * length( degree ) )
 ```
 
 #### Example 4
@@ -593,9 +593,9 @@ spline_basis = spline.ComputeSplineBasis();
 %| echo: false
 figure
 subplot( 2, 1, 1 )
-fplot( spline.dc_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+fplot( spline.dc_basis, double( spline.GetSplineDomain() ), LineWidth=2, MeshDensity=23 * length( degree ) )
 subplot( 2, 1, 2 )
-fplot( spline_basis, double( spline.GetSplineDomain() ), LineWidth=2 )
+fplot( spline_basis, double( spline.GetSplineDomain() ), LineWidth=2, MeshDensity=23 * length( degree ) )
 ```
 
 [^1]: Many classical texts on the finite element method call this operator the *assembly operator*.

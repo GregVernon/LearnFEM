@@ -38,18 +38,23 @@ book:
         - lecture_01/galerkin_function_approximation.qmd
         - lecture_01/galerkin_function_approximation_with_boundary_conditions.qmd
     - part: lecture_02/intro.qmd
-      chapters: 
+      chapters:
         - lecture_02/galerkin_poisson_equation.qmd
         - lecture_02/galerkin_heat_equation.qmd
         - lecture_02/ficks_first_law_equation.qmd
         - lecture_02/euler_bernoulli_beam_equation.qmd
+        # - lecture_02/elastostatics_equation.qmd
         - lecture_02/damped_harmonic_oscillator_equation.qmd
     - part: lecture_03/intro.qmd
       chapters:
-        - lecture_03\piecewise_polynomials.qmd
-        - lecture_03\discontinuous_splines.qmd
-        - lecture_03\continuous_splines.qmd
-        - lecture_03\smooth_splines.qmd
+        - lecture_03/piecewise_polynomials.qmd
+        - lecture_03/discontinuous_splines.qmd
+        - lecture_03/continuous_splines.qmd
+        - lecture_03/smooth_splines.qmd
+        - lecture_03/solving_pdes_with_usplines.qmd
+    - part: lecture_04/intro.qmd
+      chapters:
+        - lecture_04/polynomial_quadrature.qmd
     # - summary.qmd
     # - references.qmd
 
@@ -75,6 +80,8 @@ format:
               Vector: ["\\boldsymbol{\\mathit{#1}}", 1],
               Matrix: ["\\boldsymbol{\\mathrm{#1}}", 1],
               ChangeBasisOp: ["\\Matrix{R}_{\\tiny{\\Matrix{#1} \\rightarrow \\Matrix{#2}}}", 2],
+              d: ["\\mathop{}\\!{d{#1}}", 1],
+              p: ["\\mathop{}\\!{\partial{#1}}", 1],
             }
           }
         };
@@ -99,4 +106,6 @@ format:
         \newcommand{\Inner}[2]{\left\langle #1, #2 \right\rangle}
         \newcommand{\Vector}[1]{\mathbf{\mathit{#1}}}
         \newcommand{\Matrix}[1]{\boldsymbol{\mathrm{#1}}}
-        \newcommand{\ChangeBasisOp}[2]{\Matrix{R}_{\tiny{\Matrix{#1} \rightarrow \Matrix{#2}}}}
+        \newcommand{\ChangeBasisOp}[2]{\Matrix{R}_{\tiny{\Matrix{#1}\rightarrow \Matrix{#2}}}}
+        \newcommand{\d}{\mathop{}\!{d}}
+        \newcommand{\p}{\mathop{}\!{\partial}}

@@ -1,15 +1,24 @@
 /.quarto/
 
-*.tex
 *.m
 
 __pycache__/
 _book/
 /env/
 /index_files/
-/lecture_00/inner_products_files
-/lecture_00/change_of_basis_files/
-/lecture_00/change_of_variable_files/
-/lecture_00/polynomial_basis_files/
-/lecture_00/polynomial_roots_files/
-/lecture_01/galerkin_function_approximation_files
+/lecture_00/*_files
+/lecture_01/*_files
+/lecture_02/*_files
+/lecture_03/*_files
+/lecture_04/*_files
+*.quarto_ipynb
+
+# LATEX
+*.tex
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+*.toc
+*.pdf

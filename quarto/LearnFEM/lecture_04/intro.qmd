@@ -1,0 +1,65 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+addpath( "../lecture_02/" )
+addpath( "../lecture_03/" )
+```
+
+# Quadrature
+
+While the symbolic calculations that we've done so far have helped us write clear and concise code, allowing us to more readily peer into the mathematics of the Galerkin method.
+While this is fine as a learning exercise, it is wholely unusable as a practical implementation -- to be a useful method for real engineering problems we'll need a much more performant implementation.
+
+Additionally, while we've been lucky so far with our use of symbolic integration that every expression we've used has a closed-form integral.
+But there are some expressions that don't have closed-form integrals, and must be evaluated numerically.
+For example:
+
+```{=latex}
+\begin{equation*}
+    \int{ \sin( x^2 ) }\d{x} = \frac{\sqrt{2} \sqrt{\pi } \mathrm{S}\left(\frac{\sqrt{2}\,x}{\sqrt{\pi }}\right)}{2}
+    %
+    = \frac{2 \sqrt{\pi} \int_{0}^{\frac{\sqrt{2}x}{\sqrt{\pi}}}{\sin{ \left( \frac{\pi t^2}{2} \right) } \d{t} }}{2}
+\end{equation*}
+```
+
+```{=latex}
+\begin{equation*}
+    \int{ x^x }\d{x} = \int{ x^x }\d{x}
+\end{equation*}
+```
+
+```{matlab}
+%| output: false
+%| echo: false
+
+clear
+x = sym( "x", "real" )
+f1 = int( sin( x^2 ) )
+f2 = int( x^x )
+```
+
+Thus, for us to move away from symbolic calculations towards numerical calculations, we will need to find an approach that allows us to integrate numerically.
+By far, the most common class of numerical integration techniques is called *quadrature*.
+The term "quadrature" comes the historic process of finding the *quadrilaterals* whose area is equivalent to some nonlinear shape (or function).
+The form of quadrature that most students encounter first is *Riemann quadrature* wherein the domain is divided into segments that will serve as the widths of rectangles and then the function is evaluated at the center of each segment, and these values serve as the height of their respective rectangle.
+
+```{matlab}
+clear
+x = sym( "x", "real" );
+f(x) = sin( x.^2 );
+domain = sym( [-pi, pi] );
+
+[qp, weights] = RiemannQuadrature( domain, 10 );
+
+figure
+fplot( f, double( domain ), LineWidth=2, Color="k" );
+PlotQuadrature( qp, weights, double( f( qp ) ) );
+```

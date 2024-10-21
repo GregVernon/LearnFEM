@@ -168,7 +168,7 @@ ax.XAxisLocation = "origin";
 ```{matlab}
 %| output: false
 function eigvals = PolynomialRoots( polynomial )
-  C = CompanionMatrix( polynomial )
+  C = CompanionMatrix( polynomial );
   eigvals = ComputeEigenvalues( C, 1e-16, 1e3 );
   [~, sidx] = sort( eigvals );
   eigvals = eigvals( sidx );

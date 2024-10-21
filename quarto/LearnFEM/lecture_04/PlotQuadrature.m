@@ -1,6 +1,8 @@
 function PlotQuadrature( qp, weights, func_vals )
+    num_qp = length( qp );
     verts = [];
-    faces = [];
+    faces = zeros( num_qp, 5 );
+    colors = zeros( num_qp, 1, 3 );
     cmap = lines(2);
     for ii = 1 : length( qp )
         verts = [ verts; 
@@ -10,19 +12,21 @@ function PlotQuadrature( qp, weights, func_vals )
                   [ qp(ii) - weights(ii) / 2, 0 ];
                 ];
         faces(ii,:) = (4*(ii-1)) + [1:4 1];
-        cmap( isAlways( func_vals(ii) < 0 ) + 1, : )
+        colors(ii,1,:) = cmap( ( func_vals(ii) < 0 ) + 1, : );
     end
 
     ax = gca;
     old_next_plot = ax.NextPlot;
     ax.NextPlot = "add";
-    
+
     P = patch( NaN, NaN, NaN );
     P.Vertices = verts;
     P.Faces = faces;
     P.CData = colors;
-    P.EdgeColor = "k";
     P.FaceAlpha = 0.5;
+    P.FaceColor = "flat";
+    P.EdgeColor = "k";
+    
     
     S = scatter( NaN, NaN );
     S.XData = qp;

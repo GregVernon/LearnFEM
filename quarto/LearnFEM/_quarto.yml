@@ -55,6 +55,7 @@ book:
     - part: lecture_04/intro.qmd
       chapters:
         - lecture_04/polynomial_quadrature.qmd
+        - lecture_04/gauss_quadrature.qmd
     # - summary.qmd
     # - references.qmd
 

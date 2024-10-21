@@ -1,0 +1,533 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+```
+
+# Gauss Quadrature
+
+The final result in the first chapter of this section showed that, if we use Lagrange polynomial basis that has been modified so that its nodes are distributed according to the zeros of the Legendre basis, that convergence with respect to increasing polynomial degree is achievable.
+This suggests there may be something special about using the Legendre basis for quadrature, and in fact orthogonal basis do have special properties that make them ideal for quadrature.
+
+## Legendre Quadrature
+Other than the constant function, the Legendre basis functions integrated across a symmetric domain centered at $x=0$ have values of zero.
+
+```{=latex}
+\begin{equation}
+    \int_{-1}^{1}{ \Matrix{P}^n(x)\d{x} } = 
+    \begin{bmatrix}
+        2 \\ 0 \\ \vdots \\ 0 \\ 0
+    \end{bmatrix}
+\end{equation}
+```
+
+Whereas the interpolatory Lagrange basis resulted in a straightforward approach for determining both quadrature points and weights, it is arguably not immediately obvious what the quadrature points and weights should be for a scheme based on the Legendre basis.
+Instead we will take a constructive approach wherein we attempt to define a quadrature scheme on the basis for ever-increasing degree.
+Then we might be able to see a pattern that would allow us to derive a simpler algorithm, but if not we'll at least have determined the quadrature scheme for the degree's evaluated.
+Specifically, our process for generating the quadrature scheme on the basis is to ask two questions: 
+
+1. Where should the quadrature points be located?
+2. What weight should be assigned to each quadrature point?
+
+And as we consider these questions, we want to consider that we want to find a quadrature scheme that has the minimum amount of quadrature points (for maximum efficiency) and the weights should be non-zero (aka *non-trivial*) as otherwise we might as well not include the quadrature point (since any value multiplied by zero is zero).
+
+### The constant Legendre basis
+We begin by asking ourselves how to integrate the degree-0 (constant) basis.
+As mentioned, its definite integral on the biunit domain is $2$.
+
+1. Because the function is constant, we don't strictly need to evaluate any location on the function, simply knowing its constant value of $1$ is enough.
+
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+domain = sym( [-1, 1] );
+degree = 0;
+P = PolynomialBasisFunction( "Legendre", degree, x, domain );
+qp = 0;
+cmap = lines();
+
+figure
+hold on
+farea( P, double( domain ), LineWidth=2, EdgeColor="k", FaceColor=cmap(1,:), MeshDensity=20 );
+scatter( qp, subs( P, x, qp ), MarkerFaceColor="k", MarkerEdgeColor="k" )
+ax = gca;
+ax.XLim = [-1.1, 1.1];
+ax.YLim = [-1.1, 1.1];
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{x} = [0]
+\end{equation*}
+```
+
+2. The weight is easily determined for this case, it is the simply the definite integral of the function: $2$. For completeness, however, let's assembly the moment-fitting equation:
+
+```{=latex}
+\begin{equation*}
+    \begin{bmatrix} 
+        2 
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        1
+    \end{bmatrix}
+    \begin{bmatrix}
+        w_1
+    \end{bmatrix}
+\end{equation*}
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{w} = [2]
+\end{equation*}
+```
+
+### The linear Legendre basis
+
+1. Note that, as discussed earlier, that while we could place a quadrature point anywhere on the constant function, the linear function can only be integrated exactly, with non-trivial weight, if the quadrature point is located at the root of the linear function.
+
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+domain = sym( [-1, 1] );
+degree = 1;
+P = PolynomialBasisFunction( "Legendre", degree, x, domain );
+qp = PolynomialRoots( P(end) );
+cmap = lines();
+
+figure
+for ii = 1 : length( P )
+    subplot( length( P ), 1, ii )
+    hold on
+    farea( P(ii), double( domain ), LineWidth=2, EdgeColor="k", FaceColor=cmap(ii,:), MeshDensity=ii * 20 );
+    scatter( qp, subs( P(ii), x, qp ), MarkerFaceColor="k", MarkerEdgeColor="k" )
+    ax = gca;
+    ax.XLim = [-1.1, 1.1];
+    ax.YLim = [-1.1, 1.1];
+end
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{x} = [0]
+\end{equation*}
+```
+
+2. The weight is, again, easily determined for this case, it is the simply the definite integral of the function: $2$.  But again, for completeness, let's assemble the moment-fitting equation:
+
+```{=latex}
+\begin{equation*}
+    \begin{bmatrix} 
+        2 \\ 
+        0 
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        1 \\
+        0
+    \end{bmatrix}
+    \begin{bmatrix}
+        w_1
+    \end{bmatrix}
+\end{equation*}
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{w} = [2]
+\end{equation*}
+```
+
+### The quadratic Legendre basis
+
+1. There is no single location that will exactly integrate all three basis functions. If we were to use the root of the linear function as before, we would compute a non-zero integral for the quadratic function -- so we would require a weight of zero, which would then not correctly integrate the constant function. So we expand our search to use two quadrature points. We observe that if we place these quadrature points at the roots of quadratic function that, due to the linear being odd, we will be able to integrate the linear function as long as the weights are the same value.
+
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+domain = sym( [-1, 1] );
+degree = 2;
+P = PolynomialBasisFunction( "Legendre", degree, x, domain );
+qp = PolynomialRoots( P(end) );
+cmap = lines();
+
+figure
+for ii = 1 : length( P )
+    subplot( length( P ), 1, ii )
+    hold on
+    farea( P(ii), double( domain ), LineWidth=2, EdgeColor="k", FaceColor=cmap(ii,:), MeshDensity=ii * 20 );
+    scatter( qp, subs( P(ii), x, qp ), MarkerFaceColor="k", MarkerEdgeColor="k" )
+    ax = gca;
+    ax.XLim = [-1.1, 1.1];
+    ax.YLim = [-1.1, 1.1];
+end
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{x} = \left[ -\frac{1}{\sqrt{3}}, \frac{1}{\sqrt{3}} \right]
+\end{equation*}
+```
+
+2. It is still fairly easy to determine the weights for these quadrature points, given the constraints that they should be equal-valued and add to $2$. But to be sure, let's again assemble and solve the moment-fitting equation:
+
+```{=latex}
+\begin{equation*}
+    \begin{bmatrix} 
+        2 \\ 
+        0 \\
+        0
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        1                   & 1                  \\
+        -\frac{1}{\sqrt{3}} & \frac{1}{\sqrt{3}} \\
+        0                   & 0                  \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        w_1 \\
+        w_2
+    \end{bmatrix}
+\end{equation*}
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{w} = [1, 1]
+\end{equation*}
+```
+
+### The cubic Legendre basis
+
+1. Now something interesting happens with the cubic basis.  Note that again, because the non-constant functions are symmetric and the cubic function is odd, the two points at the roots of the *quadratic* function found previously have "equal & opposite" values on the *cubic* function -- as long as their weights are equal they will cancel out just as they did on the linear function.
+
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+domain = sym( [-1, 1] );
+degree = 3;
+P = PolynomialBasisFunction( "Legendre", degree, x, domain );
+qp = PolynomialRoots( P(3) );
+cmap = lines();
+
+figure
+for ii = 1 : length( P )
+    subplot( 2, 2, ii )
+    hold on
+    farea( P(ii), double( domain ), LineWidth=2, EdgeColor="k", FaceColor=cmap(ii,:), MeshDensity=ii * 20 );
+    scatter( qp, subs( P(ii), x, qp ), MarkerFaceColor="k", MarkerEdgeColor="k" )
+    ax = gca;
+    ax.XLim = [-1.1, 1.1];
+    ax.YLim = [-1.1, 1.1];
+end
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{x} = \left[ -\frac{1}{\sqrt{3}}, \frac{1}{\sqrt{3}} \right]
+\end{equation*}
+```
+
+2. Assembling and solving the moment-fitting equation, we confirm our suspicion: we can use the quadrature derived from the quadratic basis to exactly integrate the cubic basis.  We've just eliminated one function evaluation as compared to the Lagrange quadrature scheme.
+
+```{=latex}
+\begin{equation*}
+    \begin{bmatrix} 
+        2 \\ 
+        0 \\
+        0 \\
+        0
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        1                    & 1                    \\
+        -\frac{1}{\sqrt{3}}  & \frac{1}{\sqrt{3}}   \\
+        0                    & 0                    \\
+        \frac{ 2\sqrt{3}}{9} & -\frac{ 2\sqrt{3}}{9} \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        w_1 \\
+        w_2
+    \end{bmatrix}
+\end{equation*}
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{w} = [1, 1]
+\end{equation*}
+```
+
+### The quartic Legendre basis
+
+1. We again begin by investigating the potential for the minimum number of quadrature points to integrate the basis.  However it is clear that the quartic basis function, whose definite integral is known to be zero, cannot be integrated with the same weights as previously found. The quartic polynomial would require either the weights to be zero, which would miscalculate the integral of the constant function, or the weights would need to be additive inverses of each other, which would miscalculate the integrals of the linear and cubic functions.
+
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+domain = sym( [-1, 1] );
+degree = 4;
+P = PolynomialBasisFunction( "Legendre", degree, x, domain );
+qp = PolynomialRoots( P(3) );
+cmap = lines();
+
+%subs( P(end), x, str2sym( "1/sqrt(3)" ) )
+
+figure
+for ii = 1 : length( P )
+    subplot( 3, 2, ii )
+    hold on
+    farea( P(ii), double( domain ), LineWidth=2, EdgeColor="k", FaceColor=cmap(ii,:), MeshDensity=ii * 20 );
+    scatter( qp, subs( P(ii), x, qp ), MarkerFaceColor="k", MarkerEdgeColor="k" )
+    ax = gca;
+    ax.XLim = [-1.1, 1.1];
+    ax.YLim = [-1.1, 1.1];
+end
+```
+
+So we investigate the use of three quadrature points. As you've likely noticed, it seems to be desirable to place the quadrature points at the roots of the polynomial of the same degree as the number of roots (1: linear, 2: quadratic) so we place these quadrature points at the roots of the cubic.  While it is now no longer clear what the weights should be, we know that we can use moment fitting to compute them.
+
+```{matlab}
+%| echo: false
+qp = PolynomialRoots( P(4) );
+figure
+for ii = 1 : length( P )
+    %latex( simplify( subs( P(ii), x, [str2sym( "-sqrt(3/5)" ), 0, str2sym( "sqrt(3/5)" )] ), Steps=10 ) )
+    subplot( 3, 2, ii )
+    hold on
+    farea( P(ii), double( domain ), LineWidth=2, EdgeColor="k", FaceColor=cmap(ii,:), MeshDensity=ii * 20 );
+    scatter( qp, subs( P(ii), x, qp ), MarkerFaceColor="k", MarkerEdgeColor="k" )
+    ax = gca;
+    ax.XLim = [-1.1, 1.1];
+    ax.YLim = [-1.1, 1.1];
+end
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{x} = \left[ -\sqrt{\frac{3}{5}}, \sqrt{\frac{3}{5}} \right]
+\end{equation*}
+```
+
+2. Assembling and solving the moment-fitting equation, we confirm our suspicion: we can use the quadrature derived from the cubic basis to exactly integrate the quartic basis. We've once again eliminated one function evaluation as compared to the Lagrange quadrature scheme.
+
+```{=latex}
+\begin{equation*}
+    \begin{bmatrix} 
+        2 \\ 
+        0 \\
+        0 \\
+        0 \\
+        0
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        1                    & 1            & 1                   \\
+        -\frac{\sqrt{15}}{5} & 0            & \frac{\sqrt{15}}{5} \\
+        \frac{2}{5}          & -\frac{1}{2} & \frac{2}{5}         \\
+        0                    & 0            & 0                   \\
+        -\frac{3}{10}        & \frac{3}{8}  & -\frac{3}{10}       \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        w_1 \\
+        w_2 \\
+        w_3
+    \end{bmatrix}
+\end{equation*}
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{w} = \left[ \frac{5}{9}, \frac{8}{9}, \frac{5}{9} \right]
+\end{equation*}
+```
+
+### The quintic Legendre basis
+The final basis we investigate in this manner will be the quintic basis.
+
+1. We again begin by investigating the potential for the minimum number of quadrature points to integrate the basis. Once again, the symmetry of the basis and the odd-degree basis functions being odd assist us: the same three-point scheme derived from the cubic basis *also* will support exact integration of the quintic basis.
+
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+domain = sym( [-1, 1] );
+degree = 5;
+P = PolynomialBasisFunction( "Legendre", degree, x, domain );
+qp = PolynomialRoots( P(4) );
+cmap = lines();
+
+qp = PolynomialRoots( P(4) );
+figure
+for ii = 1 : length( P )
+    %latex( simplify( subs( P(ii), x, [str2sym( "-sqrt(3/5)" ), 0, str2sym( "sqrt(3/5)" )] ), Steps=10 ) )
+    subplot( 3, 2, ii )
+    hold on
+    farea( P(ii), double( domain ), LineWidth=2, EdgeColor="k", FaceColor=cmap(ii,:), MeshDensity=ii * 20 );
+    scatter( qp, subs( P(ii), x, qp ), MarkerFaceColor="k", MarkerEdgeColor="k" )
+    ax = gca;
+    ax.XLim = [-1.1, 1.1];
+    ax.YLim = [-1.1, 1.1];
+end
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{x} = \left[ -\sqrt{\frac{3}{5}}, \sqrt{\frac{3}{5}} \right]
+\end{equation*}
+```
+
+2. Assembling and solving the moment-fitting equation, we confirm our suspicion: we can use the quadrature derived from the cubic basis to exactly integrate the qunitic basis. We've now eliminated *two* function evaluations as compared to the Lagrange quadrature scheme.
+
+```{=latex}
+\begin{equation*}
+    \begin{bmatrix} 
+        2 \\ 
+        0 \\
+        0 \\
+        0 \\
+        0 \\
+        0
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        1                       & 1            & 1                        \\
+        -\frac{\sqrt{15}}{5}    & 0            & \frac{\sqrt{15}}{5}      \\
+        \frac{2}{5}             & -\frac{1}{2} & \frac{2}{5}              \\
+        0                       & 0            & 0                        \\
+        -\frac{3}{10}           & \frac{3}{8}  & -\frac{3}{10}            \\
+        \frac{27\sqrt{15}}{250} & 0            & -\frac{27\sqrt{15}}{250} \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        w_1 \\
+        w_2 \\
+        w_3
+    \end{bmatrix}
+\end{equation*}
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{w} = \left[ \frac{5}{9}, \frac{8}{9}, \frac{5}{9} \right]
+\end{equation*}
+```
+
+## Another perspective on Legendre Quadrature
+As both the Lagrange-Legendre polynomial basis and the Legendre polynomial basis are (obviously) polynomial basis, we can use the polynomial change of basis operation to represent the Lagrange-Legendre basis in the Legendre basis (and *vice versa* ).
+
+```{=latex}
+\begin{equation*}
+    \Vector{p} = \ChangeBasisOp{\tilde{L}}{P} \Vector{\ell}
+\end{equation*}
+```
+
+```{matlab}
+%| output: false
+%| echo: false
+function eigvals = PolynomialRoots( polynomial )
+  C = CompanionMatrix( polynomial );
+  eigvals = real( vpa( eig( C ), 16 ) );
+  [~, sidx] = sort( eigvals );
+  eigvals = eigvals( sidx );
+end
+```
+
+```{matlab}
+%| output: false
+%| echo: false
+function weights = LinearMomentFitting( basis, domain, qp )
+  variate = symvar( basis(end) );
+  if isempty( variate )
+    variate = sym( "x", "real" );
+  end
+  m = int( basis, domain );
+  A = sym( zeros( length( basis ), length( qp ) ) );
+  for ii = 1 : length( basis )
+    for jj = 1 : length( qp )
+        A(ii,jj) = subs( basis(ii), variate, qp(jj) );
+    end
+  end
+  weights = A \ m;
+end
+```
+
+```{matlab}
+%| output: false
+function [qp, weights] = LegendreQuadrature( domain, num_qp )
+    x = sym( "x", "real" );
+    if num_qp == 1
+        qp = mean( domain );
+    else
+        P = LegendreBasis( num_qp, x, domain )
+        P_roots = PolynomialRoots( P(end) );
+        qp = ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
+    end
+    basis = LegendreBasis( num_qp - 1, x, domain );
+    weights = LinearMomentFitting( basis, domain, qp );
+end
+```
+
+```{matlab}
+%| output: false
+function [qp, weights] = GetQuadratureScheme( domain, num_qp, method )
+    if method == "Riemann"
+        [qp, weights] = RiemannQuadrature( domain, num_qp );
+    elseif method == "Lagrange"
+        [qp, weights] = LagrangeQuadrature( domain, num_qp );
+    elseif method == "Lagrange-Legendre"
+        [qp, weights] = LagrangeLegendreQuadrature( domain, num_qp );
+    elseif method == "Legendre"
+        [qp, weights] = LegendreQuadrature( domain, num_qp );
+    end
+end
+```
+
+```{matlab}
+[qp, weights] = GetQuadratureScheme( sym([-1, 1]), 8, "Legendre" )
+[qp, weights] = GetQuadratureScheme( sym([-1, 1]), 8, "Lagrange-Legendre" )
+```
+
+```{matlab}
+%| echo: false
+%| output: true
+clear
+x = sym( "x", "real" );
+target_fun(x) = real( x.^x );
+domain = sym( [-1, 1] );
+ref_int = int( target_fun, domain );
+degree = 8;
+
+L = PolynomialBasisFunction( "Lagrange-Legendre", degree, x, domain );
+P = LegendreBasis( degree + 1, x, domain );
+
+C = CompanionMatrix( P(end) );
+P_roots = eig( C );
+[~, sidx] = sort( real( vpa( P_roots ) ) );
+P_roots = real( vpa( P_roots(sidx) ) );
+nodes = ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
+l_coeffs = target_fun( nodes );
+
+P = LegendreBasis( degree, x, domain );
+[p_coeffs, R] = PolynomialChangeOfBasis( L, P, l_coeffs, domain );
+
+format short
+display( double( R ) )
+display( double( l_coeffs ) )
+display( double( p_coeffs ) )
+
+figure
+%subplot( 2, 1, 1 )
+hold on
+fplot( target_fun, double( domain ), LineWidth=4, Color="k", DisplayName="$f(x)$" )
+fplot( transpose( l_coeffs ) * L, double( domain ), SeriesIndex=1, LineWidth=2, DisplayName="$\tilde{\mathbf{L}}(x)$" )
+fplot( transpose( p_coeffs ) * P, double( domain ), SeriesIndex=2, LineWidth=2, LineStyle=":", DisplayName="$\mathbf{P}(x)$" )
+legend( Location="northoutside", Orientation="horizontal")
+```

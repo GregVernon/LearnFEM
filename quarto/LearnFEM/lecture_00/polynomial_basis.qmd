@@ -445,6 +445,52 @@ for degree = 0 : 3;
 end
 ```
 
+## The Lagrange-Legendre Basis
+```{matlab}
+%| output: false
+function basis = LagrangeLegendreBasis( degree, variate, domain )
+    if degree > 0
+        P = LegendreBasis( degree + 1, variate, domain );
+        C = CompanionMatrix( P(end) );
+        P_roots = eig( C );
+        [~, sidx] = sort( real( vpa( P_roots ) ) );
+        P_roots = real( vpa( P_roots(sidx) ) );
+        node = ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
+    else
+        node = domain;
+    end
+    basis = sym( zeros( degree + 1, 1 ) );
+    for ii = 1 : degree + 1
+        basis(ii) = variate ^ 0;
+        for jj = 1 : degree + 1
+            if ii ~= jj
+                basis(ii) = basis(ii) * ( ( variate - node(jj) ) / ( node(ii) - node(jj) ) );
+            end
+        end
+    end
+end
+```
+
+```{matlab}
+%| echo: false
+x = sym( "x", "real" );
+domain = sym( [-1, 1] );
+
+figure
+for degree = 0 : 8;
+    subplot( 3, 3, degree + 1 )
+    hold on
+    lagrange_legendre_basis = LagrangeLegendreBasis( degree, x, domain );
+    % latex( expand( lagrange_legendre_basis ) )
+    for ii = 1 : length( lagrange_legendre_basis )
+        fplot( lagrange_legendre_basis(ii), double( domain ), LineWidth=2, MeshDensity=(degree + 1)*20, DisplayName="$L_" + num2str(ii) + "$" )
+    end
+    ax = gca;
+    ax.YLim = [-0.5, 1.5];
+    legend( Location="northoutside", Orientation="horizontal" )
+end
+```
+
 ## Other Basis Polynomials
 
 There are a multitude of other basis polynomials which we will not show here.
@@ -469,6 +515,8 @@ function basis = PolynomialBasisFunction( basis_name, degree, variate, domain )
             basis = LagrangeBasis( degree, variate, domain );
         elseif basis_name == "Legendre"
             basis = LegendreBasis( degree, variate, domain );
+        elseif basis_name == "Lagrange-Legendre"
+            basis = LagrangeLegendreBasis( degree, variate, domain );
         elseif basis_name == "Monomial"
             basis = MonomialBasis( degree, variate, domain );
         end

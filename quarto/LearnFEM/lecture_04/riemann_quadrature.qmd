@@ -1,0 +1,118 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+```
+
+## Riemann Quadrature
+The term "quadrature" comes the historic process of finding the *quadrilaterals* whose area is equivalent to some nonlinear shape (or function).
+
+The quadrature technique that most students encounter first is *Riemann quadrature* wherein the domain is divided into segments that will serve as the widths of rectangles and then the function is evaluated at the center of each segment, and these values serve as the height of their respective rectangle.
+The areas of each of these rectangles are then added together, yielding an approximation of the function's area.
+
+```{=latex}
+\begin{equation}
+    \int{ f(x) }\d{x} \approx \sum_{i=1}^{N}{ f(x_i) w_i }
+\end{equation}
+```
+
+To perform numerical integration, let's write a function that will provide us with the locations (*quadrature points*) at which to evaluate the function, and the widths (*weights*) of each rectangle.
+
+```{matlab}
+%| output: false
+function [qp, weights] = RiemannQuadrature( domain, num_qp )
+    bin_nodes = linspace( domain(1), domain(2), num_qp + 1 );
+    weights = zeros( num_qp, 1, "like", domain );
+    qp = zeros( num_qp, 1, "like", domain );
+    for ii = 1 : length( bin_nodes ) - 1
+        weights(ii) = bin_nodes(ii+1) - bin_nodes(ii);
+        qp(ii) = mean( bin_nodes(ii:ii+1) );
+    end
+end
+```
+
+And then a function that will perform the integration:
+
+```{matlab}
+%| output: false
+function val = Integrate( func, domain, num_qp )
+    [qp, weights] = RiemannQuadrature( domain, num_qp );
+    val = 0;
+    for ii = 1 : num_qp
+        val = val + func( qp(ii) ) * weights(ii);
+    end
+end
+```
+
+```{matlab}
+%| echo: false
+
+clear
+x = sym( "x", "real" );
+f(x) = real( x.^x );
+domain = sym( [-1, 1] );
+
+[qp, weights] = RiemannQuadrature( domain, 4 );
+
+figure
+hold on
+PlotQuadrature( double( qp ), double( weights ), double( f( qp ) ) );
+fplot( f, double( domain ), LineWidth=3, Color="k" );
+```
+
+If we want a more accurate approximation of the integral, we can just use more rectangles:
+
+```{matlab}
+%| echo: false
+
+clear
+x = sym( "x", "real" );
+f(x) = real( x.^x );
+domain = sym( [-1, 1] );
+
+[qp, weights] = RiemannQuadrature( domain, 20 );
+
+figure
+hold on
+PlotQuadrature( double( qp ), double( weights ), double( f( qp ) ) );
+fplot( f, double( domain ), LineWidth=3, Color="k" );
+```
+
+In fact, we can evaluate how much our approximation to the integral improves and find that a $10\times$ increase in quadrature points results in a $100\times$ improvement in the approximation.
+
+```{matlab}
+%| echo: false
+
+clear
+x = sym( "x", "real" );
+f(x) = real( x.^x );
+func = matlabFunction( f );
+domain = sym( [-1, 1] );
+ref_int = double( vpa( int( f, domain ), 24 ) );
+
+N = 0 : 16;
+int_val = zeros( size( N ) );
+for ii = 1 : length( N )
+    int_val(ii) = Integrate( func, double( domain ), 2^N(ii) );
+end
+
+figure
+plot( 2.^N, abs( ref_int - int_val ), LineWidth=2 )
+xlabel( "Number of Quadrature Points" )
+ylabel( "Quadrature Error" )
+ax = gca;
+ax.XScale = "log";
+ax.YScale = "log";
+grid on
+```
+
+While this might seem like a satisfactory solution, it is still far too expensive to be useful in a practical implementation -- even with 65k+ quadrature points (function evaluations) still leave a relatively large error of $10^{-8}$.
+Can we be more efficient?
+We can, by using quadrature derived from polynomials.

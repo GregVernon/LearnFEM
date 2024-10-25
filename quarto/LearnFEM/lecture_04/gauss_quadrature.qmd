@@ -420,14 +420,29 @@ end
 \end{equation*}
 ```
 
-## Another perspective on Legendre Quadrature
-As both the Lagrange-Legendre polynomial basis and the Legendre polynomial basis are (obviously) polynomial basis, we can use the polynomial change of basis operation to represent the Lagrange-Legendre basis in the Legendre basis (and *vice versa* ).
+### Summary
 
-```{=latex}
-\begin{equation*}
-    \Vector{p} = \ChangeBasisOp{\tilde{L}}{P} \Vector{\ell}
-\end{equation*}
-```
+To determine a quadrature scheme based on a degree-N Legendere polynomial basis we first compute the roots of the degree-N function in the Legendre basis.
+We then determine the weights via moment-fitting.
+We observed that this scheme allows exact integration of higher-order Legendre basis polynomials -- and thus of higher-order polynomials in general -- than we were able to using Lagrange polynomials.
+
+Since, for a given integration domain the quadrature points and weights do not change, we can afford to calculate these values using symbolic computations or variable-precision arithmetic to ensure both the points and weights are accurate to our desired precision (e.g., 64-bit "double-precision").
+We can then store these values, to avoid needing to recompute them, either in a lookup-table or caching them in memory.
+
+## But how does Legendre quadrature *work*?
+Earlier we defined the mechanics of quadrature as "evaluate the function at one or more points and multiply each by a respective weight factor".
+The reasoning behind this is clear when we're using Riemann quadrature as it clearly allows us to create a rectangle approximating the area of the curve around each quadrature point. 
+And it is clear when using an interpolatory basis like the Lagrange basis, as it directly provides us with both an approximation of the function *and* the composition of that function in the basis -- and we know the integral of each component basis function.
+And sure, it's obvious that *if* we had an interpolatory curve described in the Legendre basis, then it seems reasonable that we could determine its integral... but how does the Legendre scheme work within a quadrature framework?
+How does evaluating the target function at the Legendre nodes provide us information about the composition of the Legendre basis?
+Only one of the functions has a non-zero integral, and its the least interesting function (the constant) of all of the functions.
+And we're often sampling at the nodes of some of the functions so it seems that we couldn't determine the composition of these functions even if their integrals were non-zero.
+
+The answer, which we will demonstrate, is that an N-point Legendre quadrature scheme *is equivalent* to a degree-N Lagrange-Legendre polynomial.
+Thus, when we evaluate the function at the quadrature points, we're actually evaluating the Lagrange-Legendre polynomial that interpolates our function.
+And the definite integral of each basis function composing the degree-N Lagrange-Legendre *is exactly* the weights of the Legendre quadrature scheme.
+
+
 
 ```{matlab}
 %| output: false
@@ -466,9 +481,10 @@ function [qp, weights] = LegendreQuadrature( domain, num_qp )
     if num_qp == 1
         qp = mean( domain );
     else
-        P = LegendreBasis( num_qp, x, domain )
+        P = LegendreBasis( num_qp, x, domain );
         P_roots = PolynomialRoots( P(end) );
-        qp = ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
+        qp = P_roots;
+        %qp = ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
     end
     basis = LegendreBasis( num_qp - 1, x, domain );
     weights = LinearMomentFitting( basis, domain, qp );
@@ -491,8 +507,76 @@ end
 ```
 
 ```{matlab}
+%| output: false
+%| echo: false
+for degree = 0 : 7
+    L = PolynomialBasisFunction( "Lagrange-Legendre", degree, x, sym( [-1, 1] ) );
+    int( L, sym( [-1, 1] ) )
+end
+```
+
+```{matlab}
+%| echo: false
+
+x = sym( "x", "real" );
+domain = sym( [-1, 1] );
+degree = 3;
+L = PolynomialBasisFunction( "Lagrange-Legendre", degree, x, domain );
+[qp, weights] = GetQuadratureScheme( domain, degree + 1, "Legendre" )
+
+moments = int( L, domain )
+l_coeffs = [];
+for ii = 1 : length( qp )
+    l_coeffs(ii) = subs( L(ii), x, qp(ii) );
+end
+
+figure
+hold on
+cmap = lines( length( L ) );
+for ii = 1 : length( L )
+    farea( L(ii), double( domain ), LineWidth=4, FaceColor=cmap(ii,:), EdgeColor=cmap(ii,:) );
+end
+PlotQuadrature( double( qp ), double( moments ), double( l_coeffs ) )
+```
+
+Let's compile tables comparing the definite integrals for the Lagrange-Legendre basis and the computed weights for the Legendre quadrature scheme
+
+| $\mathrm{w_i}$ |  $n=1$  |  $n=2$  |          $n=3$           |          $n=4$         |         $n=5$          |          $n=6$         |          $n=7$         |          $n=8$         |
+|:--------------:|:-------:|:-------:|:------------------------:|:----------------------:|:----------------------:|:----------------------:|:----------------------:|:----------------------:|
+| $\mathrm{w}_1$ |   $2$   |   $1$   |   $0.\overline{55555}$   |   $0.34785\tilde{5}$   |   $0.23692\tilde{7}$   |   $0.09360\tilde{9}$   |   $0.06724\tilde{8}$   |   $0.05328\tilde{5}$   |
+| $\mathrm{w}_2$ |         |   $1$   |   $0.\overline{88888}$   |   $0.65214\tilde{5}$   |   $0.47862\tilde{9}$   |   $0.41243\tilde{1}$   |   $0.32221\tilde{9}$   |   $0.24851\tilde{6}$   |
+| $\mathrm{w}_3$ |         |         |   $0.\overline{55555}$   |   $0.65214\tilde{5}$   |   $0.56888\tilde{9}$   |   $0.49395\tilde{8}$   |   $0.37952\tilde{8}$   |   $0.31759\tilde{1}$   |
+| $\mathrm{w}_4$ |         |         |                          |   $0.34785\tilde{5}$   |   $0.47862\tilde{9}$   |   $0.49395\tilde{8}$   |   $0.46200\tilde{6}$   |   $0.38060\tilde{6}$   |
+| $\mathrm{w}_5$ |         |         |                          |                        |   $0.23692\tilde{7}$   |   $0.41243\tilde{1}$   |   $0.37952\tilde{8}$   |   $0.38060\tilde{6}$   |
+| $\mathrm{w}_6$ |         |         |                          |                        |                        |   $0.09360\tilde{9}$   |   $0.32221\tilde{9}$   |   $0.31759\tilde{1}$   |
+| $\mathrm{w}_7$ |         |         |                          |                        |                        |                        |   $0.06724\tilde{8}$   |   $0.24851\tilde{6}$   |
+| $\mathrm{w}_8$ |         |         |                          |                        |                        |                        |                        |   $0.05328\tilde{5}$   |
+: Weights of the Legendre quadrature scheme for degrees 1 - 8, computed via moment fitting
+
+|                                |  $p=0$  |  $p=1$  |          $p=2$           |          $p=3$         |         $p=4$          |          $p=5$         |          $p=6$         |          $p=7$         |
+|:------------------------------:|:-------:|:-------:|:------------------------:|:----------------------:|:----------------------:|:----------------------:|:----------------------:|:----------------------:|
+| $\int_{-1}{1}\tilde{L}_1^p(x)$ |   $2$   |   $1$   |   $0.\overline{55555}$   |   $0.34785\tilde{5}$   |   $0.23692\tilde{7}$   |   $0.09360\tilde{9}$   |   $0.06724\tilde{8}$   |   $0.05328\tilde{5}$   |
+| $\int_{-1}{1}\tilde{L}_2^p(x)$ |         |   $1$   |   $0.\overline{88888}$   |   $0.65214\tilde{5}$   |   $0.47862\tilde{9}$   |   $0.41243\tilde{1}$   |   $0.32221\tilde{9}$   |   $0.24851\tilde{6}$   |
+| $\int_{-1}{1}\tilde{L}_3^p(x)$ |         |         |   $0.\overline{55555}$   |   $0.65214\tilde{5}$   |   $0.56888\tilde{9}$   |   $0.49395\tilde{8}$   |   $0.37952\tilde{8}$   |   $0.31759\tilde{1}$   |
+| $\int_{-1}{1}\tilde{L}_4^p(x)$ |         |         |                          |   $0.34785\tilde{5}$   |   $0.47862\tilde{9}$   |   $0.49395\tilde{8}$   |   $0.46200\tilde{6}$   |   $0.38060\tilde{6}$   |
+| $\int_{-1}{1}\tilde{L}_5^p(x)$ |         |         |                          |                        |   $0.23692\tilde{7}$   |   $0.41243\tilde{1}$   |   $0.37952\tilde{8}$   |   $0.38060\tilde{6}$   |
+| $\int_{-1}{1}\tilde{L}_6^p(x)$ |         |         |                          |                        |                        |   $0.09360\tilde{9}$   |   $0.32221\tilde{9}$   |   $0.31759\tilde{1}$   |
+| $\int_{-1}{1}\tilde{L}_7^p(x)$ |         |         |                          |                        |                        |                        |   $0.06724\tilde{8}$   |   $0.24851\tilde{6}$   |
+| $\int_{-1}{1}\tilde{L}_8^p(x)$ |         |         |                          |                        |                        |                        |                        |   $0.05328\tilde{5}$   |
+: Definite integrals, over the bi-unit domain, of the Lagrange-Legendre basis functions for degrees 1 - 8
+
+
+```{matlab}
 [qp, weights] = GetQuadratureScheme( sym([-1, 1]), 8, "Legendre" )
 [qp, weights] = GetQuadratureScheme( sym([-1, 1]), 8, "Lagrange-Legendre" )
+```
+
+As both the Lagrange-Legendre polynomial basis and the Legendre polynomial basis are (obviously) polynomial basis, we can use the polynomial change of basis operation to represent the Lagrange-Legendre basis in the Legendre basis (and *vice versa* ).
+
+```{=latex}
+\begin{equation*}
+    \Vector{p} = \ChangeBasisOp{\tilde{L}}{P} \Vector{\ell}
+\end{equation*}
 ```
 
 ```{matlab}
@@ -503,7 +587,7 @@ x = sym( "x", "real" );
 target_fun(x) = real( x.^x );
 domain = sym( [-1, 1] );
 ref_int = int( target_fun, domain );
-degree = 8;
+degree = 3;
 
 L = PolynomialBasisFunction( "Lagrange-Legendre", degree, x, domain );
 P = LegendreBasis( degree + 1, x, domain );
@@ -518,10 +602,12 @@ l_coeffs = target_fun( nodes );
 P = LegendreBasis( degree, x, domain );
 [p_coeffs, R] = PolynomialChangeOfBasis( L, P, l_coeffs, domain );
 
-format short
 display( double( R ) )
 display( double( l_coeffs ) )
 display( double( p_coeffs ) )
+
+display( int( transpose( l_coeffs ) * L , domain ) )
+display( 2 * p_coeffs(1) )
 
 figure
 %subplot( 2, 1, 1 )

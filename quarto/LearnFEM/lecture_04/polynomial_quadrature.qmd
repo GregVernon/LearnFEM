@@ -13,7 +13,16 @@ addpath( "../lecture_01/" )
 
 # Polynomial Quadrature
 
-While some classes of functions are difficult to integrate, integration of polynomials is a solved problem, as a simple antiderivative rule exists for each monomial term:
+We've previously discussed using polynomials to approximate all kinds of functions, especially via Galerkin's method to produce a best-fit approximation.
+While the function we wish to integrate may be difficult to integrate by hand, integration of polynomials is easy.
+Thus one extremely effective overall strategy for approximately integrating functions is to produce a suitable polynomial approximation to the function and then integrate the polynomial.
+As a best-fit approximation via Galerkin's method would require the use of integration in the inner product calculations, a "chicken or the egg" paradox, we won't be able to use this kind of approximation technique.
+However, we can make use of the interpolation property of certain basis polynomials to produce an interpolatory approximation to the target function without needed to perform integration -- we simply need to be able to evaluate the target function.
+Because of the simplicity and, as we'll show, the accuracy and efficiency of this approach, *quadrature from polynomial interpolation* is perhaps the most commonly used approach for numerical integration today.
+
+## Quadrature from polynomial interpolation
+
+Regarding the integration of polynomials, recall that a simple antiderivative rule exists for each monomial term:
 
 ```{=latex}
 \begin{equation*}
@@ -21,7 +30,7 @@ While some classes of functions are difficult to integrate, integration of polyn
 \end{equation*}
 ```
 
-And, because of the linearity properties of integration:
+as well as simple rules derived from the linearity properties of integration:
 
 ```{=latex}
 \begin{align}
@@ -30,7 +39,7 @@ And, because of the linearity properties of integration:
 \end{align}
 ```
 
-We can easily integrate a polynomial:
+Thus we can easily integrate a polynomial:
 
 ```{=latex}
 \begin{align*}
@@ -52,7 +61,7 @@ domain = sym( [-1, 1] );
 
 for degree = 0 : 8;
     L = PolynomialBasisFunction( "Lagrange", degree, x, domain );
-    display( int( L, domain ) )
+    display( int( L, domain ) );
 end
 ```
 
@@ -71,7 +80,13 @@ What this means is that at their respective node each basis function interpolate
 Thus we can easily construct a *Lagrange polynomial* that interpolates our target function and then integrate the Lagrange polynomial.
 Note that the interpolating Lagrange polynomial **will not** be the best approximation of the target function, but it is close enough for quadrature to be accurate.
 
-Consider the following example
+Consider the following example:
+
+```{=latex}
+\begin{equation}
+    f(x) = \sin( x )
+\end{equation}
+```
 
 | Basis Function | $x_i$          |      $f(x_i)$     |    $\int_{-1}^{1}L_i^2(x)$   |   $f(x_i) \cdot \int_{-1}^{1}L_i^2(x)$   |
 |:--------------:|:--------------:|:-----------------:|:----------------------------:|:----------------------------------------:|
@@ -88,16 +103,16 @@ Consider the following example
 %| output: true
 clear
 x = sym( "x", "real" );
-target_fun(x) = sin( x.^2 );
+%target_fun(x) = sin( x.^2 );
+target_fun(x) = real( x.^x );
 domain = sym( [-1, 1] );
-degree = 3;
+degree = 4;
 
 L = PolynomialBasisFunction( "Lagrange", degree, x, domain );
 nodes = transpose( linspace( domain(1), domain(2), degree + 1 ) );
 l_coeffs = target_fun( nodes );
 
 figure
-subplot( 3, 2, [1:2] )
 hold on
 fplot( target_fun, double( domain ), LineWidth=4, Color="k" )
 fplot( transpose( l_coeffs ) * L, double( domain ), LineWidth=2, SeriesIndex=1, MeshDensity=20*degree )
@@ -108,8 +123,9 @@ ax(1) = gca;
 ax(1).XAxisLocation = "origin";
 ax(1).YAxisLocation = "origin";
 
+figure
 for ii = 1 : length( L )
-    subplot( 3, 2, 2 + ii )
+    subplot( 3, 2, ii )
     hold on
     fplot( l_coeffs(ii) * L(ii), double( domain ), LineWidth=2, SeriesIndex=ii+1, MeshDensity=20*degree )
     xline( double( nodes(ii) ), LineStyle="-" )
@@ -133,9 +149,9 @@ The rectangles are still "there", in that we are still multiplying two scalars, 
 %| output: true
 clear
 x = sym( "x", "real" );
-target_fun(x) = sin( x.^2 );
+target_fun(x) = real( x.^x );
 domain = sym( [-1, 1] );
-degree = 3;
+degree = 4;
 
 L = PolynomialBasisFunction( "Lagrange", degree, x, domain );
 nodes = transpose( linspace( domain(1), domain(2), degree + 1 ) );
@@ -192,7 +208,7 @@ end
 ```
 
 But there is an issue with this approach of using quadrature derived from the Lagrange basis.
-The sane oscillatory Runge phenomena that we saw occur with higher-order Lagrange interpolations means that high-order Lagrange quadrature schemes also suffer.
+The same oscillatory Runge phenomena that we saw occur with higher-order Lagrange interpolations means that high-order Lagrange quadrature schemes also suffer.
 
 ```{matlab}
 %| echo: false
@@ -226,7 +242,7 @@ for ii = 1 : length( N )
 end
 
 figure
-plot( N, abs( int_vals - ref_int ) )
+plot( N, abs( int_vals - ref_int ), LineWidth=2 )
 ax(2) = gca;
 ax(2).YScale = "log";
 ```
@@ -243,7 +259,8 @@ function [qp, weights] = LagrangeLegendreQuadrature( domain, num_qp )
         P_roots = eig( C );
         [~, sidx] = sort( real( vpa( P_roots ) ) );
         P_roots = real( vpa( P_roots(sidx) ) );
-        qp = ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
+        qp = P_roots;
+        %qp = ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
     end
     basis = LagrangeLegendreBasis( num_qp - 1, x, domain );
     weights = int( basis, domain );
@@ -279,7 +296,7 @@ C = CompanionMatrix( P(end) );
 P_roots = eig( C );
 [~, sidx] = sort( real( vpa( P_roots ) ) );
 P_roots = real( vpa( P_roots(sidx) ) );
-nodes = ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
+nodes = P_roots; %ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
 l_coeffs = target_fun( nodes );
 
 figure
@@ -300,7 +317,7 @@ for ii = 1 : length( N )
 end
 
 figure
-plot( N, abs( int_vals - ref_int ) )
+plot( N, abs( int_vals - ref_int ), LineWidth=2 )
 ax(2) = gca;
 ax(2).YScale = "log";
 ```

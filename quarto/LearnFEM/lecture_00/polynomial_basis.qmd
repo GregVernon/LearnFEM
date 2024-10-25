@@ -455,7 +455,8 @@ function basis = LagrangeLegendreBasis( degree, variate, domain )
         P_roots = eig( C );
         [~, sidx] = sort( real( vpa( P_roots ) ) );
         P_roots = real( vpa( P_roots(sidx) ) );
-        node = ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
+        node = P_roots;
+        %node = ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
     else
         node = domain;
     end

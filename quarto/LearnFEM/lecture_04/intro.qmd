@@ -32,7 +32,7 @@ For example:
 
 ```{=latex}
 \begin{equation*}
-    \int{ x^x }\d{x} = \int{ x^x }\d{x}
+    \int{ \Re( x^x ) }\d{x} = \int{ \Re( x^x )}\d{x}
 \end{equation*}
 ```
 
@@ -43,7 +43,7 @@ For example:
 clear
 x = sym( "x", "real" )
 f1 = int( sin( x^2 ) )
-f2 = int( x^x )
+f2 = int( real( x^x ) )
 ```
 
 Thus, for us to move away from symbolic calculations towards numerical calculations, we will need to find an approach that allows us to integrate numerically.

@@ -42,7 +42,7 @@ And as we consider these questions, we want to consider that we want to find a q
 We begin by asking ourselves how to integrate the degree-0 (constant) basis.
 As mentioned, its definite integral on the biunit domain is $2$.
 
-1. Because the function is constant, we don't strictly need to evaluate any location on the function, simply knowing its constant value of $1$ is enough.
+1. Because the function is constant, we don't strictly need to evaluate any location on the function, simply knowing its constant value of $1$ is enough.  But, for simplicity let's evaluate it at the midpoint of the domain, $x=0$.
 
 ```{matlab}
 %| echo: false
@@ -68,28 +68,30 @@ ax.YLim = [-1.1, 1.1];
 \end{equation*}
 ```
 
-2. The weight is easily determined for this case, it is the simply the definite integral of the function: $2$. For completeness, however, let's assembly the moment-fitting equation:
+2. The weight is easily determined for this case.  We know the definite integral $\int_{-1}^{1} 1 \d{x} = 2$, so we can state the following linear equation
+
+```{=latex}
+\begin{align*}
+    \int_{-1}^{1} P_0^0 \d{x} &= P_0^0(0) w_0 \\
+    %
+    2 &= 1 w_0
+\end{align*}
+```
+
+Which has the simple solution:
 
 ```{=latex}
 \begin{equation*}
-    \begin{bmatrix} 
-        2 
-    \end{bmatrix}
-    =
-    \begin{bmatrix}
-        1
-    \end{bmatrix}
-    \begin{bmatrix}
-        w_1
-    \end{bmatrix}
+    w_0 = 2
 \end{equation*}
 ```
 
-```{=latex}
-\begin{equation*}
-    \Vector{w} = [2]
-\end{equation*}
-```
+Thus the quadrature rule derived from the constant Legendre basis is
+
+| $\mathrm{i}$ | $\Vector{x}_i$ | $\Vector{w}_i$ |
+|:------------:|:--------------:|:--------------:|
+|     $0$      |       $0$      |       $2$      |
+
 
 ### The linear Legendre basis
 
@@ -122,7 +124,15 @@ end
 \end{equation*}
 ```
 
-2. The weight is, again, easily determined for this case, it is the simply the definite integral of the function: $2$.  But again, for completeness, let's assemble the moment-fitting equation:
+2. The weight can be easily determined for this case, but for completeness we again assemble a linear system of equations that we solve to determine the weights:
+
+```{=latex}
+\begin{align*}
+    \int_{-1}^{1} P_0^1 \d{x} &= P_0^{1}(0) w_0 \\
+    %
+    \int_{-1}^{1} P_1^1 \d{x} &= P_1^{1}(0) w_0 \\
+\end{align*}
+```
 
 ```{=latex}
 \begin{equation*}
@@ -136,16 +146,23 @@ end
         0
     \end{bmatrix}
     \begin{bmatrix}
-        w_1
+        w_0
     \end{bmatrix}
 \end{equation*}
 ```
 
 ```{=latex}
 \begin{equation*}
-    \Vector{w} = [2]
+    \Vector{w}_0 = 2
 \end{equation*}
 ```
+
+Thus the quadrature rule derived from the linear Legendre basis is
+
+| $\mathrm{i}$ | $\Vector{x}_i$ | $\Vector{w}_i$ |
+|:------------:|:--------------:|:--------------:|
+|     $0$      |       $0$      |       $2$      |
+
 
 ### The quadratic Legendre basis
 
@@ -178,7 +195,17 @@ end
 \end{equation*}
 ```
 
-2. It is still fairly easy to determine the weights for these quadrature points, given the constraints that they should be equal-valued and add to $2$. But to be sure, let's again assemble and solve the moment-fitting equation:
+2. It is still fairly easy to determine the weights for these quadrature points, given the constraints that they should be equal-valued and add to $2$. But to be sure, let's again assemble and solve a linear system of equations:
+
+```{=latex}
+\begin{align*}
+    \int_{-1}^{1} P_0^2 \d{x} &= P_0^2(-\frac{1}{\sqrt{3}}) w_0 + P_0^2(\frac{1}{\sqrt{3}}) w_1 \\
+    %
+    \int_{-1}^{1} P_1^2 \d{x} &= P_1^2(-\frac{1}{\sqrt{3}}) w_0 + P_1^2(\frac{1}{\sqrt{3}}) w_1 \\
+    %
+    \int_{-1}^{1} P_2^2 \d{x} &= P_2^2(-\frac{1}{\sqrt{3}}) w_0 + P_2^2(\frac{1}{\sqrt{3}}) w_1 \\
+\end{align*}
+```
 
 ```{=latex}
 \begin{equation*}
@@ -194,8 +221,8 @@ end
         0                   & 0                  \\
     \end{bmatrix}
     \begin{bmatrix}
-        w_1 \\
-        w_2
+        w_0 \\
+        w_1
     \end{bmatrix}
 \end{equation*}
 ```
@@ -237,7 +264,19 @@ end
 \end{equation*}
 ```
 
-2. Assembling and solving the moment-fitting equation, we confirm our suspicion: we can use the quadrature derived from the quadratic basis to exactly integrate the cubic basis.  We've just eliminated one function evaluation as compared to the Lagrange quadrature scheme.
+2. Assembling and solving the corresponding linear system of equations, we confirm our suspicion: we can use the quadrature derived from the quadratic basis to exactly integrate the cubic basis.  We've just eliminated one function evaluation as compared to the Lagrange quadrature scheme.
+
+```{=latex}
+\begin{align*}
+    \int_{-1}^{1} P_0^3 \d{x} &= P_0^3(-\frac{1}{\sqrt{3}}) w_0 + P_0^3(\frac{1}{\sqrt{3}}) w_1 \\
+    %
+    \int_{-1}^{1} P_1^3 \d{x} &= P_1^3(-\frac{1}{\sqrt{3}}) w_0 + P_1^3(\frac{1}{\sqrt{3}}) w_1 \\
+    %
+    \int_{-1}^{1} P_2^3 \d{x} &= P_2^3(-\frac{1}{\sqrt{3}}) w_0 + P_2^3(\frac{1}{\sqrt{3}}) w_1 \\
+    %
+    \int_{-1}^{1} P_3^3 \d{x} &= P_3^3(-\frac{1}{\sqrt{3}}) w_0 + P_3^3(\frac{1}{\sqrt{3}}) w_1 \\
+\end{align*}
+```
 
 ```{=latex}
 \begin{equation*}
@@ -269,7 +308,7 @@ end
 
 ### The quartic Legendre basis
 
-1. We again begin by investigating the potential for the minimum number of quadrature points to integrate the basis.  However it is clear that the quartic basis function, whose definite integral is known to be zero, cannot be integrated with the same weights as previously found. The quartic polynomial would require either the weights to be zero, which would miscalculate the integral of the constant function, or the weights would need to be additive inverses of each other, which would miscalculate the integrals of the linear and cubic functions.
+1. We again begin by investigating the potential for the minimum number of quadrature points to integrate the basis.  However it is clear that the quartic basis function, whose definite integral is known to be zero, cannot be integrated with the same quadrature points and weights as previously found. The quartic polynomial would require either the weights to be zero, which would miscalculate the integral of the constant function, or the weights would need to be additive inverses of each other, which would miscalculate the integrals of the linear and cubic functions.
 
 ```{matlab}
 %| echo: false
@@ -294,7 +333,7 @@ for ii = 1 : length( P )
 end
 ```
 
-So we investigate the use of three quadrature points. As you've likely noticed, it seems to be desirable to place the quadrature points at the roots of the polynomial of the same degree as the number of roots (1: linear, 2: quadratic) so we place these quadrature points at the roots of the cubic.  While it is now no longer clear what the weights should be, we know that we can use moment fitting to compute them.
+So we investigate the use of three quadrature points. As you've likely noticed, it seems to be desirable to place the quadrature points at the roots of the polynomial of the same degree as the number of roots (1: linear, 2: quadratic) so we place these quadrature points at the roots of the cubic.  While it is now no longer clear what the weights should be, we know that we can write out the linear system of equations to solve for them.
 
 ```{matlab}
 %| echo: false
@@ -314,11 +353,25 @@ end
 
 ```{=latex}
 \begin{equation*}
-    \Vector{x} = \left[ -\sqrt{\frac{3}{5}}, \sqrt{\frac{3}{5}} \right]
+    \Vector{x} = \left[ -\sqrt{\frac{3}{5}}, 0, \sqrt{\frac{3}{5}} \right]
 \end{equation*}
 ```
 
 2. Assembling and solving the moment-fitting equation, we confirm our suspicion: we can use the quadrature derived from the cubic basis to exactly integrate the quartic basis. We've once again eliminated one function evaluation as compared to the Lagrange quadrature scheme.
+
+```{=latex}
+\begin{align*}
+    \int_{-1}^{1} P_0^4 \d{x} &= P_0^4(-\frac{3}{\sqrt{5}}) w_0 + P_0^4(0) w_1 + P_0^4(\frac{3}{\sqrt{5}}) w_2 \\
+    %
+    \int_{-1}^{1} P_1^4 \d{x} &= P_1^4(-\frac{3}{\sqrt{5}}) w_0 + P_1^4(0) w_1 + P_1^4(\frac{3}{\sqrt{5}}) w_2 \\
+    %
+    \int_{-1}^{1} P_2^4 \d{x} &= P_2^4(-\frac{3}{\sqrt{5}}) w_0 + P_2^4(0) w_1 + P_2^4(\frac{3}{\sqrt{5}}) w_2 \\
+    %
+    \int_{-1}^{1} P_3^4 \d{x} &= P_3^4(-\frac{3}{\sqrt{5}}) w_0 + P_3^4(0) w_1 + P_3^4(\frac{3}{\sqrt{5}}) w_2 \\
+    %
+    \int_{-1}^{1} P_4^4 \d{x} &= P_4^4(-\frac{3}{\sqrt{5}}) w_0 + P_4^4(0) w_1 + P_4^4(\frac{3}{\sqrt{5}}) w_2 \\
+\end{align*}
+```
 
 ```{=latex}
 \begin{equation*}
@@ -385,7 +438,23 @@ end
 \end{equation*}
 ```
 
-2. Assembling and solving the moment-fitting equation, we confirm our suspicion: we can use the quadrature derived from the cubic basis to exactly integrate the qunitic basis. We've now eliminated *two* function evaluations as compared to the Lagrange quadrature scheme.
+2. And one again, we can assemble and solve a linear system of equations to confirm our suspicion: we can use the quadrature derived from the cubic basis to exactly integrate the qunitic basis. We've now eliminated *two* function evaluations as compared to the Lagrange quadrature scheme.
+
+```{=latex}
+\begin{align*}
+    \int_{-1}^{1} P_0^5 \d{x} &= P_0^5(-\frac{3}{\sqrt{5}}) w_0 + P_0^5(0) w_1 + P_0^5(\frac{3}{\sqrt{5}}) w_2 \\
+    %
+    \int_{-1}^{1} P_1^5 \d{x} &= P_1^5(-\frac{3}{\sqrt{5}}) w_0 + P_1^5(0) w_1 + P_1^5(\frac{3}{\sqrt{5}}) w_2 \\
+    %
+    \int_{-1}^{1} P_2^5 \d{x} &= P_2^5(-\frac{3}{\sqrt{5}}) w_0 + P_2^5(0) w_1 + P_2^5(\frac{3}{\sqrt{5}}) w_2 \\
+    %
+    \int_{-1}^{1} P_3^5 \d{x} &= P_3^5(-\frac{3}{\sqrt{5}}) w_0 + P_3^5(0) w_1 + P_3^5(\frac{3}{\sqrt{5}}) w_2 \\
+    %
+    \int_{-1}^{1} P_4^5 \d{x} &= P_4^5(-\frac{3}{\sqrt{5}}) w_0 + P_4^5(0) w_1 + P_4^5(\frac{3}{\sqrt{5}}) w_2 \\
+    %
+    \int_{-1}^{1} P_5^5 \d{x} &= P_5^5(-\frac{3}{\sqrt{5}}) w_0 + P_5^5(0) w_1 + P_5^5(\frac{3}{\sqrt{5}}) w_2 \\
+\end{align*}
+```
 
 ```{=latex}
 \begin{equation*}
@@ -423,8 +492,8 @@ end
 ### Summary
 
 To determine a quadrature scheme based on a degree-N Legendere polynomial basis we first compute the roots of the degree-N function in the Legendre basis.
-We then determine the weights via moment-fitting.
-We observed that this scheme allows exact integration of higher-order Legendre basis polynomials -- and thus of higher-order polynomials in general -- than we were able to using Lagrange polynomials.
+We then determine the weights by assembling a linear system of equations based on the known definite integrals and function evaluations at the quadrature points.
+We observed that this scheme allows exact integration of higher-order Legendre basis polynomials -- and thus of higher-order polynomials in general -- than we were able to using the Lagrange polynomial basis.
 
 Since, for a given integration domain the quadrature points and weights do not change, we can afford to calculate these values using symbolic computations or variable-precision arithmetic to ensure both the points and weights are accurate to our desired precision (e.g., 64-bit "double-precision").
 We can then store these values, to avoid needing to recompute them, either in a lookup-table or caching them in memory.
@@ -441,8 +510,6 @@ And we're often sampling at the nodes of some of the functions so it seems that 
 The answer, which we will demonstrate, is that an N-point Legendre quadrature scheme *is equivalent* to a degree-N Lagrange-Legendre polynomial.
 Thus, when we evaluate the function at the quadrature points, we're actually evaluating the Lagrange-Legendre polynomial that interpolates our function.
 And the definite integral of each basis function composing the degree-N Lagrange-Legendre *is exactly* the weights of the Legendre quadrature scheme.
-
-
 
 ```{matlab}
 %| output: false
@@ -475,6 +542,7 @@ end
 ```
 
 ```{matlab}
+%| echo: false
 %| output: false
 function [qp, weights] = LegendreQuadrature( domain, num_qp )
     x = sym( "x", "real" );
@@ -482,9 +550,7 @@ function [qp, weights] = LegendreQuadrature( domain, num_qp )
         qp = mean( domain );
     else
         P = LegendreBasis( num_qp, x, domain );
-        P_roots = PolynomialRoots( P(end) );
-        qp = P_roots;
-        %qp = ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
+        qp = PolynomialRoots( P(end) );
     end
     basis = LegendreBasis( num_qp - 1, x, domain );
     weights = LinearMomentFitting( basis, domain, qp );
@@ -492,6 +558,7 @@ end
 ```
 
 ```{matlab}
+%| echo: false
 %| output: false
 function [qp, weights] = GetQuadratureScheme( domain, num_qp, method )
     if method == "Riemann"
@@ -511,7 +578,7 @@ end
 %| echo: false
 for degree = 0 : 7
     L = PolynomialBasisFunction( "Lagrange-Legendre", degree, x, sym( [-1, 1] ) );
-    int( L, sym( [-1, 1] ) )
+    int( L, sym( [-1, 1] ) );
 end
 ```
 
@@ -522,60 +589,70 @@ x = sym( "x", "real" );
 domain = sym( [-1, 1] );
 degree = 3;
 L = PolynomialBasisFunction( "Lagrange-Legendre", degree, x, domain );
-[qp, weights] = GetQuadratureScheme( domain, degree + 1, "Legendre" )
+[qp, weights] = GetQuadratureScheme( domain, degree + 1, "Legendre" );
 
-moments = int( L, domain )
+moments = int( L, domain );
 l_coeffs = [];
 for ii = 1 : length( qp )
     l_coeffs(ii) = subs( L(ii), x, qp(ii) );
 end
 
 figure
-hold on
 cmap = lines( length( L ) );
 for ii = 1 : length( L )
+    subplot( 2, 2, ii )
+    hold on
     farea( L(ii), double( domain ), LineWidth=4, FaceColor=cmap(ii,:), EdgeColor=cmap(ii,:) );
+    PlotQuadrature( double( qp(ii) ), double( moments(ii) ), double( l_coeffs(ii) ) )
+    ylim( [-1.5, 1.5] )
 end
-PlotQuadrature( double( qp ), double( moments ), double( l_coeffs ) )
 ```
 
 Let's compile tables comparing the definite integrals for the Lagrange-Legendre basis and the computed weights for the Legendre quadrature scheme
 
 | $\mathrm{w_i}$ |  $n=1$  |  $n=2$  |          $n=3$           |          $n=4$         |         $n=5$          |          $n=6$         |          $n=7$         |          $n=8$         |
 |:--------------:|:-------:|:-------:|:------------------------:|:----------------------:|:----------------------:|:----------------------:|:----------------------:|:----------------------:|
-| $\mathrm{w}_1$ |   $2$   |   $1$   |   $0.\overline{55555}$   |   $0.34785\tilde{5}$   |   $0.23692\tilde{7}$   |   $0.09360\tilde{9}$   |   $0.06724\tilde{8}$   |   $0.05328\tilde{5}$   |
-| $\mathrm{w}_2$ |         |   $1$   |   $0.\overline{88888}$   |   $0.65214\tilde{5}$   |   $0.47862\tilde{9}$   |   $0.41243\tilde{1}$   |   $0.32221\tilde{9}$   |   $0.24851\tilde{6}$   |
-| $\mathrm{w}_3$ |         |         |   $0.\overline{55555}$   |   $0.65214\tilde{5}$   |   $0.56888\tilde{9}$   |   $0.49395\tilde{8}$   |   $0.37952\tilde{8}$   |   $0.31759\tilde{1}$   |
-| $\mathrm{w}_4$ |         |         |                          |   $0.34785\tilde{5}$   |   $0.47862\tilde{9}$   |   $0.49395\tilde{8}$   |   $0.46200\tilde{6}$   |   $0.38060\tilde{6}$   |
-| $\mathrm{w}_5$ |         |         |                          |                        |   $0.23692\tilde{7}$   |   $0.41243\tilde{1}$   |   $0.37952\tilde{8}$   |   $0.38060\tilde{6}$   |
-| $\mathrm{w}_6$ |         |         |                          |                        |                        |   $0.09360\tilde{9}$   |   $0.32221\tilde{9}$   |   $0.31759\tilde{1}$   |
-| $\mathrm{w}_7$ |         |         |                          |                        |                        |                        |   $0.06724\tilde{8}$   |   $0.24851\tilde{6}$   |
-| $\mathrm{w}_8$ |         |         |                          |                        |                        |                        |                        |   $0.05328\tilde{5}$   |
+| $\mathrm{w}_0$ |   $2$   |   $1$   |   $0.\overline{55555}$   |   $0.34785\tilde{5}$   |   $0.23692\tilde{7}$   |   $0.09360\tilde{9}$   |   $0.06724\tilde{8}$   |   $0.05328\tilde{5}$   |
+| $\mathrm{w}_1$ |         |   $1$   |   $0.\overline{88888}$   |   $0.65214\tilde{5}$   |   $0.47862\tilde{9}$   |   $0.41243\tilde{1}$   |   $0.32221\tilde{9}$   |   $0.24851\tilde{6}$   |
+| $\mathrm{w}_2$ |         |         |   $0.\overline{55555}$   |   $0.65214\tilde{5}$   |   $0.56888\tilde{9}$   |   $0.49395\tilde{8}$   |   $0.37952\tilde{8}$   |   $0.31759\tilde{1}$   |
+| $\mathrm{w}_3$ |         |         |                          |   $0.34785\tilde{5}$   |   $0.47862\tilde{9}$   |   $0.49395\tilde{8}$   |   $0.46200\tilde{6}$   |   $0.38060\tilde{6}$   |
+| $\mathrm{w}_4$ |         |         |                          |                        |   $0.23692\tilde{7}$   |   $0.41243\tilde{1}$   |   $0.37952\tilde{8}$   |   $0.38060\tilde{6}$   |
+| $\mathrm{w}_5$ |         |         |                          |                        |                        |   $0.09360\tilde{9}$   |   $0.32221\tilde{9}$   |   $0.31759\tilde{1}$   |
+| $\mathrm{w}_6$ |         |         |                          |                        |                        |                        |   $0.06724\tilde{8}$   |   $0.24851\tilde{6}$   |
+| $\mathrm{w}_7$ |         |         |                          |                        |                        |                        |                        |   $0.05328\tilde{5}$   |
 : Weights of the Legendre quadrature scheme for degrees 1 - 8, computed via moment fitting
 
 |                                |  $p=0$  |  $p=1$  |          $p=2$           |          $p=3$         |         $p=4$          |          $p=5$         |          $p=6$         |          $p=7$         |
 |:------------------------------:|:-------:|:-------:|:------------------------:|:----------------------:|:----------------------:|:----------------------:|:----------------------:|:----------------------:|
-| $\int_{-1}{1}\tilde{L}_1^p(x)$ |   $2$   |   $1$   |   $0.\overline{55555}$   |   $0.34785\tilde{5}$   |   $0.23692\tilde{7}$   |   $0.09360\tilde{9}$   |   $0.06724\tilde{8}$   |   $0.05328\tilde{5}$   |
-| $\int_{-1}{1}\tilde{L}_2^p(x)$ |         |   $1$   |   $0.\overline{88888}$   |   $0.65214\tilde{5}$   |   $0.47862\tilde{9}$   |   $0.41243\tilde{1}$   |   $0.32221\tilde{9}$   |   $0.24851\tilde{6}$   |
-| $\int_{-1}{1}\tilde{L}_3^p(x)$ |         |         |   $0.\overline{55555}$   |   $0.65214\tilde{5}$   |   $0.56888\tilde{9}$   |   $0.49395\tilde{8}$   |   $0.37952\tilde{8}$   |   $0.31759\tilde{1}$   |
-| $\int_{-1}{1}\tilde{L}_4^p(x)$ |         |         |                          |   $0.34785\tilde{5}$   |   $0.47862\tilde{9}$   |   $0.49395\tilde{8}$   |   $0.46200\tilde{6}$   |   $0.38060\tilde{6}$   |
-| $\int_{-1}{1}\tilde{L}_5^p(x)$ |         |         |                          |                        |   $0.23692\tilde{7}$   |   $0.41243\tilde{1}$   |   $0.37952\tilde{8}$   |   $0.38060\tilde{6}$   |
-| $\int_{-1}{1}\tilde{L}_6^p(x)$ |         |         |                          |                        |                        |   $0.09360\tilde{9}$   |   $0.32221\tilde{9}$   |   $0.31759\tilde{1}$   |
-| $\int_{-1}{1}\tilde{L}_7^p(x)$ |         |         |                          |                        |                        |                        |   $0.06724\tilde{8}$   |   $0.24851\tilde{6}$   |
-| $\int_{-1}{1}\tilde{L}_8^p(x)$ |         |         |                          |                        |                        |                        |                        |   $0.05328\tilde{5}$   |
+| $\int_{-1}^{1}\tilde{L}_0^p$ |   $2$   |   $1$   |   $0.\overline{55555}$   |   $0.34785\tilde{5}$   |   $0.23692\tilde{7}$   |   $0.09360\tilde{9}$   |   $0.06724\tilde{8}$   |   $0.05328\tilde{5}$   |
+| $\int_{-1}^{1}\tilde{L}_1^p$ |         |   $1$   |   $0.\overline{88888}$   |   $0.65214\tilde{5}$   |   $0.47862\tilde{9}$   |   $0.41243\tilde{1}$   |   $0.32221\tilde{9}$   |   $0.24851\tilde{6}$   |
+| $\int_{-1}^{1}\tilde{L}_2^p$ |         |         |   $0.\overline{55555}$   |   $0.65214\tilde{5}$   |   $0.56888\tilde{9}$   |   $0.49395\tilde{8}$   |   $0.37952\tilde{8}$   |   $0.31759\tilde{1}$   |
+| $\int_{-1}^{1}\tilde{L}_3^p$ |         |         |                          |   $0.34785\tilde{5}$   |   $0.47862\tilde{9}$   |   $0.49395\tilde{8}$   |   $0.46200\tilde{6}$   |   $0.38060\tilde{6}$   |
+| $\int_{-1}^{1}\tilde{L}_4^p$ |         |         |                          |                        |   $0.23692\tilde{7}$   |   $0.41243\tilde{1}$   |   $0.37952\tilde{8}$   |   $0.38060\tilde{6}$   |
+| $\int_{-1}^{1}\tilde{L}_5^p$ |         |         |                          |                        |                        |   $0.09360\tilde{9}$   |   $0.32221\tilde{9}$   |   $0.31759\tilde{1}$   |
+| $\int_{-1}^{1}\tilde{L}_6^p$ |         |         |                          |                        |                        |                        |   $0.06724\tilde{8}$   |   $0.24851\tilde{6}$   |
+| $\int_{-1}^{1}\tilde{L}_7^p$ |         |         |                          |                        |                        |                        |                        |   $0.05328\tilde{5}$   |
 : Definite integrals, over the bi-unit domain, of the Lagrange-Legendre basis functions for degrees 1 - 8
 
 
 ```{matlab}
+%| echo: false
+%| output: false
 [qp, weights] = GetQuadratureScheme( sym([-1, 1]), 8, "Legendre" )
 [qp, weights] = GetQuadratureScheme( sym([-1, 1]), 8, "Lagrange-Legendre" )
 ```
 
-As both the Lagrange-Legendre polynomial basis and the Legendre polynomial basis are (obviously) polynomial basis, we can use the polynomial change of basis operation to represent the Lagrange-Legendre basis in the Legendre basis (and *vice versa* ).
+As final evidence, consider that both the Lagrange-Legendre polynomial basis and the Legendre polynomial basis are (obviously) polynomial basis, thus we can use the polynomial change of basis operation to represent the Lagrange-Legendre basis in the Legendre basis (and *vice versa* ).
 
 ```{=latex}
 \begin{equation*}
-    \Vector{p} = \ChangeBasisOp{\tilde{L}}{P} \Vector{\ell}
+    f(x) = \Vector{\tilde{\ell}}^T \tilde{\Matrix{L}}(x) = \Vector{p}^T \Matrix{P}(x)
+\end{equation*}
+```
+
+```{=latex}   
+\begin{equation*}
+    \Vector{p} = \ChangeBasisOp{\tilde{L}}{P} \Vector{\tilde{\ell}}
 \end{equation*}
 ```
 
@@ -602,12 +679,12 @@ l_coeffs = target_fun( nodes );
 P = LegendreBasis( degree, x, domain );
 [p_coeffs, R] = PolynomialChangeOfBasis( L, P, l_coeffs, domain );
 
-display( double( R ) )
-display( double( l_coeffs ) )
-display( double( p_coeffs ) )
+%display( double( R ) )
+%display( double( l_coeffs ) )
+%display( double( p_coeffs ) )
 
-display( int( transpose( l_coeffs ) * L , domain ) )
-display( 2 * p_coeffs(1) )
+%display( int( transpose( l_coeffs ) * L , domain ) )
+%display( 2 * p_coeffs(1) )
 
 figure
 %subplot( 2, 1, 1 )

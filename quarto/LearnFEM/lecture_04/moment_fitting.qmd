@@ -1,0 +1,298 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+```
+
+# Computing Quadrature Schemes
+
+A quadrature scheme is composed of two components, locations and associated weights.
+When interpreting quadrature as integration of an interpolating polynomial, or rather the basis of the interpolating polynomial, it is possible to compute a quadrature scheme that can be reused.
+In fact, we can formulate a system of linear equations that either approximately or exactly integrate the polynomial's basis -- determined by the dimensionality and rank of the system.
+
+The general approach to computing a quadrature scheme in this way is to first pick the polynomial basis, $\phi_{\Index{i}}(x)$, to be integrated and compute, analytically, what the exact integrals of the polynomial basis are -- these are called *moments*.
+
+```{=latex}
+\begin{equation*}
+    \begin{bmatrix}
+        \int_{\Omega} \phi_1(x) \d{x} \\
+        \vdots \\
+        \int_{\Omega} \phi_M(x) \d{x} \\
+    \end{bmatrix}
+\end{equation*}
+```
+
+The second step is to then choose locations of the quadrature points -- the locations at which the basis will be evaluated.
+
+```{=latex}
+\begin{equation*}
+    \begin{bmatrix}
+        \int_{\Omega} \phi_{\Index{1}}(x_{\Index{1}}) & \cdots & \phi_{\Index{1}}(x_{\Index{N}}) \\
+        \vdots & \ddots & \vdots \\
+        \int_{\Omega} \phi_{\Index{M}}(x_{\Index{1}}) & \cdots & \phi_{\Index{M}}(x_{\Index{N}}) \\
+    \end{bmatrix}
+\end{equation*}
+```
+
+The third step is to assemble the linear system and then to solve for the weights that balance the system.
+
+```{=latex}
+\begin{equation*}
+    \begin{bmatrix}
+        \int_{\Omega} \phi_{\Index{1}}(x) \d{x} \\
+        \vdots \\
+        \int_{\Omega} \phi_{\Index{M}}(x) \d{x} \\
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        \int_{\Omega} \phi_{\Index{1}}(x_{\Index{1}}) & \cdots & \phi_{\Index{1}}(x_{\Index{N}}) \\
+        \vdots & \ddots & \vdots \\
+        \int_{\Omega} \phi_{\Index{M}}(x_{\Index{1}}) & \cdots & \phi_{\Index{M}}(x_{\Index{N}}) \\
+    \end{bmatrix}
+    \begin{bmatrix}
+        w_\Index{1} \\
+        \vdots \\
+        w_\Index{N}
+    \end{bmatrix}
+\end{equation*}
+```
+
+This approach to computing quadrature schemes is known as *moment fitting*.
+In the form described above, where both the quadrature points and quadrature weights may vary, the system is nonlinear and thus is often referred to as *nonlinear moment fitting*.
+However, there is often some theoretical or heuristic reasoning that prescribes the choice of quadrature points which simplifies the system into a linear system, and is then referred to *linear moment fitting*.
+
+# Computing a Quadrature Scheme using Linear Moment Fitting
+Let us suppose that we want to compute a quadrature scheme based on the Lagrange polynomial basis over the biunit domain: $[-1, 1]$.
+
+```{=latex}
+\begin{equation*}
+    \Vector{\phi}(x)
+    =
+    \begin{bmatrix}
+         \frac{-9 x^3 + 9 x^2 +    x - 1}{16} \\
+         \frac{27 x^3 - 9 x^2 - 27 x + 9}{16} \\
+         \frac{27 x^3 - 9 x^2 - 27 x + 9}{16} \\
+         \frac{ 9 x^3 + 9 x^2 -    x - 1}{16} \\
+    \end{bmatrix}
+\end{equation*}
+```
+
+We can then compute the moment vector:
+
+```{=latex}
+\begin{align*}
+    \int_{-1}^{+1}{\Vector{\phi}(x) \d{x}}
+    &=
+    \begin{bmatrix}
+         \int_{-1}^{+1}{\frac{-9 x^3 + 9 x^2 +    x - 1}{16} \d{x}} \\
+         \int_{-1}^{+1}{\frac{27 x^3 - 9 x^2 - 27 x + 9}{16} \d{x}} \\
+         \int_{-1}^{+1}{\frac{27 x^3 - 9 x^2 - 27 x + 9}{16} \d{x}} \\
+         \int_{-1}^{+1}{\frac{ 9 x^3 + 9 x^2 -    x - 1}{16} \d{x}} \\
+    \end{bmatrix} \\
+    %
+    &=
+    \begin{bmatrix}
+         \frac{1}{4} \\
+         \frac{3}{4} \\
+         \frac{3}{4} \\
+         \frac{1}{4} \\
+    \end{bmatrix}
+\end{align*}
+```
+
+Recalling that the Lagrange polynomial basis is an interpolatory basis, that has nodes at which only one basis function is non-zero and has a value of one, we will choose to use these nodes as the quadrature points for our scheme.
+
+```{=latex}
+\begin{equation*}
+    \mathrm{w} = [ -1, -\frac{1}{3}, \frac{1}{3}, 1 ]
+\end{equation*}
+```
+
+We then assemble the moment-fitting coefficient matrix by evaluating each basis function at each quadrature point:
+
+```{=latex}
+\begin{align*}
+    \Matrix{A}
+    &=
+    \begin{bmatrix}
+        \frac{-9 (-1)^3 + 9 (-1)^2 +    (-1) - 1}{16} & \frac{-9 \left(\frac{-1}{3}\right)^3 + 9 \left(\frac{-1}{3}\right)^2 +    \left(\frac{-1}{3}\right) - 1}{16} & \frac{-9 \left(\frac{1}{3}\right)^3 + 9 \left(\frac{1}{3}\right)^2 +    \left(\frac{1}{3}\right) - 1}{16} & \frac{-9 (1)^3 + 9 (1)^2 +    (1) - 1}{16} \\
+        \frac{27 (-1)^3 - 9 (-1)^2 - 27 (-1) + 9}{16} & \frac{27 \left(\frac{-1}{3}\right)^3 - 9 \left(\frac{-1}{3}\right)^2 - 27 \left(\frac{-1}{3}\right) + 9}{16} & \frac{27 \left(\frac{1}{3}\right)^3 - 9 \left(\frac{1}{3}\right)^2 - 27 \left(\frac{1}{3}\right) + 9}{16} & \frac{27 (1)^3 - 9 (1)^2 - 27 (1) + 9}{16} \\
+        \frac{27 (-1)^3 - 9 (-1)^2 - 27 (-1) + 9}{16} & \frac{27 \left(\frac{-1}{3}\right)^3 - 9 \left(\frac{-1}{3}\right)^2 - 27 \left(\frac{-1}{3}\right) + 9}{16} & \frac{27 \left(\frac{1}{3}\right)^3 - 9 \left(\frac{1}{3}\right)^2 - 27 \left(\frac{1}{3}\right) + 9}{16} & \frac{27 (1)^3 - 9 (1)^2 - 27 (1) + 9}{16} \\
+        \frac{ 9 (-1)^3 + 9 (-1)^2 -    (-1) - 1}{16} & \frac{ 9 \left(\frac{-1}{3}\right)^3 + 9 \left(\frac{-1}{3}\right)^2 -    \left(\frac{-1}{3}\right) - 1}{16} & \frac{ 9 \left(\frac{1}{3}\right)^3 + 9 \left(\frac{1}{3}\right)^2 -    \left(\frac{1}{3}\right) - 1}{16} & \frac{ 9 (1)^3 + 9 (1)^2 -    (1) - 1}{16} \\
+    \end{bmatrix} \\
+    %
+    &=
+    \begin{bmatrix}
+        1 & 0 & 0 & 0 \\
+        0 & 1 & 0 & 0 \\
+        0 & 0 & 1 & 0 \\
+        0 & 0 & 0 & 1 \\
+    \end{bmatrix}
+\end{align*}
+```
+
+Thus the full linear moment fitting system of equations for this problem can be written as:
+
+```{=latex}
+\begin{equation*}
+    \begin{bmatrix}
+         \frac{1}{4} \\
+         \frac{3}{4} \\
+         \frac{3}{4} \\
+         \frac{1}{4} \\
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        1 & 0 & 0 & 0 \\
+        0 & 1 & 0 & 0 \\
+        0 & 0 & 1 & 0 \\
+        0 & 0 & 0 & 1 \\
+    \end{bmatrix}
+    \begin{bmatrix}
+         w_{\Index{1}} \\
+         w_{\Index{2}} \\
+         w_{\Index{3}} \\
+         w_{\Index{4}} \\
+    \end{bmatrix}
+\end{equation*}
+```
+
+Which is trivial to solve for the quadrature weights:
+
+```{=latex}
+\begin{equation*}
+    \Vector{w}
+    =
+    \begin{bmatrix}
+        \frac{1}{4} \\
+        \frac{3}{4} \\
+        \frac{3}{4} \\
+        \frac{1}{4} \\
+    \end{bmatrix}
+\end{equation*}
+```
+
+We can implement linear moment fitting in a concise Matlab function and verify these results.
+
+```{matlab}
+%| output: false
+function weights = LinearMomentFitting( moment_functions, domain, qp )
+  variate = symvar( moment_functions(end) );
+  if isempty( variate )
+    variate = sym( "x", "real" );
+  end
+  m = int( moment_functions, domain );
+  A = subs( moment_functions, variate, qp );
+  weights = lsqminnorm( double( A ), double( m ) );
+end
+```
+
+```{matlab}
+variate = sym( "x" );
+domain = sym( [-1, 1] );
+degree = 3;
+basis_name = "Lagrange";
+nodes = linspace( domain(1), domain(2), degree + 1 );
+basis = PolynomialBasisFunction( basis_name, degree, variate, domain );
+
+weights = LinearMomentFitting( basis, domain, nodes )
+```
+
+# Computing a Quadrature Scheme using Nonlinear Moment Fitting
+
+Let us now suppose that we want to compute a quadrature scheme based on the Legendre polynomial basis over the biunit domain: $[-1, 1]$.
+While you can probably intuit some good locations from quadrature points, let us not assume the locations of quadrature points; instead let's compute a quadrature scheme using nonlinear moment fitting.
+Even though we are not prescribing the quadrature points, we will impose some constraints on the computed quadrature scheme that we desire for computational purposes.
+For example:
+
+```{=latex}
+\begin{align*}
+& \min_{x} & & \norm{ \int_{\Omega} \Vector{\phi}(x) \d{x} - \sum_{\Index{i}=1}^{N} f(x_{\Index{i}}) w_{\Index{i}} }_2 & \\
+& \textrm{s.t.} & & w_{\Index{i}} \geq 0 \ & \forall \ \Index{i} \in [1, N] \\
+& & & \abs{ x_{\Index{i}} - \Omega_1 } = \abs{ x_{N - ( \Index{i} - 1 )} - \Omega_2 } & \forall \ \Index{i} \in [1, N] \\
+\end{align*} 
+```
+
+```{matlab}
+%| output: false
+function [x_qp, w_qp] = NonlinearMomentFitting( num_qp, moment_functions, domain )
+    nodes_initial = double( linspace( domain(1), domain(2), num_qp ) );
+    obj_fun = @(x_qp) LinearMomentResidual( moment_functions, domain, x_qp );
+    nonlinear_constraints = @(x_qp) NonlinearMomentFittingConstraints( moment_functions, domain, x_qp );
+    lower_bounds = double( domain(1) * ones( size( nodes_initial ) ) );
+    upper_bounds = double( domain(2) * ones( size( nodes_initial ) ) );
+    Aeq = double( eye( num_qp ) | fliplr( eye( num_qp ) ) );
+    beq = double( zeros( num_qp, 1 ) );
+    options_global = optimoptions( @patternsearch, FunctionTolerance=1e-12, Display="iter", MeshTolerance=1e-12, StepTolerance=1e-12 );
+    x_qp = patternsearch( obj_fun, nodes_initial, [], [], Aeq, beq, lower_bounds, upper_bounds, nonlinear_constraints, options_global );
+    x_qp = sort( x_qp );
+    w_qp = double( LinearMomentFitting( moment_functions, domain, x_qp ) );
+end
+```
+
+```{matlab}
+%| output: false
+function r = LinearMomentResidual( moment_functions, domain, qp )
+    variate = symvar( moment_functions(end) );
+    if isempty( variate )
+        variate = sym( "x", "real" );
+    end
+    qp = sort( qp );
+    w = LinearMomentFitting( moment_functions, domain, qp );
+    m = int( moment_functions, domain );
+    r = double( norm( m - subs( moment_functions, variate, qp ) * w ) );
+end
+```
+
+```{matlab}
+%| output: false
+function [c, ceq] = NonlinearMomentFittingConstraints( moment_functions, domain, qp )
+    w = LinearMomentFitting( moment_functions, domain, qp );
+    c = -1 * w;
+    %c = [ c; (-1 * ( w - 1 ) ) ]
+    ceq = [];
+end
+```
+
+```{matlab}
+variate = sym( "x" );
+domain = sym( [-1, 1] );
+degree = 6;
+basis_name = "Bernstein";
+basis = PolynomialBasisFunction( basis_name, degree, variate, domain );
+
+num_qp = ceil( ( degree + 1 ) / 2 );
+[x_qp, w_qp] = NonlinearMomentFitting( num_qp, basis, domain )
+```
+
+```{matlab}
+%|echo: false
+figure
+fplot( basis, double( domain ), LineWidth=2 )
+hold on
+xline( x_qp, LineStyle=":", LineWidth=1 )
+```
+
+```{matlab}
+%|echo: false
+%|eval: false
+%|output: false
+x1 = linspace( double( domain(1) ), double( domain(2) ), 100 );
+x2 = linspace( double( domain(1) ), double( domain(2) ), 100 );
+[x1, x2] = meshgrid( x1, x2 );
+r = zeros( size( x1 ) );
+for n = 1 : numel( r )
+    r(n) = LinearMomentResidual( basis, domain, [x1(n), x2(n)] );
+end
+
+figure
+pcolor( x1, x2, r, LineStyle="none" )
+axis equal
+```

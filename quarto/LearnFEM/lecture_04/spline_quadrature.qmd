@@ -1,0 +1,20 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+```
+
+# Quadrature on Piecewise Polynomials
+
+Thus far we have discussed quadrature on a function composed of a single polynomial function.
+However, we previously demonstrated a desire -- or rather, a practical necessity -- to use *piecewise* polynomial functions as the basis functions in our Galerkin approach.
+Therefore, we need to extend our polynomial quadrature to the piecewise polynomial.
+While we *could* compute a quadrature scheme on the piecewise polynomial, and in fact we will demonstrate this, by far the simplest approach (and the one most widely used) is to use change of variables on each piecewise domain (element).
+

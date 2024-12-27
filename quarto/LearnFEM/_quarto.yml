@@ -58,6 +58,7 @@ book:
         - lecture_04/polynomial_quadrature.qmd
         - lecture_04/gauss_quadrature.qmd
         - lecture_04/moment_fitting.qmd
+        - lecture_04/spline_quadrature.qmd
     # - summary.qmd
     # - references.qmd
 

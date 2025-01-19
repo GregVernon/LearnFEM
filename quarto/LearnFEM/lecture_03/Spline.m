@@ -3,7 +3,7 @@ classdef Spline
     properties
         spline_space SplineSpace
     end
-    
+
     % Derived properties
     properties
         local_dc_extraction_operators
@@ -13,7 +13,7 @@ classdef Spline
         dc_basis
         basis
     end
-    
+
     % Constructors
     methods
         function obj = Spline( spline_space )
@@ -46,7 +46,7 @@ classdef Spline
             end
         end
     end
-    
+
     % Get information about the spline space
     methods
         function basis_name = GetBasisName( obj )
@@ -56,15 +56,15 @@ classdef Spline
         function variate = GetVariate( obj )
             variate = obj.spline_space.GetVariate();
         end
-        
+
         function vertex = GetVertex( obj, vertex_id )
             vertex = obj.spline_space.GetVertex( vertex_id );
         end
-        
+
         function num_elems = GetNumElements( obj )
             num_elems = obj.spline_space.GetNumElements();
         end
-        
+
         function num_interfaces = GetNumInterfaces( obj )
             num_interfaces = obj.spline_space.GetNumInterfaces();
         end
@@ -79,7 +79,7 @@ classdef Spline
         function elem_domain = GetElementDomain( obj, elem_id )
             elem_domain = obj.spline_space.GetElementDomain( elem_id );
         end
-        
+
         function elem_degree = GetElementDegree( obj, elem_id )
             elem_degree = obj.spline_space.GetElementDegree( elem_id );
         end
@@ -88,10 +88,32 @@ classdef Spline
             elem_continuity = obj.spline_space.GetElementContinuity( elem_id );
         end
 
+        function elem_interface_ids = GetElementInterfaceIds( obj, elem_id )
+            elem_interface_ids = obj.spline_space.GetElementInterfaceIds( elem_id );
+        end
+
         function supported_dc_basis_ids = GetSupportedDCBasisIdsFromElementId( obj, elem_id )
             start_id = sum( obj.spline_space.degree(1:elem_id-1) + 1 ) + 1;
             num_local_dc_basis = obj.GetElementDegree( elem_id ) + 1;
             supported_dc_basis_ids = start_id : start_id + ( num_local_dc_basis - 1 );
+        end
+
+        function supported_basis_ids = GetSupportedBasisIdsFromElementId( obj, elem_id )
+            supported_basis_ids = [];
+            curr_basis_id = 0;
+            for e = 1 : elem_id
+                elem_degree = GetElementDegree( obj, e );
+                elem_interface_ids = GetElementInterfaceIds( obj, e );
+                left_elem_continuity = GetInterfaceContinuity( obj, elem_interface_ids(1) );
+                for n = 1 : elem_degree + 1
+                    if ( n - 1 ) > left_elem_continuity
+                        curr_basis_id = curr_basis_id + 1;
+                    end
+                    if e == elem_id
+                        supported_basis_ids = [ supported_basis_ids; curr_basis_id ];
+                    end
+                end
+            end
         end
     end
 
@@ -109,7 +131,7 @@ classdef Spline
             interface_vertex_id = obj.spline_space.GetInterfaceVertexId( interface_id );
         end
     end
-    
+
     % Compute information about the spline space
     methods
         function knot_vector = ComputeKnotVector( obj )
@@ -120,10 +142,10 @@ classdef Spline
             num_dc_basis = obj.spline_space.ComputeNumDCBasis();
         end
     end
-    
+
     % USpline
     methods
-        
+
         function spline_basis = ComputeSplineBasis( obj )
             spline_assembly_operator = obj.ComputeSplineAssemblyOperator();
             spline_basis = spline_assembly_operator * obj.dc_basis;
@@ -148,13 +170,13 @@ classdef Spline
                 spline_assembly_operator = normalize_cols .* N;
             end
         end
-        
+
         function interface_index_sets = ComputeLocalInterfaceIndexSets( obj, interface_id )
             num_interfaces = obj.GetNumInterfaces();
             interface_cont = obj.GetInterfaceContinuity( interface_id );
             interface_elems = obj.GetInterfaceElementIds( interface_id );
             index_set_length = interface_cont + 2;
-            if interface_id == 1  
+            if interface_id == 1
                 interface_r_elem_id = interface_elems;
                 r_elem_dc_basis_ids = obj.GetSupportedDCBasisIdsFromElementId( interface_r_elem_id );
                 interface_index_sets = r_elem_dc_basis_ids(1);
@@ -198,7 +220,7 @@ classdef Spline
                     end
                 end
             end
-            
+
             num_dc_basis = ComputeNumDCBasis( obj );
             for ii = 1 : num_dc_basis
                 supported_basis = false;
@@ -221,7 +243,7 @@ classdef Spline
                     end
                 end
             end
-            
+
             contiguous_index_sets = {};
             for ii = 1 : length( candidate_contiguous_index_sets )
                 keep_set = true;

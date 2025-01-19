@@ -177,7 +177,7 @@ function [qp, weights] = LagrangeQuadrature( domain, num_qp, method )
     if num_qp == 1
         qp = mean( domain );
     else
-        qp = linspace( domain(1), domain(2), num_qp );
+        qp = transpose( linspace( domain(1), domain(2), num_qp ) );
     end
     x = sym( "x", "real" );
     basis = LagrangeBasis( num_qp - 1, x, domain );

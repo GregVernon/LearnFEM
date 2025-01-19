@@ -458,7 +458,7 @@ function basis = LagrangeLegendreBasis( degree, variate, domain )
         node = P_roots;
         %node = ChangeOfVariable( P_roots, [P_roots(1), P_roots(end)], domain );
     else
-        node = domain;
+        node = domain(1);
     end
     basis = sym( zeros( degree + 1, 1 ) );
     for ii = 1 : degree + 1

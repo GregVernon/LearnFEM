@@ -59,6 +59,10 @@ classdef SplineSpace
         function elem_continuity = GetElementContinuity( obj, elem_id )
             elem_continuity = obj.continuity( elem_id : elem_id + 1 );
         end
+
+        function elem_interface_ids = GetElementInterfaceIds( obj, elem_id )
+            elem_interface_ids = elem_id : elem_id + 1;
+        end
     end
     
     % Get information about individual interfaces of the spline

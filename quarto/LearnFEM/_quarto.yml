@@ -84,6 +84,7 @@ format:
               Vector: ["\\boldsymbol{\\mathit{#1}}", 1],
               Matrix: ["\\boldsymbol{\\mathrm{#1}}", 1],
               ChangeBasisOp: ["\\Matrix{R}_{\\tiny{\\Matrix{#1} \\rightarrow \\Matrix{#2}}}", 2],
+              defequals: ["\\stackrel{\\text{def}}{=}"],
               d: ["\\mathop{}\\!{d{#1}}", 1],
               p: ["\\mathop{}\\!{\partial{#1}}", 1],
               Index: ["\\mathrm{#1}", 1],
@@ -113,6 +114,7 @@ format:
         \newcommand{\Vector}[1]{\mathbf{\mathit{#1}}}
         \newcommand{\Matrix}[1]{\boldsymbol{\mathrm{#1}}}
         \newcommand{\ChangeBasisOp}[2]{\Matrix{R}_{\tiny{\Matrix{#1}\rightarrow \Matrix{#2}}}}
+        \newcommand{\defequals}{\stackrel{\text{def}}{=}}
         \newcommand{\d}{\mathop{}\!{d}}
         \newcommand{\p}{\mathop{}\!{\partial}}
         \newcommand{\Index}{\mathrm{#1}}

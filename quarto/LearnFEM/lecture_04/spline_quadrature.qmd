@@ -135,6 +135,79 @@ quad_int = quad_int + elem_int;
 
 ## Reference element quadrature
 
+The final approach we'll discuss is the one that is ubiquitous in finite element method implementations.
+In this technique we construct the basis functions and quadrature scheme on a single *parametric* element within a *parametric* domain, and then "map" the integral back to the actual domain of each element.
+For example, recalling our previous discussion of *change of variable*, we wish to integrate some function, $f(x)$, over the domain $\mathcal{X}\in [x_0, x_1]$.
+
+```{matlab}
+clear
+x = sym( "x", "real" );
+xi = sym( "xi", "real" );
+x_domain = sym( [ 2*pi, 4*pi ] );
+xi_domain = sym( [ -1, 1 ] );
+
+X(xi) = ChangeOfVariable( x, xi_domain, x_domain );
+
+f(x) = -sin( x / 2 );
+g(x) = subs( f, x, X );
+
+cmap = lines( 2 );
+figure
+subplot( 2, 1, 1 )
+farea( f, double( x_domain ), LineWidth=2, EdgeColor=cmap(1,:), FaceColor=cmap(1,:) );
+xlabel( "$x$", Interpreter="latex" )
+ylabel( "$f(x)$", Interpreter="latex" )
+ax(1) = gca;
+ax(1).XLim = double( [min( [x_domain(1), xi_domain(1)] ), max( [x_domain(2), xi_domain(2)] ) ] );
+subplot( 2, 1, 2 )
+farea( g, double( xi_domain ), LineWidth=2, EdgeColor=cmap(2,:), FaceColor=cmap(2,:) );
+xlabel( "$\xi$", Interpreter="latex" )
+ylabel( "$f(x(\xi))$", Interpreter="latex" )
+ax(2) = gca;
+ax(2).XLim = double( [min( [x_domain(1), xi_domain(1)] ), max( [x_domain(2), xi_domain(2)] ) ] );
+
+```
+
+Through the application of change of variables we can describe this as
+
+```{=latex}
+\begin{equation*}
+        \int_{x_0}^{x_1}{f(x) \d x } = \int_{\xi_0}^{\xi_1}{ f(x(\xi)) \frac{d x(\xi)}{d \xi} \d \xi},
+\end{equation*}
+```
+
+where $\frac{ d x(\xi)}{d\xi}$ is known as the *Jacobian* and describes how the function changes through the change of variables operation.
+Note that in this one-dimensional case, where we've used change of variable, the Jacobian can be computed as
+
+```{=latex}
+\begin{align*}
+        x(\xi) &\defequals \left( \left( \xi - \xi_0 \right) \frac{x_1 - x_0}{\xi_1 - \xi_0} \right) + x_0 \\
+        %
+        \frac{ dx(\xi) }{ d\xi } &= \frac{ x_1 - x_0 }{ \xi_1 - \xi_0 } \\
+\end{align*}
+```
+
+Substituting this into our previous result we have:
+
+```{=latex}
+\begin{align*}
+        \int_{x_0}^{x_1}{f(x) \d x } &= \int_{\xi_0}^{\xi_1}{ f(x(\xi)) \frac{ x_1 - x_0 }{ \xi_1 - \xi_0 } \d \xi} \\
+        %
+        \int_{x_0}^{x_1}{f(x) \d x } &= \frac{ x_1 - x_0 }{ \xi_1 - \xi_0 } \int_{\xi_0}^{\xi_1}{ f(x(\xi))  \d \xi} \\
+\end{align*}
+```
+
+which we can then integrate, at least approximately, with a quadrature scheme of our choice over the parametric domain:
+
+```{=latex}
+\begin{equation*}
+        \int_{x_0}^{x_1}{f(x) \d x } \approx \frac{ x_1 - x_0 }{ \xi_1 - \xi_0 } \sum_{i=1}^{n} f(x(\xi_{\Index{i}})) w_{\Index{i}}
+\end{equation*}
+```
+
+
+The previous approaches, while useful to understand what is being accomplished by this "element poin"
+
 ```{matlab}
 function domain = GetPolynomialReferenceElementDomain( basis_name )
     switch basis_name
@@ -153,6 +226,8 @@ function domain = GetPolynomialReferenceElementDomain( basis_name )
     end
 end
 ```
+
+
 
 ```{matlab}
 %| output: true

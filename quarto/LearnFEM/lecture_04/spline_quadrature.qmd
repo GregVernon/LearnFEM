@@ -25,8 +25,6 @@ There are three approaches that we can use to apply quadrature:
 2. Piecewise quadrature rule
 3. Piecewise quadrature rule on reference element
 
-## Moment-fitting
-
 ```{matlab}
 %| output: true
 x = sym( "x", "real" );
@@ -40,22 +38,37 @@ spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
 spline = Spline( spline_space );
 num_coeffs = numel( spline.basis );
 
-%coeffs = [1; 2; 2.5; 2; 1];
-%coeffs = [1; 2; 2; 1.25; 1; 1; 1.25; 1.5; 2];
-coeffs = subs( real( x^x ), x, linspace( domain(1), domain(2), num_coeffs ).' )
-piecewise_polynomial = transpose( coeffs ) * spline.basis;
-int( piecewise_polynomial, domain );
+coefficients = subs( real( x^x ), x, linspace( domain(1), domain(2), num_coeffs ).' );
+piecewise_polynomial = transpose( coefficients ) * spline.basis;
+piecewise_polynomial = symfun( piecewise_polynomial, x );
+```
 
-figure
-fplot( piecewise_polynomial, double( domain ), LineWidth=3 )
-xline( double( vertices ), LineWidth=1, LineStyle=":" )
-axis padded
-%ax = gca;
-%ax.YLim = [0, 3];
+## Moment-fitting
 
-quad_int = sym( 0 );
+```{matlab}
+%| output: true
+%| echo: false
+clear
+x = sym( "x", "real" );
+basis_name = "Lagrange";
+num_elements = 4;
+degree = 2 * ones( 1, num_elements );
+continuity = [-1, 0 * ones( 1, num_elements - 1 ) -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), num_elements + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+spline = Spline( spline_space );
+num_coeffs = numel( spline.basis );
+
+coefficients = subs( real( x^x ), x, linspace( domain(1), domain(2), num_coeffs ).' );
+piecewise_polynomial = transpose( coefficients ) * spline.basis;
+piecewise_polynomial = symfun( piecewise_polynomial, x );
+```
+
+```{matlab}
+%| output: true
+%| echo: true
 x_qp = [];
-w_qp = [];
 for elem_id = 1 : num_elements
     elem_domain = spline.GetElementDomain( elem_id );
     elem_degree = spline.GetElementDegree( elem_id );
@@ -63,24 +76,28 @@ for elem_id = 1 : num_elements
     x_qp = [x_qp; elem_x_qp];
 end
 
-x_qp = unique( transpose( x_qp ) )
-w_qp = LinearMomentFitting( spline.basis, domain, x_qp )
+x_qp = unique( x_qp );
+w_qp = LinearMomentFitting( spline.basis, domain, transpose( x_qp ) );
+quad_int = sum( piecewise_polynomial( x_qp ) .* w_qp );
+```
 
-subs( piecewise_polynomial, x, x_qp.' );
+```{matlab}
+%| output: true
+%| echo: false
+
+figure
+fplot( piecewise_polynomial, double( domain ), LineWidth=3 )
+xline( double( vertices ), LineWidth=1, LineStyle=":" )
+axis padded
 PlotQuadrature( double( x_qp ), double( w_qp ), double( subs( piecewise_polynomial, x, x_qp.' ) ) )
-%ref_piecewise_polynomial = ChangeOfVariable( piecewise_polynomial, elem_domain, ref_elem_domain )
-%ref_piecewise_polynomial = subs( piecewise_polynomial, x, xi )
-elem_int = sym( 0 );
-for ii = 1 : length( x_qp )
-    quad_int = quad_int + ( w_qp(ii) * subs( piecewise_polynomial, x, x_qp(ii) ) );
-end
-quad_int
 ```
 
 ## Piecewise quadrature
 
 ```{matlab}
 %| output: true
+%| echo: false
+clear
 x = sym( "x", "real" );
 basis_name = "Lagrange";
 num_elements = 4;
@@ -92,18 +109,27 @@ spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
 spline = Spline( spline_space );
 num_coeffs = numel( spline.basis );
 
-%coeffs = [1; 2; 2.5; 2; 1];
-%coeffs = [1; 2; 1; 2; 1; 2; 1; 2; 1];
-coeffs = subs( real( x^x ), x, linspace( domain(1), domain(2), num_coeffs ).' )
-piecewise_polynomial = transpose( coeffs ) * spline.basis;
-int( piecewise_polynomial, domain );
+coefficients = subs( real( x^x ), x, linspace( domain(1), domain(2), num_coeffs ).' );
+piecewise_polynomial = transpose( coefficients ) * spline.basis;
+piecewise_polynomial = symfun( piecewise_polynomial, x );
+```
 
-figure
-fplot( piecewise_polynomial, double( domain ), LineWidth=3 )
-xline( double( vertices ), LineWidth=1, LineStyle=":" )
-axis padded
-%ax = gca;
-%ax.YLim = [0, 3];
+```{matlab}
+%| output: true
+quad_int = sym( 0 );
+for elem_id = 1 : num_elements
+    elem_domain = spline.GetElementDomain( elem_id );
+    elem_degree = spline.GetElementDegree( elem_id );
+    [elem_x_qp, elem_w_qp] = GetQuadratureScheme( elem_domain, elem_degree + 1, "Lagrange" );
+    for ii = 1 : length( elem_x_qp )
+        quad_int = quad_int + ( elem_w_qp(ii) * subs( piecewise_polynomial, x, elem_x_qp(ii) ) );
+    end
+end
+```
+
+```{matlab}
+%| output: true
+%| echo: false
 
 quad_int = sym( 0 );
 x_qp = [];
@@ -112,25 +138,16 @@ for elem_id = 1 : num_elements
     elem_domain = spline.GetElementDomain( elem_id );
     elem_degree = spline.GetElementDegree( elem_id );
     [elem_x_qp, elem_w_qp] = GetQuadratureScheme( elem_domain, elem_degree + 1, "Lagrange" );
-    x_qp = [x_qp; elem_x_qp];
-    w_qp = [w_qp; elem_w_qp];
+    x_qp = [ x_qp; elem_x_qp ];
+    w_qp = [ w_qp; elem_w_qp ];
 end
 
-x_qp;
-w_qp;
-
-%[x_qp, idx] = unique( x_qp )
-%w_qp = w_qp( idx )
-
+figure
+fplot( piecewise_polynomial, double( domain ), LineWidth=3 )
+xline( double( vertices ), LineWidth=1, LineStyle=":" )
+axis padded
 subs( piecewise_polynomial, x, x_qp.' );
 PlotQuadrature( double( x_qp ), double( w_qp ), double( subs( piecewise_polynomial, x, x_qp.' ) ) )
-%ref_piecewise_polynomial = ChangeOfVariable( piecewise_polynomial, elem_domain, ref_elem_domain )
-%ref_piecewise_polynomial = subs( piecewise_polynomial, x, xi )
-elem_int = sym( 0 );
-for ii = 1 : length( x_qp )
-    elem_int = elem_int + ( w_qp(ii) * subs( piecewise_polynomial, x, x_qp(ii) ) );
-end
-quad_int = quad_int + elem_int;
 ```
 
 ## Reference element quadrature
@@ -140,6 +157,7 @@ In this technique we construct the basis functions and quadrature scheme on a si
 For example, recalling our previous discussion of *change of variable*, we wish to integrate some function, $f(x)$, over the domain $\mathcal{X}\in [x_0, x_1]$.
 
 ```{matlab}
+%| echo: false
 clear
 x = sym( "x", "real" );
 xi = sym( "xi", "real" );
@@ -165,7 +183,6 @@ xlabel( "$\xi$", Interpreter="latex" )
 ylabel( "$f(x(\xi))$", Interpreter="latex" )
 ax(2) = gca;
 ax(2).XLim = double( [min( [x_domain(1), xi_domain(1)] ), max( [x_domain(2), xi_domain(2)] ) ] );
-
 ```
 
 Through the application of change of variables we can describe this as
@@ -205,10 +222,11 @@ which we can then integrate, at least approximately, with a quadrature scheme of
 \end{equation*}
 ```
 
-
-The previous approaches, while useful to understand what is being accomplished by this "element poin"
+Note that we were able to pull the Jacobian, $\frac{x_1 - x_0}{\xi_1 - \xi_0}$ out of the integral because our change of variable mapping is linear.
+In general finite element analysis, this is often not the case and the Jacobian would need to be evaluated at each quadrature point.
 
 ```{matlab}
+%| output: false
 function domain = GetPolynomialReferenceElementDomain( basis_name )
     switch basis_name
         case "Bernstein"
@@ -228,9 +246,34 @@ end
 ```
 
 
+```{matlab}
+%| output: false
+function SplineQuadratureElement( spline, quadrature_basis )
+    ref_elem_domain = GetPolynomialReferenceElementDomain( quadrature_basis );
+    ref_elem_basis = PolynomialBasisFunction( quadrature_basis, elem_degree, x, ref_elem_domain );
+    [elem_x_qp, elem_w_qp] = GetQuadratureScheme( ref_elem_domain, elem_degree + 1, quadrature_basis );
+    
+    num_elements = spline.GetNumElements();
+    for elem_id = 1 : num_elements
+        elem_domain = spline.GetElementDomain( elem_id );
+        elem_degree = spline.GetElementDegree( elem_id );
+        elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( elem_id );
+        elem_coeffs = coefficients( elem_basis_ids );
+        xi = ChangeOfVariable( x, ref_elem_domain, elem_domain );
+        jacobian = diff( xi, x, 1 );
+        elem_quad_int = sym( 0 );
+        for ii = 1 : length( elem_x_qp )
+            elem_quad_int = elem_quad_int + sum( subs( elem_coeffs .* ref_elem_basis * jacobian, x, elem_x_qp(ii) ) ) * elem_w_qp(ii);
+        end
+    quad_int = quad_int + elem_quad_int
+    end
+end
+```
 
 ```{matlab}
 %| output: true
+%| echo: false
+clear
 x = sym( "x", "real" );
 basis_name = "Lagrange";
 num_elements = 4;
@@ -242,27 +285,21 @@ spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
 spline = Spline( spline_space );
 num_coeffs = numel( spline.basis );
 
-%coeffs = [1; 2; 2.5; 2; 1];
-%coeffs = [1; 2; 1; 2; 1; 2; 1; 2; 1];
-coeffs = subs( real( x^x ), x, linspace( domain(1), domain(2), num_coeffs ).' )
-piecewise_polynomial = transpose( coeffs ) * spline.basis;
-int( piecewise_polynomial, domain )
+coefficients = subs( real( x^x ), x, linspace( domain(1), domain(2), num_coeffs ).' );
+piecewise_polynomial = transpose( coefficients ) * spline.basis;
+piecewise_polynomial = symfun( piecewise_polynomial, x );
+```
 
-figure
-fplot( piecewise_polynomial, double( domain ), LineWidth=3 )
-xline( double( vertices ), LineWidth=1, LineStyle=":" )
-axis padded
-%ax = gca;
-%ax.YLim = [0, 3];
+```{matlab}
+%| output: true
+%| echo: false
 
 quad_int = sym( 0 );
-x_qp = [];
-w_qp = [];
 for elem_id = 1 : num_elements
     elem_domain = spline.GetElementDomain( elem_id );
     elem_degree = spline.GetElementDegree( elem_id );
     elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( elem_id );
-    elem_coeffs = coeffs( elem_basis_ids );
+    elem_coeffs = coefficients( elem_basis_ids );
     ref_elem_domain = GetPolynomialReferenceElementDomain( basis_name );
     ref_elem_basis = PolynomialBasisFunction( "Lagrange", elem_degree, x, ref_elem_domain );
     [elem_x_qp, elem_w_qp] = GetQuadratureScheme( ref_elem_domain, elem_degree + 1, "Lagrange" );
@@ -272,13 +309,79 @@ for elem_id = 1 : num_elements
     for ii = 1 : length( elem_x_qp )
         elem_quad_int = elem_quad_int + sum( subs( elem_coeffs .* ref_elem_basis * jacobian, x, elem_x_qp(ii) ) ) * elem_w_qp(ii);
     end
-    quad_int = quad_int + elem_quad_int
+    quad_int = quad_int + elem_quad_int;
+end
+```
+
+
+```{matlab}
+%| output: true
+%| echo: false
+figure
+cmap = lines( num_elements );
+
+for elem_id = 1 : num_elements
+    elem_domain = spline.GetElementDomain( elem_id );
+    elem_degree = spline.GetElementDegree( elem_id );
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( elem_id );
+    elem_coeffs = coefficients( elem_basis_ids );
+    ref_elem_domain = GetPolynomialReferenceElementDomain( basis_name );
+    ref_elem_basis = PolynomialBasisFunction( "Lagrange", elem_degree, x, ref_elem_domain );
+    [elem_x_qp, elem_w_qp] = GetQuadratureScheme( ref_elem_domain, elem_degree + 1, "Lagrange" );
+    xi = ChangeOfVariable( x, ref_elem_domain, elem_domain );
+    elem_quad_int = sym( 0 );
+    jacobian = diff( xi, x, 1 );
+    subplot( num_elements, 3, elem_id + (2 * (elem_id - 1 ) ) )
+    hold on
+    fplot( subs( piecewise_polynomial, x, xi ), double( ref_elem_domain ), SeriesIndex=elem_id, LineWidth=3 )
+    PlotQuadrature( double( elem_x_qp ), double( elem_w_qp ), double( elem_coeffs ), cmap(elem_id,:) )
+    ylim( [0, 1] )
 end
 
-%PlotQuadrature( double( x_qp ), double( w_qp ), double( subs( piecewise_polynomial, x, x_qp.' ) ) )
-%elem_int = sym( 0 );
-%for ii = 1 : length( x_qp )
-%    elem_int = elem_int + ( w_qp(ii) * subs( piecewise_polynomial, x, x_qp(ii) ) );
-%end
-%quad_int = quad_int + elem_int;
+subplot( num_elements, 3, sub2ind( [3, num_elements], [2; 3; 2; 3; 2; 3; 2; 3].', [1; 1; 2; 2; 3; 3; 4; 4].' ) )
+hold on
+for elem_id = 1 : num_elements
+    elem_domain = spline.GetElementDomain( elem_id );
+    elem_domain = spline.GetElementDomain( elem_id );
+    elem_degree = spline.GetElementDegree( elem_id );
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( elem_id );
+    elem_coeffs = coefficients( elem_basis_ids );
+    ref_elem_domain = GetPolynomialReferenceElementDomain( basis_name );
+    ref_elem_basis = PolynomialBasisFunction( "Lagrange", elem_degree, x, ref_elem_domain );
+    [elem_x_qp, elem_w_qp] = GetQuadratureScheme( ref_elem_domain, elem_degree + 1, "Lagrange" );
+    elem_x_qp = ChangeOfVariable( elem_x_qp, ref_elem_domain, elem_domain );
+    jacobian = diff( xi, x, 1 );
+    elem_w_qp = jacobian .* elem_w_qp;
+    fplot( piecewise_polynomial, double( elem_domain ), SeriesIndex=elem_id, LineWidth=3 )
+    PlotQuadrature( double( elem_x_qp ), double( elem_w_qp ), double( elem_coeffs ), cmap(elem_id,:) )
+end
+xline( double( vertices ), LineWidth=1, LineStyle=":" )
+ylim( [0, 1] )
 ```
+
+## Comparing quadrature methods
+
+Compare all three figures produced by each quadrature technique --- do you see how they're functionally the same operation?
+So, why might we choose one approach over the other?
+
+* Linear moment-fitting
+  * Pros
+    * After precomputation of global basis functions and quadrature, fewest number of operations to compute integral.
+    * After precomputation of quadrature scheme, easy to implement and reason about.
+    * Jacobian evaluations not necessary to evaluate quadrature.
+  * Cons
+    * Requires precomputation of quadrature scheme, which includes a relatively expensive linear / least-squares solve.
+    * Precompuation has several practical and numerical challenges that complicate implementation.
+* Piecewise polynomial quadrature
+  * Pros
+    * Simpler precomputation of the quadrature scheme than moment-fitting approaches.
+    * Jacobian evaluations not necessary to evaluate quadrature.
+  * Cons
+    * Unique quadrature scheme for each element that doesn't allow for hard-coding of a quadrature scheme.
+* Reference element quadrature
+  * Pros
+    * Only need to evaluate basis functions on identical reference elements, allowing for hard-coded quadrature schemes that are efficient.
+    * Supports the "element point-of-view" long preferred in finite element methods.
+    * Relatively easy to implement.
+  * Cons
+    * Requires computing the Jacobian for each element -- at each quadrature point for nonlinear Jacobians.

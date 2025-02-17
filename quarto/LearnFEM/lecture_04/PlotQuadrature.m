@@ -1,9 +1,11 @@
-function PlotQuadrature( qp, weights, func_vals )
+function PlotQuadrature( qp, weights, func_vals, color_style )
     num_qp = length( qp );
     verts = [];
     faces = zeros( num_qp, 5 );
-    colors = zeros( num_qp, 1, 3 );
-    cmap = lines(2);
+    if nargin == 3 || ( isstring( color_style ) && strcomp( color_style, "default" ) )
+        colors = zeros( num_qp, 1, 3 );
+        cmap = lines(2);
+    end
     for ii = 1 : length( qp )
         verts = [ verts; 
                   [ qp(ii) + weights(ii) / 2, 0 ];
@@ -12,7 +14,9 @@ function PlotQuadrature( qp, weights, func_vals )
                   [ qp(ii) - weights(ii) / 2, 0 ];
                 ];
         faces(ii,:) = (4*(ii-1)) + [1:4 1];
-        colors(ii,1,:) = cmap( ( func_vals(ii) < 0 ) + 1, : );
+        if nargin == 3 || ( isstring( color_style ) && strcomp( color_style, "default" ) )
+            colors(ii,1,:) = cmap( ( func_vals(ii) < 0 ) + 1, : );
+        end
     end
 
     ax = gca;
@@ -22,9 +26,13 @@ function PlotQuadrature( qp, weights, func_vals )
     P = patch( NaN, NaN, NaN );
     P.Vertices = verts;
     P.Faces = faces;
-    P.CData = colors;
+    if nargin == 3 || ( isstring( color_style ) && strcomp( color_style, "default" ) )
+        P.CData = colors;
+        P.FaceColor = "flat";
+    else
+        P.FaceColor = color_style;
+    end
     P.FaceAlpha = 0.5;
-    P.FaceColor = "flat";
     P.EdgeColor = "k";
     
     

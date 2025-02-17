@@ -15,6 +15,26 @@ Chances are that you have a pretty good basic understanding of polynomials, you 
 But you may not have considered polynomials as being a vector space, of each polynomial function being describable as a linear combination of coefficients and a polynomial basis.
 Let's investigate.
 
+```{matlab}
+%| output: false
+function domain = GetPolynomialReferenceElementDomain( basis_name )
+    switch basis_name
+        case "Bernstein"
+            domain = [0, 1];
+        case "Chebyshev"
+            domain = [-1, 1];
+        case "Lagrange"
+            domain = [-1, 1];
+        case "Legendre"
+            domain = [-1, 1];
+        case "Lagrange-Legendre"
+            domain = [-1, 1];
+        case "Monomial"
+            domain = [0, 1];
+    end
+end
+```
+
 ## The Monomial Basis
 The polynomial basis probably most familiar to the reader is the *monomial basis*, sometimes called the *power basis*.
 

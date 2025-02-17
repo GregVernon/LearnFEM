@@ -225,26 +225,6 @@ which we can then integrate, at least approximately, with a quadrature scheme of
 Note that we were able to pull the Jacobian, $\frac{x_1 - x_0}{\xi_1 - \xi_0}$ out of the integral because our change of variable mapping is linear.
 In general finite element analysis, this is often not the case and the Jacobian would need to be evaluated at each quadrature point.
 
-```{matlab}
-%| output: false
-function domain = GetPolynomialReferenceElementDomain( basis_name )
-    switch basis_name
-        case "Bernstein"
-            domain = [0, 1];
-        case "Chebyshev"
-            domain = [-1, 1];
-        case "Lagrange"
-            domain = [-1, 1];
-        case "Legendre"
-            domain = [-1, 1];
-        case "Lagrange-Legendre"
-            domain = [-1, 1];
-        case "Monomial"
-            domain = [0, 1];
-    end
-end
-```
-
 
 ```{matlab}
 %| output: false

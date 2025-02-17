@@ -1,0 +1,20 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+addpath( "../lecture_02/" )
+addpath( "../lecture_03/" )
+```
+
+# Enhancing the Galerkin Method: Numerical Computation
+
+As mentioned at the beginning of the previous chapter, the symbolic approach to computation allowed us write clear and concise code and elucidated for us the surprisingly simple mathematics of the Galerkin method.
+However, even using the quadrature techniques for more efficient integration, what we've implemented thus far is still far, far too slow to apply to complex engineering problems encountered in practice.
+Thus we now turn our focus to converting our symbolic codebase into a numerical code base.

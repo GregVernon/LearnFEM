@@ -59,6 +59,10 @@ book:
         - lecture_04/gauss_quadrature.qmd
         - lecture_04/moment_fitting.qmd
         - lecture_04/spline_quadrature.qmd
+    - part: lecture_05/intro.qmd
+      chapters:
+        - lecture_05/numerical_core_algorithms.qmd
+    
     # - summary.qmd
     # - references.qmd
 

@@ -17,7 +17,7 @@ Let's investigate.
 
 ```{matlab}
 %| output: false
-function domain = GetPolynomialReferenceElementDomain( basis_name )
+function domain = GetPolynomialParametricDomain( basis_name )
     switch basis_name
         case "Bernstein"
             domain = [0, 1];
@@ -41,7 +41,8 @@ The polynomial basis probably most familiar to the reader is the *monomial basis
 ```{matlab}
 %| output: false
 function basis = MonomialBasis( degree, variate, domain )
-    variate = ChangeOfVariable( variate, domain, [0, 1] );
+    param_domain = GetPolynomialParametricDomain( "Monomial" )
+    variate = ChangeOfVariable( variate, domain, param_domain );
     basis = sym( zeros( degree + 1, 1 ) );
     for ii = 1 : degree + 1
         basis(ii) = variate^( ii - 1 );
@@ -223,7 +224,8 @@ Note that the Bernstein basis is usually defined over the unit domain $[0,1]$.
 ```{matlab}
 %| output: false
 function basis = BernsteinBasis( degree, variate, domain )
-    variate = ChangeOfVariable( variate, domain, [0 1] );
+    param_domain = GetPolynomialParametricDomain( "Bernstein" )
+    variate = ChangeOfVariable( variate, domain, param_domain );
     basis = sym( zeros( degree + 1, 1 ) );
     for a=0:degree
         basis(a+1) = nchoosek( degree, a ) * ( variate ^ a ) * ( ( 1 - variate ) ^ ( degree - a ) );
@@ -300,21 +302,22 @@ For now, it's enough to know that this orthogonality property provides a number 
 
 ```{matlab}
 %| output: false
-function basis = LegendreBasis( degree, variate, domain )
-variate = ChangeOfVariable( variate, domain, [-1, 1] );
-basis = sym( zeros( degree + 1, 1 ) );
-for ii = 0 : degree
-    if ii == 0
-        basis(ii+1) = variate ^ 0 ;
-    elseif ii == 1
-        basis(ii+1) = variate ^ 1;
-    else
-        n = ii - 1;
-        term1 = ( 2 * n + 1 ) * variate * basis(n+1);
-        term2 = n * basis(n);
-        basis(ii+1) = simplify ( ( term1 - term2 ) / ( n + 1 ) );
+function basis = LegendreBasis( degree, variate, domain )\
+    param_domain = GetPolynomialParametricDomain( "Legendre" )
+    variate = ChangeOfVariable( variate, domain, param_domain );
+    basis = sym( zeros( degree + 1, 1 ) );
+    for ii = 0 : degree
+        if ii == 0
+            basis(ii+1) = variate ^ 0 ;
+        elseif ii == 1
+            basis(ii+1) = variate ^ 1;
+        else
+            n = ii - 1;
+            term1 = ( 2 * n + 1 ) * variate * basis(n+1);
+            term2 = n * basis(n);
+            basis(ii+1) = simplify ( ( term1 - term2 ) / ( n + 1 ) );
+        end
     end
-end
 end
 ```
 
@@ -389,7 +392,8 @@ Due to various transliterations of its namesake, [Pafnuty Chebyshev](https://en.
 ```{matlab}
 %| output: false
 function basis = ChebyshevBasis( degree, variate, domain )
-    variate = ChangeOfVariable( variate, domain, [-1, 1] );
+    param_domain = GetPolynomialParametricDomain( "Chebyshev" )
+    variate = ChangeOfVariable( variate, domain, param_domain );
     basis = sym( zeros( degree + 1, 1 ) );
     for ii = 0 : degree
         if ii == 0

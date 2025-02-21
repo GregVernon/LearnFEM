@@ -7,10 +7,168 @@ jupyter: mkernel
 clear
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
 ```
 
 # Numerical Computations
 
-## Basis Functions
+## Evaluating Basis Functions
+Let's evaluate the performance gains that can be achieved using numerical computations.
+As basis functions are at the heart of Galerkin methods, such as FEM, let's begin by evaluating them.
+We begin by slightly modifying one of our original basis functions, such that it will perform either symbolic or numerical computations based on the type of input it receives.
 
-## Quadrature
+```{matlab}
+%| output: false
+function basis = BernsteinBasis( degree, variate, domain )
+    assert( strcmpi( class( variate ), class( domain ) ) )
+    param_domain = GetPolynomialParametricDomain( "Bernstein" );
+    variate = ChangeOfVariable( variate, domain, param_domain );
+    basis = zeros( degree + 1, 1, class( variate ) );
+    for a=0:degree
+        basis(a+1) = nchoosek( degree, a ) * ( variate ^ a ) * ( ( 1 - variate ) ^ ( degree - a ) );
+    end
+end
+```
+
+One strategy for improving the performance of functions that are called many times, is to *cache* (aka *memoize*) the outputs of the function for each unique input combination.
+Caching results is preferred for cases where evaluating the function is expensive compared to accessing stored values in memory.
+Because the cached values are stored in memory, this approach is not ideal for cases where exceedingly many combinations of inputs might be evaluated.
+However, consider that, as we wish to perform numerical quadrature on parametric elements, we can know *a priori* a small fixed set of input combinations that we wish to evaluate for any given basis function.
+In Matlab we can activate caching via the [`memoize`](https://www.mathworks.com/help/matlab/ref/memoize.html) function.
+
+```{matlab}
+%| output: true
+BernsteinBasisMemoized = memoize( @BernsteinBasis );
+```
+
+We can then compare the performance of evaluated vs cached symbolic computations.
+```{matlab}
+%| output: true
+
+degree = 1;
+x = sym( -1 / sqrt( 3 ) );
+domain = sym( [0, 1] );
+t1 = timeit( @()BernsteinBasis( degree, x, domain ) );
+t2 = timeit( @()BernsteinBasisMemoized( degree, x, domain ) );
+```
+
+```{matlab}
+%| output: true
+%| echo: false
+disp( "Evaluated Symbolic Computation: " + num2str( t1 ) + " seconds")
+disp( "Cached Symbolic Computation: " + num2str( t2 ) + " seconds")
+disp( "Cached is ~" + num2str( round( t1 / t2 ) ) + "x faster than evaluated symbolic" )
+```
+
+Any speedup of an order of magnitude (i.e., 10x) or greater is nothing to scoff at, but let's now compare against a numerical computation.
+
+```{matlab}
+%| output: true
+
+degree = 1;
+x =-1 / sqrt( 3 );
+domain = [0, 1];
+t3 = timeit( @()BernsteinBasis( degree, x, domain ) );
+t4 = timeit( @()BernsteinBasisMemoized( degree, x, domain ) );
+```
+
+```{matlab}
+%| output: true
+%| echo: false
+disp( "Evaluated Numerical Computation: " + num2str( t3 ) + " seconds")
+disp( "Cached Numerical Computation: " + num2str( t4 ) + " seconds")
+disp( "Evaluated numerical is ~" + num2str( round( t1 / t3 ) ) + "x faster than evaluated symbolic" )
+```
+
+Finally, we consider another option: rather than caching values automatically, let's instead use a hard-coded function that simply returns pre-computed values of the basis function at various quadrature points.
+Note that, while we could cache this function, there is really no need to cache functions with hard-coded return values with minimal evaluations.
+
+
+```{matlab}
+%| output: false
+function val = BernsteinBasisLegendreQuadrature( degree, num_qp, qp_idx )
+    if degree == 1
+        val = [ 0.5; 0.5 ];
+    elseif degree == 2
+        if num_qp == 1
+            val = [ 0.25; 0.5; 0.25 ];
+        elseif num_qp == 2
+            val = [ 0.622008467928146, 0.044658198738520;
+                    0.333333333333333, 0.333333333333333;
+                    0.044658198738520, 0.622008467928146 ];
+            val = val(:, qp_idx );
+        end
+    elseif degree == 3
+        if num_qp == 1
+            val = [ 0.125; 0.375; 0.375; 0.125 ];
+        elseif num_qp == 2
+            val = [ 0.490562612162344, 0.009437387837656;
+                    0.394337567297406, 0.105662432702594;
+                    0.105662432702594, 0.394337567297406;
+                    0.009437387837656, 0.490562612162344 ];
+            val = val(:, qp_idx );
+        end
+    elseif degree == 4
+        if num_qp == 1
+            val = [ 0.0625; 0.25; 0.375; 0.25; 0.0625 ];
+            val = val(:, qp_idx );
+        elseif num_qp == 2
+            val = [ 0.386894534174320, 0.001994354714569;
+                    0.414672311952097, 0.029772132492347;
+                    0.166666666666667, 0.166666666666667;
+                    0.029772132492347, 0.414672311952097;
+                    0.001994354714569, 0.386894534174320 ];
+            val = val(:, qp_idx );
+        elseif num_qp == 3
+            val = [ 0.619838667696593, 0.0625, 0.000161332303407;
+                    0.314919333848297, 0.2500, 0.005080666151703;
+                    0.060000000000000, 0.3750, 0.060000000000000;
+                    0.005080666151703, 0.2500, 0.314919333848297;
+                    0.000161332303407, 0.0625, 0.619838667696593 ];
+            val = val(:, qp_idx );
+        end
+    end
+end
+```
+
+
+```{matlab}
+%| output: true
+
+degree = 1;
+x =-1 / sqrt( 3 );
+domain = [0, 1];
+t5 = timeit( @()BernsteinBasisLegendreQuadrature( degree, 2, 1 ) );
+```
+
+As of Matlab 2024b the above test results in a warning that it is *too fast* for `timeit` to measure how long the function takes to run -- a good sign to be sure.
+Reviewing the source code for the `timeit` function reveals that it measures the time over 11 loops, discards the first evaluation to ignore "[Just In Time](https://blogs.mathworks.com/loren/2016/02/12/run-code-faster-with-the-new-matlab-execution-engine/#a10b1355-2da4-47e8-87b9-bac247d0b6a6)" (JIT) compilation time, and returns the median execution time from the remaining ten samples.
+If we instead write our own script that evaluates the function *one million* times and compute the *average* run time, we will at least get a number that will allow us to make a reasonable performance comparison.
+
+```{matlab}
+%| output: true
+
+degree = 1;
+x =-1 / sqrt( 3 );
+domain = [0, 1];
+val = BernsteinBasisLegendreQuadrature( degree, 2, 1 );
+num_evals = 1e6;
+tic;
+for n = 1 : num_evals
+    val = BernsteinBasisLegendreQuadrature( degree, 2, 1 );
+end
+tElapsed = toc;
+t5 = tElapsed / num_evals;
+```
+
+```{matlab}
+%| output: true
+%| echo: false
+disp( "Hard-coded Numerical Calcuation: " + num2str( t5 ) + " seconds")
+disp( "Evaluated numerical is ~" + num2str( round( t1 / t5 ) ) + "x faster than evaluated symbolic" )
+disp( "Hard-coded numerical is ~" + num2str( round( t4 / t5 ) ) + "x faster than evaluated numerical" )
+```
+
+Wow!
+This hard-coded function runs in ~15 *nanoseconds* on my machine, approximately *500x* faster than the evaluated numerical approach, and approximately *one million* times faster than the original symbolic approach.
+It is for this reason that many finite element codes hard-code quadrature schemes and related basis function values, and often result in code that can appear daunting for the initiate -- speed is king.

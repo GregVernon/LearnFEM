@@ -229,7 +229,7 @@ In general finite element analysis, this is often not the case and the Jacobian 
 ```{matlab}
 %| output: false
 function SplineQuadratureElement( spline, quadrature_basis )
-    ref_elem_domain = GetPolynomialReferenceElementDomain( quadrature_basis );
+    ref_elem_domain = GetPolynomialParametricDomain( quadrature_basis );
     ref_elem_basis = PolynomialBasisFunction( quadrature_basis, elem_degree, x, ref_elem_domain );
     [elem_x_qp, elem_w_qp] = GetQuadratureScheme( ref_elem_domain, elem_degree + 1, quadrature_basis );
     
@@ -280,7 +280,7 @@ for elem_id = 1 : num_elements
     elem_degree = spline.GetElementDegree( elem_id );
     elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( elem_id );
     elem_coeffs = coefficients( elem_basis_ids );
-    ref_elem_domain = GetPolynomialReferenceElementDomain( basis_name );
+    ref_elem_domain = GetPolynomialParametricDomain( basis_name );
     ref_elem_basis = PolynomialBasisFunction( "Lagrange", elem_degree, x, ref_elem_domain );
     [elem_x_qp, elem_w_qp] = GetQuadratureScheme( ref_elem_domain, elem_degree + 1, "Lagrange" );
     xi = ChangeOfVariable( x, ref_elem_domain, elem_domain );
@@ -305,7 +305,7 @@ for elem_id = 1 : num_elements
     elem_degree = spline.GetElementDegree( elem_id );
     elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( elem_id );
     elem_coeffs = coefficients( elem_basis_ids );
-    ref_elem_domain = GetPolynomialReferenceElementDomain( basis_name );
+    ref_elem_domain = GetPolynomialParametricDomain( basis_name );
     ref_elem_basis = PolynomialBasisFunction( "Lagrange", elem_degree, x, ref_elem_domain );
     [elem_x_qp, elem_w_qp] = GetQuadratureScheme( ref_elem_domain, elem_degree + 1, "Lagrange" );
     xi = ChangeOfVariable( x, ref_elem_domain, elem_domain );
@@ -326,7 +326,7 @@ for elem_id = 1 : num_elements
     elem_degree = spline.GetElementDegree( elem_id );
     elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( elem_id );
     elem_coeffs = coefficients( elem_basis_ids );
-    ref_elem_domain = GetPolynomialReferenceElementDomain( basis_name );
+    ref_elem_domain = GetPolynomialParametricDomain( basis_name );
     ref_elem_basis = PolynomialBasisFunction( "Lagrange", elem_degree, x, ref_elem_domain );
     [elem_x_qp, elem_w_qp] = GetQuadratureScheme( ref_elem_domain, elem_degree + 1, "Lagrange" );
     elem_x_qp = ChangeOfVariable( elem_x_qp, ref_elem_domain, elem_domain );

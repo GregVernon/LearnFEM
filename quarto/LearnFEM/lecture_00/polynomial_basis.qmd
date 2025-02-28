@@ -302,7 +302,7 @@ For now, it's enough to know that this orthogonality property provides a number 
 
 ```{matlab}
 %| output: false
-function basis = LegendreBasis( degree, variate, domain )\
+function basis = LegendreBasis( degree, variate, domain )
     param_domain = GetPolynomialParametricDomain( "Legendre" );
     variate = ChangeOfVariable( variate, domain, param_domain );
     basis = sym( zeros( degree + 1, 1 ) );

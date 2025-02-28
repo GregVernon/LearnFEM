@@ -362,6 +362,32 @@ m_coeffs = sym( [-1; 1; 4; 0; -1] );
 M = PolynomialBasisFunction( "Monomial", 4, x, domain );
 L = PolynomialBasisFunction( "Lagrange", 4, x, domain );
 [l_coeffs, R] = PolynomialChangeOfBasis( M, L, m_coeffs, domain );
-display( l_coeffs )
-display( R )
+```
+
+```{=latex}
+\begin{equation*}
+    \Vector{\ell}
+    = 
+    \begin{bmatrix}
+        -1 \\
+        -\frac{129}{256} \\
+        \frac{7}{16} \\
+        \frac{431}{256} \\
+        3
+    \end{bmatrix}
+\end{equation*}
+```
+
+```{=latex}
+\begin{equation*}
+    \Matrix{R} 
+    = 
+    \begin{bmatrix}
+        1 & 0               & 0               & 0                & 0 \\
+        1 & \frac{64}{256}  & \frac{16}{256}  & \frac{4}{256}    & \frac{1}{256} \\
+        1 & \frac{128}{256} & \frac{64}{256}  & \frac{32}{256}   & \frac{16}{256} \\
+        1 & \frac{192}{256} & \frac{144}{256} & \frac{108}{256}  & \frac{81}{256} \\
+        1 & 1               & 1               & 1                & 1 \\
+    \end{bmatrix}
+\end{equation*}
 ```

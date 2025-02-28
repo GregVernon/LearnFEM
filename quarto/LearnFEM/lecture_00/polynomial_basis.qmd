@@ -41,7 +41,7 @@ The polynomial basis probably most familiar to the reader is the *monomial basis
 ```{matlab}
 %| output: false
 function basis = MonomialBasis( degree, variate, domain )
-    param_domain = GetPolynomialParametricDomain( "Monomial" )
+    param_domain = GetPolynomialParametricDomain( "Monomial" );
     variate = ChangeOfVariable( variate, domain, param_domain );
     basis = sym( zeros( degree + 1, 1 ) );
     for ii = 1 : degree + 1
@@ -224,7 +224,7 @@ Note that the Bernstein basis is usually defined over the unit domain $[0,1]$.
 ```{matlab}
 %| output: false
 function basis = BernsteinBasis( degree, variate, domain )
-    param_domain = GetPolynomialParametricDomain( "Bernstein" )
+    param_domain = GetPolynomialParametricDomain( "Bernstein" );
     variate = ChangeOfVariable( variate, domain, param_domain );
     basis = sym( zeros( degree + 1, 1 ) );
     for a=0:degree
@@ -303,7 +303,7 @@ For now, it's enough to know that this orthogonality property provides a number 
 ```{matlab}
 %| output: false
 function basis = LegendreBasis( degree, variate, domain )\
-    param_domain = GetPolynomialParametricDomain( "Legendre" )
+    param_domain = GetPolynomialParametricDomain( "Legendre" );
     variate = ChangeOfVariable( variate, domain, param_domain );
     basis = sym( zeros( degree + 1, 1 ) );
     for ii = 0 : degree
@@ -392,7 +392,7 @@ Due to various transliterations of its namesake, [Pafnuty Chebyshev](https://en.
 ```{matlab}
 %| output: false
 function basis = ChebyshevBasis( degree, variate, domain )
-    param_domain = GetPolynomialParametricDomain( "Chebyshev" )
+    param_domain = GetPolynomialParametricDomain( "Chebyshev" );
     variate = ChangeOfVariable( variate, domain, param_domain );
     basis = sym( zeros( degree + 1, 1 ) );
     for ii = 0 : degree

@@ -1,0 +1,127 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+```
+
+# Dirac Delta Function
+
+## Definition
+The Dirac delta function is a rather curious, yet incredibly important function with broad applicability in mathematics and physics.
+
+```{=latex}
+\begin{equation}
+    \DiracDelta{x}{a} = w(x) \Inner{a}{x}
+\end{equation}
+```
+
+where $w(x)$ is a *weight* function[^1].
+The Dirac delta function has the property where, for a smooth function $f(x)$ has the property
+
+```{=latex}
+\begin{equation}
+    \int_{-\infty}^{\infty}{ f(x) \DiracDelta{x}{a} \d x } = f(a)
+\end{equation}
+```
+
+We note that this can be equivalently written in inner product form
+
+```{=latex}
+\begin{equation}
+    \int_{-\infty}^{\infty}{ f(x) \DiracDelta{x}{a} \d x } \equiv \Inner{f(x)}{\DiracDelta{x}{a}}_{\Real}
+\end{equation}
+```
+
+## Example: Constant $f(x)$
+
+First we consider the case where $f(x) = 1$ -- i.e., $f(x)$ is a constant.
+Let us also assume that $a = 1$.
+
+```{=latex}
+\begin{align*}
+    \Inner{1}{\DiracDelta{x}{1}}_{\Real} = 1
+\end{align*}
+```
+
+```{matlab}
+%| echo: false
+
+clear
+a = 1;
+x = sym( "x", "real" );
+f(x) = x^0;
+domain = [-3, 3];
+
+figure
+subplot( 2, 1, 1 )
+fplot( f, domain, LineWidth=4, SeriesIndex=1 )
+ylabel( "$f(x)$" )
+grid on
+axis padded
+ax = gca;
+ax.XLim = domain;
+
+subplot( 2, 1, 2 )
+hold on
+plot( domain, [0 0], LineWidth=4, SeriesIndex=1 )
+scatter( a, 1, SizeData=60, Marker="o", MarkerFaceColor="flat", MarkerEdgeColor="none", LineWidth=2, SeriesIndex=1 )
+scatter( a, 0, SizeData=60, Marker="o", MarkerFaceColor="white", MarkerEdgeColor="flat", LineWidth=2, SeriesIndex=1 )
+axis padded
+xlabel( "x" )
+ylabel( "$\delta( x - 1 )$" )
+ax = gca;
+ax.XLim = domain;
+ax.YTick = [0, 1];
+ax.YTickLabel = ["0", "$\infty$"];
+```
+
+## Example: Polynomial $f(x)$
+
+Next we consider the case where $f(x) = x^2 + x$ -- i.e., $f(x)$ is a constant.
+Let us also assume that $a = 1$.
+
+```{=latex}
+\begin{align*}
+    \Inner{x^2 + x }{\DiracDelta{x}{1}}_{\Real} = 2
+\end{align*}
+```
+
+```{matlab}
+%| echo: false
+
+clear
+a = 1;
+x = sym( "x", "real" );
+f(x) = x^2 + x;
+domain = [-3, 3];
+
+figure
+subplot( 2, 1, 1 )
+fplot( f, domain, LineWidth=4, SeriesIndex=1 )
+ylabel( "$f(x)$" )
+grid on
+axis padded
+ax = gca;
+ax.XLim = domain;
+
+subplot( 2, 1, 2 )
+hold on
+plot( domain, [0 0], LineWidth=4, SeriesIndex=1 )
+scatter( a, 1, SizeData=60, Marker="o", MarkerFaceColor="flat", MarkerEdgeColor="none", LineWidth=2, SeriesIndex=1 )
+scatter( a, 0, SizeData=60, Marker="o", MarkerFaceColor="white", MarkerEdgeColor="flat", LineWidth=2, SeriesIndex=1 )
+axis padded
+xlabel( "x" )
+ylabel( "$\delta( x - 1 )$" )
+ax = gca;
+ax.XLim = domain;
+ax.YTick = [0, 1];
+ax.YTickLabel = ["0", "$\infty$"];
+```
+
+
+[^1]: A strictly positive real-valued function.

@@ -33,6 +33,7 @@ book:
         - lecture_00/polynomial_basis.qmd
         - lecture_00/inner_products.qmd
         - lecture_00/change_of_basis.qmd
+        - lecture_00/dirac_delta_function.qmd
     - part: lecture_01/intro.qmd
       chapters:
         - lecture_01/galerkin_function_approximation.qmd
@@ -88,6 +89,7 @@ format:
               Vector: ["\\boldsymbol{\\mathit{#1}}", 1],
               Matrix: ["\\boldsymbol{\\mathrm{#1}}", 1],
               ChangeBasisOp: ["\\Matrix{R}_{\\tiny{\\Matrix{#1} \\rightarrow \\Matrix{#2}}}", 2],
+              DiracDelta: ["\\delta\\left( #1 - #2 \\right)", 2],
               defequals: ["\\stackrel{\\text{def}}{=}"],
               d: ["\\mathop{}\\!{d{#1}}", 1],
               p: ["\\mathop{}\\!{\partial{#1}}", 1],
@@ -118,6 +120,7 @@ format:
         \newcommand{\Vector}[1]{\mathbf{\mathit{#1}}}
         \newcommand{\Matrix}[1]{\boldsymbol{\mathrm{#1}}}
         \newcommand{\ChangeBasisOp}[2]{\Matrix{R}_{\tiny{\Matrix{#1}\rightarrow \Matrix{#2}}}}
+        \newcommand{\DiracDelta}[2]{ \delta\left( #1 - #2 \right) }
         \newcommand{\defequals}{\stackrel{\text{def}}{=}}
         \newcommand{\d}{\mathop{}\!{d}}
         \newcommand{\p}{\mathop{}\!{\partial}}

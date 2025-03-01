@@ -10,10 +10,15 @@ setappdata(0, "MKernel_plot_format", "svg")
 ```
 
 # Polynomial Basis
+
 What is a polynomial?
 Chances are that you have a pretty good basic understanding of polynomials, you know a polynomial when you see it.
 But you may not have considered polynomials as being a vector space, of each polynomial function being describable as a linear combination of coefficients and a polynomial basis.
-Let's investigate.
+
+## Parametric Domains of Polynomial Basis
+When working with polynomial bases there is often reference to a *parametric domain* for the basis.
+The bases themselves are defined over the entirety of the real number line[^1], however the algorithms used to construct the canonical forms of each polynomial basis either depend on a finite domain or, as in the case of the monomial basis, result in a simple range for the basis functions.
+We provide here a function that will be referenced in the construction of each polynomial basis, but we leave the discussion of each basis's parametric domain to their respective section.
 
 ```{matlab}
 %| output: false

@@ -29,13 +29,32 @@ The Dirac delta function has the property where, for a smooth function $f(x)$ ha
 \end{equation}
 ```
 
-We note that this can be equivalently written in inner product form
+We note that this property can be equivalently written in inner product form
 
 ```{=latex}
 \begin{equation}
-    \int_{-\infty}^{\infty}{ f(x) \DiracDelta{x}{a} \d x } \equiv \Inner{f(x)}{\DiracDelta{x}{a}}_{\Real}
+    \Inner{f(x)}{\DiracDelta{x}{a}}_{\Real} = f(a)
 \end{equation}
 ```
+
+Further note that in Matlab that, even though this inner product is integrated over the domain $x\in [-\infty, \infty]$, this inner product can be successfully evaluated using symbolic integration:
+
+
+```{matlab}
+a = 1;
+x = sym( "x", "real" );
+f = x^2 + sin( x );
+
+int( dirac( x - a ) * f, [-inf, inf] ) 
+```
+
+However, it is functionally equivalent to using the `subs` function:
+
+```{matlab}
+subs( f, x, a )
+```
+
+Recognize that this `subs` form "reads" differently than the property previously presented, it reads: "$f(x) evaluated at a."
 
 ## Example: Constant $f(x)$
 

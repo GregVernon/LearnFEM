@@ -12,6 +12,104 @@ addpath( "../lecture_00/" )
 
 # Incorporating Boundary Conditions in Galerkin's Method
 
+We previously showed the Galerkin method as being *the best* approximation of a function over a domain, which implies that there are *other* approximations of the function.
+We also observed that, because the approximation is merely trying to minimize the $L^2$ error over the entire domain, that there is no guarantee that it is the best approximation of the function at any arbitrary point.
+Indeed, for the approximation to be the "best approximation" of the function at any arbitrary point, it would have to be the best approximation at every point -- the approximation would need to be equivalent to the target function.
+
+But what if we only care about being the best approximation of the function at a few points, for example: at the boundaries of the domain?
+While this might itself seem arbitrary, consider that in real-world applications we often know the conditions at physical boundaries -- either through direct measurement or intuition.
+For example, we might directly measure the temperature of a device using thermal imaging or thermocouples, which measure temperature at the boundary of an object.
+Or we might safely assume that a long beam that is welded to a much stiffer object has zero displacement at the shared interface.
+Because these conditions are often applied on boundaries, they are historically called *boundary conditions*.
+
+We modify the Galerkin statement function from the previous section to include this desire to produce the best approximation of the function at its boundaries.
+
+```{=latex}
+\begin{equation}
+    \begin{alignedat}{2}
+        &\textrm{Given:}      & \quad g(x) &= \sin(\pi x)^2 + \cos(x) - 1 \\
+        &\textrm{Find:}       & \quad \tilde{g}(x) &\in \tilde{\mathcal{V}} \\
+        &\textrm{subject to:} & \quad \Inner{\tilde{\mathcal{V}}}{\tilde{g}(x)} &= \Inner{\tilde{\mathcal{V}}}{g(x)} \\
+        &\textrm{such that:}  & \quad \tilde{g}(0) &= g(0) \\
+        &                     & \quad \tilde{g}(1) &= g(1) \\
+    \end{alignedat}
+\end{equation}
+```
+
+We need to determine how to enforce our boundary conditions; it's not immediately clear how we could enforce the boundary conditions in general.
+But let's consider these under our change of basis perspective: we want to represent $g(0)$ and $g(1)$ in our finite basis:
+
+```{=latex}
+\begin{align}
+    %%%%%%%%%%%%%
+    %%% EQN 1 %%%
+    %%%%%%%%%%%%%
+    \Inner{\Matrix{T}}{\Matrix{T}} \Vector{t} &= \Inner{\Matrix{T}}{\Matrix{F}} \Vector{f} \\
+    %%%%%%%%%%%%%
+    %%% EQN 2 %%%
+    %%%%%%%%%%%%%
+    \begin{bmatrix}
+        \Inner{\Matrix{T}_1}{\Matrix{T}_1} & \cdots & \Inner{\Matrix{T}_1}{\Matrix{T}_n} \\
+        \vdots & \ddots & \vdots \\
+        \Inner{\Matrix{T}_n}{\Matrix{T}_1} & \cdots & \Inner{\Matrix{T}_m}{\Matrix{T}_n}
+    \end{bmatrix}
+    &=
+    \begin{bmatrix}
+        \Inner{\Matrix{T}_1}{g(0)} \\
+        \vdots \\
+        \Inner{\Matrix{T}_m}{g(0)}
+    \end{bmatrix}
+\end{align}
+```
+
+Where the "To"-basis is our chosen polynomial basis *evaluated* at the boundary condition, which we can represent using the Dirac delta function:
+
+```{=latex}
+\begin{equation}
+    \Matrix{T}_{\Index{i}} = \Inner{\Matrix{M}_{\Index{i}}}{\DiracDelta{x}{0}}
+\end{equation}
+```
+
+And thus the boundary condition at $x=0$ can be written as
+
+```{=latex}
+\begin{align*}
+    \begin{bmatrix} 
+        \Inner{\Matrix{T}_{\Index{i}}}{\Matrix{T}_{\Index{j}}}
+    \end{bmatrix}
+    &=
+    \begin{bmatrix}
+        \Inner{ \Inner{ \Matrix{M}_{\Index{i}} }{\DiracDelta{x}{0}} }{ \Inner{ \Matrix{M}_{\Index{j}} }{\DiracDelta{x}{0}} }
+    \end{bmatrix} \\
+    %%%%%%
+    \begin{bmatrix} 
+        \Inner{\Matrix{T}_{\Index{i}}}{g(0)}
+    \end{bmatrix}
+    &=
+    \begin{bmatrix}
+        \Inner{ \Inner{ \Matrix{M}_{\Index{i}} }{\DiracDelta{x}{0}} }{ g(0) }
+    \end{bmatrix}
+\end{align*}
+```
+
+<!-- ```{=latex}
+\begin{equation}
+    \begin{split}
+        \begin{bmatrix}
+            \Inner{ \Inner{ \Matrix{M}_{\Index{1}} }{\DiracDelta{x}{0}} }{ \Inner{ \Matrix{M}_{\Index{1}} }{\DiracDelta{x}{0}} } & \cdots & \Inner{ \Inner{ \Matrix{M}_{\Index{1}} }{\DiracDelta{x}{0}} }{ \Inner{ \Matrix{M}_{\Index{1}} }{\DiracDelta{x}{0}} } \\
+            \vdots & \ddots & \vdots \\
+            \Inner{ \Inner{ \Matrix{M}_{\Index{1}} }{\DiracDelta{x}{0}} }{ \Inner{ \Matrix{M}_{\Index{1}} }{\DiracDelta{x}{0}} } & \cdots & \Inner{ \Inner{ \Matrix{M}_{\Index{1}} }{\DiracDelta{x}{0}} }{ \Inner{ \Matrix{M}_{\Index{1}} }{\DiracDelta{x}{0}} }
+        \end{bmatrix} \\
+        =
+        \begin{bmatrix}
+            \Inner{\Matrix{T}_1}{g(0)} \\
+            \vdots \\
+            \Inner{\Matrix{T}_m}{g(0)}
+        \end{bmatrix}
+    \end{split}
+\end{equation}
+``` -->
+
 
 ```{matlab}
 %| output: false
@@ -28,12 +126,12 @@ function [u, D, F, basis, d] = ScalarProjection( target_fun, basis_name, degree,
 
     function [D, F] = ApplyBoundaryConditions( D, F )
         function [D, F] = LeftFunctionValue( D, F )
-            D = D + subs( basis .* transpose( basis ), variate, domain(1) );
-            F = F + subs( basis * target_fun, variate, domain(1) );
+            D = D + int( dirac( variate - domain(1) ) * ( basis .* transpose( basis ) ), [-inf, inf] );
+            F = F + int( ( dirac( variate - domain(1) ) * basis ) * ( dirac( variate - domain(1) ) * target_fun ), [-inf, inf] );
         end
         function [D, F] = RightFunctionValue( D, F )
-            D = D + subs( basis .* transpose( basis ), variate, domain(2) );
-            F = F + subs( basis * target_fun, variate, domain(2) );
+            D = D + int( dirac( variate - domain(2) ) * ( basis .* transpose( basis ) ), [-inf, inf] );
+            F = F + int( basis * ( dirac( variate - domain(2) ) * target_fun ), [-inf, inf] );
         end
         [D, F] = LeftFunctionValue( D, F );
         [D, F] = RightFunctionValue( D, F );

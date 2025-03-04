@@ -90,6 +90,7 @@ format:
               Matrix: ["\\boldsymbol{\\mathrm{#1}}", 1],
               ChangeBasisOp: ["\\Matrix{R}_{\\tiny{\\Matrix{#1} \\rightarrow \\Matrix{#2}}}", 2],
               DiracDelta: ["\\delta\\left( #1 - #2 \\right)", 2],
+              DiracDeltaShort: ["\\delta^{#1}_{#2}", 2],
               defequals: ["\\stackrel{\\text{def}}{=}"],
               d: ["\\mathop{}\\!{d{#1}}", 1],
               p: ["\\mathop{}\\!{\partial{#1}}", 1],
@@ -121,6 +122,7 @@ format:
         \newcommand{\Matrix}[1]{\boldsymbol{\mathrm{#1}}}
         \newcommand{\ChangeBasisOp}[2]{\Matrix{R}_{\tiny{\Matrix{#1}\rightarrow \Matrix{#2}}}}
         \newcommand{\DiracDelta}[2]{ \delta\left( #1 - #2 \right) }
+        \newcommand{\DiracDeltaShort}[2]{ \delta^{#1}_{#2} }
         \newcommand{\defequals}{\stackrel{\text{def}}{=}}
         \newcommand{\d}{\mathop{}\!{d}}
         \newcommand{\p}{\mathop{}\!{\partial}}

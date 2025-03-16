@@ -40,9 +40,11 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
+
+      - name: Install pip requirements
         run: |
-        set MATLABROOT=${MATLAB_ROOT}
-        pip install -r mkernel_python_requirements.txt
+          set MATLABROOT=${MATLAB_ROOT}
+          pip install -r mkernel_python_requirements.txt
 
       - name: Render and Publish
         uses: quarto-dev/quarto-actions/publish@v2

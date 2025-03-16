@@ -20,11 +20,11 @@ jobs:
           cache: true
           release: R2024b
           register: true
-          products: >
-            Symbolic_Math_Toolbox
+          products: Symbolic_Math_Toolbox
 
       - name: Debug setup-matlab output
-        run: echo "setup-matlab output: ${{ steps.setup-matlab.outputs.matlab-root }}"
+        run: >
+          echo "setup-matlab output: ${{ steps.setup-matlab.outputs.matlab-root }}"
 
       - name: Build Matlab
         uses: matlab-actions/run-build@v2

@@ -45,7 +45,7 @@ jobs:
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${{ env.MATLAB_ROOT }}/bin/glnxa64
           echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
           python3 -m pip install jupyter
-          python3 -m pip install matlabengine==24.2.2
+          python3 -m pip install --no-cache-dir matlabengine==24.2.2
           python3 -m pip install git+https://github.com/allefeld/mkernel.git
         env:
           MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlab-root }}

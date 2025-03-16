@@ -40,7 +40,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - run: |
+        run: |
         set MATLABROOT=${MATLAB_ROOT}
         pip install -r mkernel_python_requirements.txt
 

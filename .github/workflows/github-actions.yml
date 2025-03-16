@@ -19,6 +19,7 @@ jobs:
       - name: Set MATLAB_ROOT
         run: >
           echo "MATLAB_ROOT=${{ env.steps.setup-matlab.outputs.matlabroot }}" >> $GITHUB_ENV
+          export MATLAB_ROOT="${{ steps.setup-matlab.outputs.matlab-root }}"
           echo ${{ steps.setup-matlab.outputs.matlabroot }}
           echo $MATLAB_ROOT
 

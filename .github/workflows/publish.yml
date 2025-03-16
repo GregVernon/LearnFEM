@@ -1,0 +1,66 @@
+on:
+  workflow_dispatch:
+  push:
+    branches: main
+
+name: Quarto Publish
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up MATLAB
+        id: setup-matlab
+        uses: matlab-actions/setup-matlab@v2
+        with:
+          cache: true
+          release: R2024b
+          register: true
+          products: Symbolic_Math_Toolbox
+
+      - name: Set MATLAB_ROOT
+        run: |
+          echo "MATLAB_ROOT=${{ steps.setup-matlab.outputs.matlabroot }}" >> $GITHUB_ENV
+          export MATLAB_ROOT="${{ steps.setup-matlab.outputs.matlabroot }}"
+          echo ${{ steps.setup-matlab.outputs.matlabroot }}
+          echo $MATLAB_ROOT
+
+      - name: Build Matlab
+        uses: matlab-actions/run-build@v2
+
+      - name: Verify MATLAB_ROOT
+        run: ls ${{ env.MATLAB_ROOT }}/bin/glnxa64
+        env:
+          MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlabroot }}
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Install Python and Dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install pip requirements
+        run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${{ env.MATLAB_ROOT }}/bin/glnxa64
+          echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+          python3 -m pip install jupyter
+          python3 -m pip install --no-cache-dir matlabengine==24.2.2
+          python3 -m pip install git+https://github.com/allefeld/mkernel.git
+        env:
+          MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlabroot}}
+
+      - name: Render and Publish
+        uses: quarto-dev/quarto-actions/publish@v2
+        with:
+          target: gh-pages
+          path: ./contents
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -44,8 +44,15 @@ jobs:
       - name: Install pip requirements
         run: |
           set MATLABROOT=${MATLAB_ROOT}
-          pip install -r mkernel_python_requirements.txt
+          pip install -r mkernel_python_requirements.txt --exclude matlabengine
 
+      - name: Manually build and install matlabengine
+        run: |
+          cd %MATLAB_ROOT%\extern\engines\python
+          python setup.py install
+        env:
+          MATLAB_ROOT: ${{ env.MATLAB_ROOT }}
+          
       - name: Render and Publish
         uses: quarto-dev/quarto-actions/publish@v2
         with:

@@ -43,11 +43,11 @@ jobs:
       - name: Install pip requirements
         run: |
           python3 -m pip install jupyter
-          python3 -m pip install matlabengine==24.2.2" 
+          python3 -m pip install matlabengine==24.2.2
           python3 -m pip install git+https://github.com/allefeld/mkernel.git
         env:
           MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlab-root }}
-          
+
       - name: Render and Publish
         uses: quarto-dev/quarto-actions/publish@v2
         with:

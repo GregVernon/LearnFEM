@@ -23,9 +23,14 @@ jobs:
             R2024b
           products: >
             Symbolic_Math_Toolbox
-            
+
       - name: Build Matlab
         uses: matlab-actions/run-build@v2
+
+      - name: Set MATLAB_ROOT
+        run: echo "MATLAB_ROOT=${{ env.MATLAB_ROOT }}" >> $GITHUB_ENV
+        env:
+          MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlab-root }}
 
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
@@ -35,7 +40,9 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - run: pip install -r mkernel_python_requirements.txt
+      - run: |
+        set MATLABROOT=${MATLAB_ROOT}
+        pip install -r mkernel_python_requirements.txt
 
       - name: Render and Publish
         uses: quarto-dev/quarto-actions/publish@v2

@@ -19,11 +19,9 @@ jobs:
 
       - name: Set MATLAB_ROOT
         run: >
-          echo "MATLAB_ROOT=${{ env.MATLAB_ROOT }}" >> $GITHUB_ENV
+          echo "MATLAB_ROOT=${{ env.steps.setup-matlab.outputs.matlabroot }}" >> $GITHUB_ENV
           echo ${{ steps.setup-matlab.outputs.matlabroot }}
           echo $MATLAB_ROOT
-        env:
-          MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlabroot }}
 
       - name: Run build
         uses: matlab-actions/run-build@v2

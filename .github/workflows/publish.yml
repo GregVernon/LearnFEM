@@ -7,7 +7,7 @@ name: Quarto Publish
 
 jobs:
   build-deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
@@ -42,9 +42,9 @@ jobs:
 
       - name: Install pip requirements
         run: |
-          python.exe -m pip install jupyter
-          python.exe -m pip install matlabengine==24.2.2 --install-option="--matlab-root=${{ env.MATLAB_ROOT }}" 
-          python.exe -m pip install git+https://github.com/allefeld/mkernel.git
+          python3 -m pip install jupyter
+          python3 -m pip install matlabengine==24.2.2" 
+          python3 -m pip install git+https://github.com/allefeld/mkernel.git
         env:
           MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlab-root }}
           

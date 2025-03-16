@@ -42,6 +42,7 @@ jobs:
 
       - name: Install pip requirements
         run: |
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${{ env.MATLAB_ROOT }}/bin/glnxa64" >> $GITHUB_ENV
           python3 -m pip install jupyter
           python3 -m pip install matlabengine==24.2.2
           python3 -m pip install git+https://github.com/allefeld/mkernel.git

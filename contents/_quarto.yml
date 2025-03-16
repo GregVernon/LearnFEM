@@ -24,45 +24,45 @@ book:
   date: "8/10/2024"
   page-navigation: true
   chapters:
-    - contents/index.qmd
-    - part: contents/intro.qmd
-    - part: contents/lectures/lecture_00/intro.qmd
+    - index.qmd
+    - part: intro.qmd
+    - part: lectures/lecture_00/intro.qmd
       chapters:
-        - contents/lectures/lecture_00/change_of_variable.qmd
-        - contents/lectures/lecture_00/polynomial_roots.qmd
-        - contents/lectures/lecture_00/polynomial_basis.qmd
-        - contents/lectures/lecture_00/inner_products.qmd
-        - contents/lectures/lecture_00/change_of_basis.qmd
-        - contents/lectures/lecture_00/dirac_delta_function.qmd
-    - part: contents/lectures/lecture_01/intro.qmd
+        - lectures/lecture_00/change_of_variable.qmd
+        - lectures/lecture_00/polynomial_roots.qmd
+        - lectures/lecture_00/polynomial_basis.qmd
+        - lectures/lecture_00/inner_products.qmd
+        - lectures/lecture_00/change_of_basis.qmd
+        - lectures/lecture_00/dirac_delta_function.qmd
+    - part: lectures/lecture_01/intro.qmd
       chapters:
-        - contents/lectures/lecture_01/galerkin_function_approximation.qmd
-        - contents/lectures/lecture_01/galerkin_function_approximation_with_boundary_conditions.qmd
-    - part: contents/lectures/lecture_02/intro.qmd
+        - lectures/lecture_01/galerkin_function_approximation.qmd
+        - lectures/lecture_01/galerkin_function_approximation_with_boundary_conditions.qmd
+    - part: lectures/lecture_02/intro.qmd
       chapters:
-        - contents/lectures/lecture_02/galerkin_poisson_equation.qmd
-        - contents/lectures/lecture_02/galerkin_heat_equation.qmd
-        - contents/lectures/lecture_02/ficks_first_law_equation.qmd
-        - contents/lectures/lecture_02/euler_bernoulli_beam_equation.qmd
-        # - contents/lectures/lecture_02/elastostatics_equation.qmd
-        - contents/lectures/lecture_02/damped_harmonic_oscillator_equation.qmd
-    - part: contents/lectures/lecture_03/intro.qmd
+        - lectures/lecture_02/galerkin_poisson_equation.qmd
+        - lectures/lecture_02/galerkin_heat_equation.qmd
+        - lectures/lecture_02/ficks_first_law_equation.qmd
+        - lectures/lecture_02/euler_bernoulli_beam_equation.qmd
+        # - lectures/lecture_02/elastostatics_equation.qmd
+        - lectures/lecture_02/damped_harmonic_oscillator_equation.qmd
+    - part: lectures/lecture_03/intro.qmd
       chapters:
-        - contents/lectures/lecture_03/piecewise_polynomials.qmd
-        - contents/lectures/lecture_03/discontinuous_splines.qmd
-        - contents/lectures/lecture_03/continuous_splines.qmd
-        - contents/lectures/lecture_03/smooth_splines.qmd
-        - contents/lectures/lecture_03/solving_pdes_with_usplines.qmd
-    - part: contents/lectures/lecture_04/intro.qmd
+        - lectures/lecture_03/piecewise_polynomials.qmd
+        - lectures/lecture_03/discontinuous_splines.qmd
+        - lectures/lecture_03/continuous_splines.qmd
+        - lectures/lecture_03/smooth_splines.qmd
+        - lectures/lecture_03/solving_pdes_with_usplines.qmd
+    - part: lectures/lecture_04/intro.qmd
       chapters:
-        - contents/lectures/lecture_04/riemann_quadrature.qmd
-        - contents/lectures/lecture_04/polynomial_quadrature.qmd
-        - contents/lectures/lecture_04/gauss_quadrature.qmd
-        - contents/lectures/lecture_04/moment_fitting.qmd
-        - contents/lectures/lecture_04/spline_quadrature.qmd
-    - part: contents/lectures/lecture_05/intro.qmd
+        - lectures/lecture_04/riemann_quadrature.qmd
+        - lectures/lecture_04/polynomial_quadrature.qmd
+        - lectures/lecture_04/gauss_quadrature.qmd
+        - lectures/lecture_04/moment_fitting.qmd
+        - lectures/lecture_04/spline_quadrature.qmd
+    - part: lectures/lecture_05/intro.qmd
       chapters:
-        - contents/lectures/lecture_05/numerical_core_algorithms.qmd
+        - lectures/lecture_05/numerical_core_algorithms.qmd
     
     # - summary.qmd
     # - references.qmd

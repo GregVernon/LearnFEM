@@ -23,11 +23,19 @@ jobs:
           products: >
             Symbolic_Math_Toolbox
 
+      - name: Debug setup-matlab output
+        run: echo "setup-matlab output: ${{ steps.setup-matlab.outputs.matlab-root }}"
+
       - name: Build Matlab
         uses: matlab-actions/run-build@v2
 
       - name: Set MATLAB_ROOT
         run: echo "MATLAB_ROOT=${{ env.MATLAB_ROOT }}" >> $GITHUB_ENV
+        env:
+          MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlab-root }}
+
+      - name: Verify MATLAB_ROOT
+        run: ls ${{ env.MATLAB_ROOT }}/bin/glnxa64
         env:
           MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlab-root }}
 

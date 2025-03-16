@@ -47,7 +47,6 @@ jupyterlab_pygments==0.3.0
 jupyterlab_server==2.27.3
 jupyterlab_widgets==3.0.13
 MarkupSafe==3.0.2
-matlabengine==24.2.2
 matplotlib-inline==0.1.7
 mistune==3.1.2
 mkernel @ git+https://github.com/allefeld/mkernel.git@e625560bece002917feff585dc9d0d7cea9aa3c4

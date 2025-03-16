@@ -44,7 +44,7 @@ jobs:
       - name: Install pip requirements
         run: |
           set MATLABROOT=${MATLAB_ROOT}
-          pip install -r mkernel_python_requirements.txt --exclude matlabengine
+          pip install -r mkernel_python_requirements.txt
 
       - name: Manually build and install matlabengine
         run: |

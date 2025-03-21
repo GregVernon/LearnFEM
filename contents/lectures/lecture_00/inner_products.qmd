@@ -11,7 +11,7 @@ setappdata(0, "MKernel_plot_format", "svg")
 
 # Inner Products
 
-Just as measuring quanitities is critical in engineering and science, so to is it important in mathematics.
+Just as measuring quantities is critical in engineering and science, so to is it important in mathematics.
 For example, when working with vectors one often wishes to know "how similar are these two vectors?" --- a question that every STEM practitioner knows to solve via the *dot product*.
 It is perhaps unfortunate, however, that far fewer STEM practitioners understand the dot product as an *inner product*.
 In fact, I would posit that very few engineers even know what the inner product is and how incredibly useful it is to engineering.
@@ -20,16 +20,10 @@ It is my belief that this lack of understanding might come from simply a disconn
 As an engineer myself, I like to think of *tools* that I can use to solve problems --- we often give tools names that describe what they do: hammer, screwdriver, pliers, vice grip, drill, etc.
 While I'm not going to rename the inner product, let me at least provide a simplified description of what this tool does:
 
-Inner Product
-: a tool that allows us to compare two objects of similar type, allowing us to measure them.
+> Inner Product
+> : a tool that allows us to compare two objects of similar type, allowing us to measure them.
 
-There is obviously a more rigorous definition of an inner product, similar to how there's a more rigorous definition of "hammer" than
-
-Hammer
-: a tool that allows us to drive a nail into solid material, allowing us to join objects.
-
-You could use a book, a shoe, a smartphone, or a gold bar to drive a nail in this manner but if you bought a hammer online and what arrived was a hardcover book you'd, understandably, be upset.
-At the end of this chapter I'll provide a wrote description of the inner product that will allow you to recognize an operation "in the wild" as an inner product (or not).
+There is, obviously, a more rigorous definition of an inner product but this description is a good mental model for the purpose of inner products. At the end of this chapter I'll provide the standard description of the inner product that will allow you to recognize an operation as an inner product.
 But for now, let me just show you how my simplified description of the inner product works.
 
 ## Notation
@@ -40,19 +34,19 @@ $$
 \Inner{\cdot}{\cdot}
 $$
 
-where each "$\cdot$" is a placeholder for one of the two objects.
+where each $\cdot$ is a placeholder for one of the two objects.
 
 ## The Inner Product on the Real Numbers
 
-Overly simplified, the real numbers, represented by $\Real$, are the types of numbers you use 99.999% in everyday life.
-Numbers like 0, or 1, or 147... but also numbers like 1.4 and -0.9, and $\sqrt{2}$ and $\pi$.
+Overly simplified, the real numbers, represented by $\Real$, are the types of numbers you encounter routinely in your everyday life.
+This includes numbers like 0, or 1, or 147, as well as 1.4 and -0.9, and $\sqrt{2}$ and $\pi$.
 
 $$
 \Inner{a}{b} := ab, \quad a,b \in \Real
 $$
 
-This is simply *scalar multiplication* between two numbers, how does this let us compare two objects?
-We can compare $\Inner{a}{b}$ against $\Inner{b}{b}$ by dividing the former by the latter:
+This is simply *scalar multiplication* between two numbers, so how does this let us compare two objects?
+Well, we can compare $\Inner{a}{b}$ against $\Inner{b}{b}$ by dividing the former by the latter:
 
 $$
 \frac{\Inner{a}{b}}{\Inner{b}{b}}
@@ -61,48 +55,51 @@ $$
 Which gives us the comparisons:
 
 - $\frac{\Inner{a}{b}}{\Inner{b}{b}} = 1$
-  - This tells us that $a$ is equal to $b$
-- $\frac{\Inner{a}{b}}{\Inner{b}{b}} = ^{-}1$
-  - This tells us that $a$ is the additive inverse of $b$.
+  - This tells us that $a$ is equal to $b$, $a = b$
+- $\frac{\Inner{a}{b}}{\Inner{b}{b}} = -1$
+  - This tells us that $a$ is the additive inverse of $b$, $a = -b$
 - $\frac{\Inner{a}{b}}{\Inner{b}{b}} > 1$
-  - This tells us that the magnitude of $a$ is larger than the magnitude of $b$, i.e., $\|a\| > \|b\|$.
+  - This tells us that the magnitude of $a$ is larger than the magnitude of $b$, $\abs{a} > \abs{b}$.
 - $\frac{\Inner{a}{b}}{\Inner{b}{b}} < 1$
-  - This tells us that the magnitude of $a$ is smaller than the magnitude of $b$, i.e., $\|a\| < \|b\|$.
+  - This tells us that the magnitude of $a$ is smaller than the magnitude of $b$, $\abs{a} < \abs{b}$.
 
-Furthermore, if we simplify the expression comparing the two inner products, $\frac{\Inner{a}{b}}{\Inner{b}{b}}$, we find $\frac{a \cdot b}{b \cdot b} = \frac{a}{b}$ --- the inner product is providing us a *ratio* between the two numbers.
+Furthermore, if we simplify the expression comparing the two inner products, $\frac{\Inner{a}{b}}{\Inner{b}{b}}$, we find $\frac{a \cdot b}{b \cdot b} = \frac{a}{b}$, in plain English: the inner product is providing us a *ratio* between the two numbers.
 So how is this useful?
-I'll admit this seems a bit contrived but consider this example:
+Let's consider this example:
 
+::: {.callout-note icon=false appearance="simple"}
+## Example
 Imagine that you have two unknown values.
 You are able to compare them against each other using the inner product, but do not yet actually know the value of either.
 You compare the two inner products and find $\frac{\Inner{a}{b}}{\Inner{b}{b}} = -\frac{1}{16}$.
-Now, sometime later you are able to compare $a$ against the number $2.5$ and find $\frac{\Inner{2.5}{a}}{\Inner{2.5}{2.5}} = -1.6$.
-We now *instantly* know that $a = -.25$ and $b = 4$.
-The inner product allowed us to compare two objects, and when you can compare two objects *you can measure them*.
-But perhaps this was too simple to be convincing, afterall it is, as we said, simply scalar multiplication and division.
-Let's look at a slightly more difficult use-case:
+Now suppose that sometime later you are able to compare $a$ against the number $2.5$ and find $\frac{\Inner{2.5}{a}}{\Inner{2.5}{2.5}} = -1.6$.
+You now *instantly* know that $a = -.25$ and $b = 4$.
+:::
+
+In the above example, the inner product allowed us to compare two objects, and when you can compare two objects *you can measure them*.
+But perhaps this was too simple to be convincing, as we noticed it is simply scalar multiplication and division.
+Let's look at a more interesting application of inner products next:
 
 ## The Inner Product of Real Vectors
 
-If we have two vectors consisting of real numbers
+For two vectors consisting of real numbers
 
 ```{=latex}
 \begin{align*}
-  \vec{x} = [ x_0, \cdots, x_n ]^T, &\quad i \in 0:n \\
-  \vec{y} = [ y_0, \cdots, y_n ]^T, &\quad i \in 0:n \\
+  \vec{x} &= [ x_{\Index{1}}, \cdots, x_{\Index{n}} ]^T, &\quad x_{\Index{i}} \in \Real, \ \forall \Index{i} \ \in [1, \Index{n}] \\
+  \vec{y} &= [ y_{\Index{1}}, \cdots, y_{\Index{n}} ]^T, &\quad y_{\Index{i}} \in \Real, \ \forall \Index{i} \ \in [1, \Index{n}]
 \end{align*}
 ```
 
-the inner product, which we previously stated is also known as the "dot product", is defined as
+the inner product, which we previously stated is also known as the *dot product*, is defined as
 
 ```{=latex}
 \begin{equation*}
-\Inner{\vec{x}}{\vec{y}} = \vec{x}^T \vec{y} \sum_{i=0}^{n-1} x_i y_i = x_0 y_0 + \cdots + x_{n-1} y_{n-1}
+  \Inner{\vec{x}}{\vec{y}} = \vec{x}^T \vec{y} = \sum_{\Index{i}=1}^{\Index{n}} x_{\Index{i}} y_{\Index{i}} = x_1 y_1 + \cdots + x_{\Index{n}} y_{\Index{n}}
 \end{equation*}
 ```
 
-And again, we ask the question "how does the inner product allow us to compare and/or measure vectors?"
-And again, we answer with an example.
+And again, we ask the question: *"how does the inner product allow us to compare and/or measure vectors?"*
 As before we can compare the vectors against each other via
 
 ```{=latex}
@@ -111,16 +108,31 @@ As before we can compare the vectors against each other via
 \end{equation*}
 ```
 
-Which gives us the comparisons:
+Which allows us to understand the relative orientation of the vectors:
 
-- $\frac{\Inner{\vec{x}}{\vec{y}}}{\Inner{\vec{y}}{\vec{y}}} = 1$
-  - This tells us that $\vec{x}$ is equivalent to $\vec{y}$, having the same magnitude and direction.
-- $\frac{\Inner{\vec{x}}{\vec{y}}}{\Inner{\vec{y}}{\vec{y}}} = ^{-}1$
-  - This tells us that $\vec{x}$ is has equivalent magnitude to $\vec{y}$, but in the opposite direction.
-- $\frac{\Inner{\vec{x}}{\vec{y}}}{\Inner{\vec{y}}{\vec{y}}} > 1$
-  - This tells us that the magnitude of $\vec{x}$ is larger than the magnitude of $a$, i.e., $\|b\| > \|a\|$.
-- $\frac{\Inner{\vec{x}}{\vec{y}}}{\Inner{\vec{y}}{\vec{y}}} < 1$
-  - This tells us that the magnitude of $b$ is smaller than the magnitude of $a$, i.e., $\|b\| < \|a\|$.
+- $\frac{\Inner{\vec{x}}{\vec{y}}}{\Inner{\vec{y}}{\vec{y}}} = 0$
+  - This tells us that $\vec{x}$ is orthogonal (perpendicular) to $\vec{y}$.
+- $\frac{\Inner{\vec{x}}{\vec{y}}}{\Inner{\vec{y}}{\vec{y}}} > 0$
+  - This tells us that the angle between $\vec{x}$ and $\vec{y}$ is acute ($<90^\circ$).
+- $\frac{\Inner{\vec{x}}{\vec{y}}}{\Inner{\vec{y}}{\vec{y}}} < 0$
+  - This tells us that the angle between $\vec{x}$ and $\vec{y}$ is obtuse ($>90^\circ$).
+
+While the evaluation of
+
+```{=latex}
+\begin{equation*}
+  \frac{\Inner{\vec{x}}{\vec{x}}}{\Inner{\vec{y}}{\vec{y}}}
+\end{equation*}
+```
+
+allows us to compare the lengths of the vectors:
+
+- $\frac{\Inner{\vec{x}}{\vec{x}}}{\Inner{\vec{y}}{\vec{y}}} = 1$ 
+  - This tells us that $\vec{x}$ is the same length as $\vec{y}$.
+- $\frac{\Inner{\vec{x}}{\vec{x}}}{\Inner{\vec{y}}{\vec{y}}} > 1$ 
+  - This tells us that $\vec{x}$ is longer than $\vec{y}$.
+- $\frac{\Inner{\vec{x}}{\vec{x}}}{\Inner{\vec{y}}{\vec{y}}} < 1$ 
+  - This tells us that $\vec{x}$ is shorter than $\vec{y}$.
 
 ## The Inner Product of Real Functions
 Given two real functions[^2], $f$ and $g$, the inner product is
@@ -169,10 +181,14 @@ subplot( 2, 1, 1 )
 hold on
 fplot( f, double( domain ), LineWidth=2, DisplayName="$f(x)$" )
 fplot( g, double( domain ), LineWidth=2, DisplayName="$g(x)$" )
+axis padded
+grid on
 legend()
 
 subplot( 2, 1, 2 )
 fplot( L2, double( domain ), LineWidth=2, DisplayName="$\langle f(x), g(x) \rangle$" )
+axis padded
+grid on
 legend()
 ```
 
@@ -222,10 +238,14 @@ subplot( 2, 1, 1 )
 hold on
 fplot( f, double( domain ), LineWidth=2, DisplayName="$f(x)$" )
 fplot( g, double( domain ), LineWidth=2, DisplayName="$g(x)$" )
+axis padded
+grid on
 legend()
 
 subplot( 2, 1, 2 )
 fplot( L2, double( domain ), LineWidth=2, DisplayName="$\langle f(x), g(x) \rangle$" )
+axis padded
+grid on
 legend()
 ```
 And, for example, the inner product on the domain $[0,2\pi]$ is then
@@ -264,10 +284,14 @@ subplot( 2, 1, 1 )
 hold on
 fplot( f, double( domain ), LineWidth=2, DisplayName="$f(x)$" )
 fplot( g, double( domain ), LineWidth=2, DisplayName="$g(x)$" )
+axis padded
+grid on
 legend()
 
 subplot( 2, 1, 2 )
 fplot( L2, double( domain ), LineWidth=2, DisplayName="$\langle f(x), g(x) \rangle$" )
+axis padded
+grid on
 legend()
 ```
 And, for example, the inner product on the domain $[0,2\pi]$ is then
@@ -306,10 +330,14 @@ subplot( 2, 1, 1 )
 hold on
 fplot( f, double( domain ), LineWidth=2, DisplayName="$f(x)$" )
 fplot( g, double( domain ), LineWidth=2, DisplayName="$g(x)$" )
+axis padded
+grid on
 legend()
 
 subplot( 2, 1, 2 )
 fplot( L2, double( domain ), LineWidth=2, DisplayName="$\langle f(x), g(x) \rangle$" )
+axis padded
+grid on
 legend()
 ```
 

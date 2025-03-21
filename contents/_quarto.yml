@@ -23,6 +23,11 @@ book:
   author: "Gregory Vernon"
   date: "8/10/2024"
   page-navigation: true
+  search: true
+  repo-url: https://github.com/GregVernon/LearnFEM/
+  repo-actions: [edit]
+  downloads: pdf
+  reader-mode: true
   chapters:
     - index.qmd
     - part: intro.qmd
@@ -63,7 +68,7 @@ book:
     - part: lectures/lecture_05/intro.qmd
       chapters:
         - lectures/lecture_05/numerical_core_algorithms.qmd
-    
+
     # - summary.qmd
     # - references.qmd
 

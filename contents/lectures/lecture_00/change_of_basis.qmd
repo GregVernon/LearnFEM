@@ -241,8 +241,8 @@ We can write a routine for computing the change of basis between two vectors
 
 ```{matlab}
 %| output: false
-function [to_coeffs, R] = VectorChangeOfBasis( from_basis, to_basis, from_coeffs )
-    basis_dimension = length( from_coeffs )
+function R = ComputeVectorChangeOfBasisOperator( from_basis, to_basis )
+    basis_dimension = length( from_basis )
     D = sym( zeros( basis_dimension ) );
     C = sym( zeros( basis_dimension ) );
     for ii = 1 : basis_dimension
@@ -252,6 +252,13 @@ function [to_coeffs, R] = VectorChangeOfBasis( from_basis, to_basis, from_coeffs
         end
     end
     R = D \ C;
+end
+```
+
+```{matlab}
+%| output: false
+function [to_coeffs, R] = VectorChangeOfBasis( from_basis, to_basis, from_coeffs )
+    R = ComputeVectorChangeOfBasisOperator( from_basis, to_basis )
     to_coeffs = R * from_coeffs;
 end
 ```
@@ -342,8 +349,7 @@ Within our mnemonic, $\Matrix{T} \equiv \Matrix{M}$, $\Matrix{F} \equiv \Matrix{
 
 ```{matlab}
 %| output: false
-function [to_coeffs, R] = PolynomialChangeOfBasis( from_basis, to_basis, from_coeffs, domain )
-    basis_dim = length( from_coeffs );
+function R = ComputePolynomialChangeOfBasisOperator( from_basis, to_basis, domain )
     variate = symvar( from_basis(end) );
     if isempty( variate )
         variate = sym( "x", "real" );
@@ -351,6 +357,13 @@ function [to_coeffs, R] = PolynomialChangeOfBasis( from_basis, to_basis, from_co
     D = int( to_basis * transpose( to_basis ), domain );
     C = int( to_basis * transpose( from_basis ), domain );
     R = D \ C;
+end
+```
+
+```{matlab}
+%| output: false
+function [to_coeffs, R] = PolynomialChangeOfBasis( from_basis, to_basis, from_coeffs, domain )
+    R = ComputePolynomialChangeOfBasisOperator( from_basis, to_basis, domain )
     to_coeffs = R * from_coeffs;
 end
 ```

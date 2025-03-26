@@ -1,0 +1,497 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+addpath( "../lecture_02/" )
+```
+
+# Extraction Operators
+In our previous discussion of U-splines we introduced an operator that transformed the discontinuous piecewise polynomial basis functions into the U-spline basis functions.
+
+## Bezier Extraction
+### The Bezier Decomposition Perspective
+
+In Hughes' seminal book on isogeometric analysis, he describes the process of *Bezier decomposition* where the multiplicity of each knot to $p+1$ resulting in a spline whose elements are discontinuous. 
+This process utilizes the *knot insertion* algorithm, during which a linear operator, $T$, can be constructed that allows us to reconstruct the smooth basis from the discontinuous basis.
+Helpfully, Hughes provides the algorithm in the form of this operator:
+
+```{=latex}
+\begin{equation}
+    \begin{split}
+        T_{\Index{i},\Index{j}}^0 &= \begin{cases} 
+                                        1 & \bar{\xi}_{\Index{i}} \in \left[ \xi_\Index{j}, \xi_{\Index{j} + 1} \right) \\
+                                        0 & \text{otherwise}
+                                    \end{cases} \\
+        T_{\Index{i},\Index{j}}^{\Index{q}+1} &= \frac{ \bar{\xi}_{\Index{i} + \Index{q}} - \xi_{\Index{j}} }{ \xi_{\Index{j} + \Index{q} } - \xi_{\Index{j}} } T_{\Index{i},\Index{j}}^{\Index{q}}
+                                                    + \frac{ \xi_{\Index{j} + \Index{q} + 1} - \bar{\xi}_{\Index{i} + \Index{q}} }{ \xi_{\Index{j} + \Index{q} + 1} - \xi_{\Index{j}+1} } T_{\Index{i},\Index{j}+1}^{\Index{q}},
+                                                    \quad \Index{q} = 0, 1, 2, \dots, p-1
+    \end{split}
+\end{equation}
+```
+
+
+```{matlab}
+%| output: false
+function T = ComputeBezierDecompositionOperator( knot_vector )
+    degree = double( sum( isAlways( knot_vector == knot_vector(1) ) ) - 1 );
+    extended_knot_vector = repelem( unique( knot_vector ), double( degree ) + 1 );
+    T = cell( degree + 1, 1 );
+    for p = 0 : degree
+        m = double( length( extended_knot_vector ) - degree - 1 );
+        n = double( length( knot_vector ) - degree - 1 );
+        if p < degree
+            T{p+1} = sym( zeros( n + 1, m ) );
+        else
+            T{p+1} = sym( zeros( n, m ) );
+        end
+        for ii = 1 : m
+            for jj = 1 : n
+                if p == 0
+                    if isAlways( knot_vector(jj) <= extended_knot_vector(ii) < knot_vector(jj+1) )
+                        T{p+1}(jj,ii) = 1;
+                    else
+                        T{p+1}(jj,ii) = 0;
+                    end
+                else
+                    if ( knot_vector(jj+p) - knot_vector(jj) ) == 0
+                        A = 0;
+                    else
+                        A = ( extended_knot_vector(ii+p) - knot_vector(jj) ) / ( knot_vector(jj+p) - knot_vector(jj) );
+                    end
+                    
+                    if ( knot_vector(jj+p+1) - knot_vector(jj+1) ) == 0
+                        B = 0;
+                    else
+                        B = ( knot_vector(jj+p+1) - extended_knot_vector(ii+p) ) / ( knot_vector(jj+p+1) - knot_vector(jj+1) );
+                    end
+                    T{p+1}(jj,ii) = A * T{p}(jj,ii) + B * T{p}(jj+1,ii);
+                end
+            end
+        end
+    end
+    T = T{end};
+end
+```
+
+```{matlab}
+%| output: true
+clear
+
+x = sym( "x", "real" );
+degree = [2, 2, 2];
+continuity = [-1, 1, 1, -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
+spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
+smooth_basis = BSplineBasis( spline_space );
+
+T = ComputeBezierDecompositionOperator( spline_space.ComputeKnotVector() )
+
+continuity = [-1, -1, -1, -1];
+spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
+discont_basis = BSplineBasis( spline_space );
+
+extracted_basis = T * discont_basis;
+
+figure
+subplot( 2, 1, 1 )
+fplot( discont_basis, double( domain ), LineWidth=2, MeshDensity=100 )
+subplot( 2, 1, 2 )
+fplot( extracted_basis, double( domain ), LineWidth=2, MeshDensity=100 )
+```
+
+### The Change of Basis Perspective
+
+An alternative approach to Bezier extraction utilizes the change of basis operation on each element of the spline.
+Recognize that the portions of the smooth spline's basis functions supported by each element are polynomials.
+Thus we can apply the change of basis to determine the linear operator that relates the element's spline basis to one of our standard polynomial bases, such as the Bernstein basis.
+
+Let's use the same quadratic B-spline basis from the previous example, with the coefficients
+
+```{=latex}
+\begin{equation}
+    \Vector{n} = \begin{bmatrix} 1 \\ 1 \\ 2 \\ 1 \\ 1 \end{bmatrix}
+\end{equation}
+```
+
+Recall that the change of basis operation allows us to determine the representation (coefficient values) of a polynomial defined in a "from" basis in a "to" basis -- here we will use the spline as the "from" basis and the Bernstein polynomials as the "to" basis.
+Then we have the following relationships for the three elements of the spline:
+
+```{=latex}
+\begin{equation}
+    \begin{split}
+        \Vector{b}^1 &= \Matrix{R}^1 \Vector{n}^1 = \Matrix{R}^1 \begin{bmatrix} 1 \\ 1 \\ 2 \end{bmatrix} \\
+        \Vector{b}^2 &= \Matrix{R}^2 \Vector{n}^2 = \Matrix{R}^2 \begin{bmatrix} 1 \\ 2 \\ 1 \end{bmatrix} \\
+        \Vector{b}^3 &= \Matrix{R}^3 \Vector{n}^3 = \Matrix{R}^3 \begin{bmatrix} 2 \\ 1 \\ 1 \end{bmatrix} \\
+    \end{split}
+\end{equation}
+```
+
+The per-element spline basis functions are
+
+```{=latex}
+\begin{equation}
+    \begin{split}
+        \Vector{N}^1 &= \begin{bmatrix}
+                            9x^2 - 6x + 1 \\
+                            -\frac{27}{2}x^2 + 6x \\
+                            \frac{9}{2}x^2
+                       \end{bmatrix} \\
+        %
+        \Vector{N}^2 &= \begin{bmatrix}
+                            \frac{9}{2}x^2 - 6x + 2 \\
+                            -9x^2 + 9x - \frac{3}{2} \\
+                            \frac{9}{2}x^2 - 3x + \frac{1}{2} \\
+                       \end{bmatrix} \\
+        %
+        \Vector{N}^3 &= \begin{bmatrix}
+                            \frac{9}{2}x^2 - 9x + \frac{9}{2} \\
+                           -\frac{27}{2}x^2 + 21x - \frac{15}{2} \\
+                            9x^2 - 12x + 4 \\                            
+                       \end{bmatrix} \\
+    \end{split}
+\end{equation}
+```
+
+The per-element Bernstein basis functions are
+
+```{=latex}
+\begin{equation}
+    \begin{split}
+        \Vector{B}^1 &= \begin{bmatrix}
+                            9x^2 - 6x + 1 \\
+                           -18x^2 + 6x \\
+                            9x^2 \\
+                       \end{bmatrix} \\
+        %
+        \Vector{B}^2 &= \begin{bmatrix}
+                           9x^2 - 12x + 4 \\
+                          -18x^2 + 18x - 4 \\
+                            9x^2 - 6x + 1 \\
+                       \end{bmatrix} \\
+        %
+        \Vector{B}^3 &= \begin{bmatrix}
+                                9x^2 - 18x + 9 \\
+                               -18x^2 + 30x - 12 \\
+                                9x^2 - 12x + 4 \\
+                       \end{bmatrix} \\
+    \end{split}
+\end{equation}
+```
+
+```{matlab}
+%| echo: false
+clear
+
+x = sym( "x", "real" );
+degree = [2, 2, 2];
+continuity = [-1, 1, 1, -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
+spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
+smooth_basis = BSplineBasis( spline_space );
+
+figure
+t = tiledlayout( 2, 3 );
+
+nexttile()
+fplot( smooth_basis(1:3), double( vertices(1:2) ), LineWidth=2 )
+ylim([0, 1])
+
+
+nexttile()
+fplot( smooth_basis(2:4), double( vertices(2:3) ), LineWidth=2 )
+ylim([0, 1])
+
+nexttile()
+fplot( smooth_basis(3:5), double( vertices(3:4) ), LineWidth=2 )
+ylim([0, 1])
+
+nexttile()
+poly_basis = PolynomialBasisFunction( "Bernstein", degree(1), x, vertices(1:2) );
+fplot( poly_basis, double( vertices(1:2) ), LineWidth=2 )
+ylim([0, 1])
+
+nexttile()
+poly_basis = PolynomialBasisFunction( "Bernstein", degree(2), x, vertices(2:3) );
+fplot( poly_basis, double( vertices(2:3) ), LineWidth=2 )
+ylim([0, 1])
+
+nexttile()
+poly_basis = PolynomialBasisFunction( "Bernstein", degree(3), x, vertices(3:4) );
+fplot( poly_basis, double( vertices(3:4) ), LineWidth=2 )
+ylim([0, 1])
+```
+
+The extraction operators can then be computed as
+
+```{matlab}
+clear
+
+x = sym( "x", "real" );
+degree = [2, 2, 2];
+continuity = [-1, 1, 1, -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
+spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
+spline = Spline( spline_space );
+spline_coeffs = [ 1; 1; 2; 1; 1 ];
+
+num_elems = spline.GetNumElements();
+local_extraction_operator = cell( num_elems, 1 );
+for e = 1 : spline.GetNumElements()
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
+    elem_degree = spline.GetElementDegree( e );
+    elem_domain = spline.GetElementDomain( e );
+    local_spline_coeffs = spline_coeffs( elem_basis_ids );
+    local_spline_basis = spline.basis( elem_basis_ids );
+    local_bernstein_basis = PolynomialBasisFunction( "Bernstein", elem_degree, x, elem_domain );
+    local_extraction_operator{e} = ComputePolynomialChangeOfBasisOperator( local_spline_basis, local_bernstein_basis, elem_domain );
+end
+%celldisp( local_extraction_operator )
+```
+
+```{=latex}
+\begin{equation}
+    \begin{split}
+        \Matrix{R}^1 &= \begin{bmatrix}
+                            1 & 0 & 0 \\
+                            0 & 1 & 0 \\
+                            0 & \frac{1}{2} & \frac{1}{2} \\
+                        \end{bmatrix} \\
+        %
+        \Matrix{R}^2 &= \begin{bmatrix}
+                            \frac{1}{2} & \frac{1}{2} & 0 \\
+                            0 & 1 & 0 \\
+                            0 & \frac{1}{2} & \frac{1}{2} \\
+                        \end{bmatrix} \\
+        %
+        \Matrix{R}^3 &= \begin{bmatrix}
+                            \frac{1}{2} & \frac{1}{2} & 0 \\
+                            0 & 1 & 0 \\
+                            0 & 0 & 1 \\
+                        \end{bmatrix} \\
+    \end{split}
+\end{equation}
+```
+
+Which allows us to determine the coefficients of the Bernstein basis polynomials as
+```{=latex}
+\begin{equation}
+    \begin{split}
+        \Vector{b}^1 &= \begin{bmatrix}
+                            1 & 0 & 0 \\
+                            0 & 1 & 0 \\
+                            0 & \frac{1}{2} & \frac{1}{2} \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            1 \\ 1 \\ 2
+                        \end{bmatrix}
+                        =
+                        \begin{bmatrix}
+                            1 \\ 1 \\ \frac{3}{2}
+                        \end{bmatrix}\\
+        %
+        \Vector{b}^2 &= \begin{bmatrix}
+                            \frac{1}{2} & \frac{1}{2} & 0 \\
+                            1 & 1 & 0 \\
+                            \frac{1}{2} & \frac{1}{2} & \frac{1}{2} \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            1 \\ 2 \\ 1
+                        \end{bmatrix}
+                        =
+                        \begin{bmatrix}
+                            \frac{3}{2} \\ 2 \\ \frac{3}{2}
+                        \end{bmatrix}\\
+        %
+        \Vector{b}^3 &= \begin{bmatrix}
+                            \frac{1}{2} & \frac{1}{2} & 0 \\
+                            1 & 1 & 0 \\
+                            0 & 0 & 1 \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            2 \\ 1 \\ 1
+                        \end{bmatrix}
+                        =
+                        \begin{bmatrix}
+                            \frac{3}{2} \\ 1 \\ 1
+                        \end{bmatrix}\\
+    \end{split}
+\end{equation}
+```
+
+```{matlab}
+%| echo: false
+
+figure
+subplot( 2, 1, 1 )
+hold on
+f = transpose( spline_coeffs ) * spline.basis;
+fplot( spline_coeffs .* spline.basis, double( domain ), LineWidth=2 )
+fplot( f, double( domain ), Color="k", LineWidth=3 )
+
+subplot( 2, 1, 2 )
+hold on
+for e = 1 : spline.GetNumElements()
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
+    elem_degree = spline.GetElementDegree( e );
+    elem_domain = spline.GetElementDomain( e );
+    local_spline_coeffs = spline_coeffs( elem_basis_ids );
+    local_bernstein_coeffs = local_extraction_operator{e} * local_spline_coeffs;
+    local_bernstein_basis = PolynomialBasisFunction( "Bernstein", elem_degree, x, elem_domain );
+    for n = 1 : length( local_bernstein_basis )
+        fplot( local_bernstein_coeffs(n) * local_bernstein_basis(n), double( elem_domain ), SeriesIndex=n, LineWidth=2 )
+    end
+end
+
+for e = 1 : spline.GetNumElements()
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
+    elem_degree = spline.GetElementDegree( e );
+    elem_domain = spline.GetElementDomain( e );
+    local_spline_coeffs = spline_coeffs( elem_basis_ids );
+    local_bernstein_coeffs = local_extraction_operator{e} * local_spline_coeffs;
+    local_bernstein_basis = PolynomialBasisFunction( "Bernstein", elem_degree, x, elem_domain );
+    g = transpose( local_bernstein_coeffs ) * local_bernstein_basis;
+    fplot( g, double( elem_domain ), Color="k", LineWidth=3 )
+end
+%celldisp( local_extraction_operator )
+```
+
+And as might be obvious, we can apply the inverse of the Bezier extraction operator to compute the spline coefficients
+
+```{=latex}
+\begin{equation}
+    \begin{split}
+        \Vector{n}^1 &= \left( \Matrix{R}^1 \right)^{-1} \Vector{b}^1
+                        =
+                        \begin{bmatrix}
+                            1 & 0 & 0 \\
+                            0 & 1 & 0 \\
+                            0 & \frac{1}{2} & \frac{1}{2} \\
+                        \end{bmatrix}^{-1}
+                        \begin{bmatrix}
+                            1 \\ 1 \\ \frac{3}{2}
+                        \end{bmatrix}
+                        &=
+                        \begin{bmatrix}
+                            1 & 0 & 0 \\
+                            0 & 1 & 0 \\
+                            0 & -1 & 2 \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            1 \\ 1 \\ \frac{3}{2}
+                        \end{bmatrix}
+                        &=
+                        \begin{bmatrix}
+                            1 \\ 1 \\ 2
+                        \end{bmatrix} \\
+        %
+        \Vector{n}^2 &= \left( \Matrix{R}^2 \right)^{-1} \Vector{b}^2
+                        =
+                        \begin{bmatrix}
+                            \frac{1}{2} & \frac{1}{2} & 0 \\
+                            1 & 1 & 0 \\
+                            \frac{1}{2} & \frac{1}{2} & \frac{1}{2} \\
+                        \end{bmatrix}^{-1}
+                        \begin{bmatrix}
+                            \frac{3}{2} \\ 2 \\ \frac{3}{2}
+                        \end{bmatrix}
+                        &=
+                        \begin{bmatrix}
+                            2 & -1 & 0 \\
+                            0 & 1 & 0 \\
+                            0 & -1 & 2 \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            \frac{3}{2} \\ 2 \\ \frac{3}{2}
+                        \end{bmatrix}
+                        &=
+                        \begin{bmatrix}
+                            1 \\ 2 \\ 1
+                        \end{bmatrix} \\
+        %
+        \Vector{n}^3 &= \left( \Matrix{R}^3 \right)^{-1} \Vector{b}^3
+                        =
+                        \begin{bmatrix}
+                            \frac{1}{2} & \frac{1}{2} & 0 \\
+                            1 & 1 & 0 \\
+                            0 & 0 & 1 \\
+                        \end{bmatrix}^{-1}
+                        \begin{bmatrix}
+                            \frac{3}{2} \\ 1 \\ 1
+                        \end{bmatrix}
+                        &=
+                        \begin{bmatrix}
+                            2 & -1 & 0 \\
+                            0 & 1 & 0 \\
+                            0 & 0 & 1 \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            \frac{3}{2} \\ 1 \\ 1
+                        \end{bmatrix}
+                        &=
+                        \begin{bmatrix}
+                            2 \\ 1 \\ 1
+                        \end{bmatrix}
+    \end{split}
+\end{equation}
+```
+
+In addition to being able to use the Bezier extraction operator to compute the Bernstein coefficients, applying the *transpose* of the operator 
+
+```{=latex}
+\begin{equation}
+    \begin{split}
+        \Vector{b}^1 &= \begin{bmatrix}
+                            1 & 0 & 0 \\
+                            0 & 1 & 0 \\
+                            0 & \frac{1}{2} & \frac{1}{2} \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            1 \\ 1 \\ 2
+                        \end{bmatrix}
+                        =
+                        \begin{bmatrix}
+                            1 \\ 1 \\ \frac{3}{2}
+                        \end{bmatrix}\\
+        %
+        \Vector{b}^2 &= \begin{bmatrix}
+                            \frac{1}{2} & \frac{1}{2} & 0 \\
+                            1 & 1 & 0 \\
+                            \frac{1}{2} & \frac{1}{2} & \frac{1}{2} \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            1 \\ 2 \\ 1
+                        \end{bmatrix}
+                        =
+                        \begin{bmatrix}
+                            \frac{3}{2} \\ 2 \\ \frac{3}{2}
+                        \end{bmatrix}\\
+        %
+        \Vector{b}^3 &= \begin{bmatrix}
+                            \frac{1}{2} & \frac{1}{2} & 0 \\
+                            1 & 1 & 0 \\
+                            0 & 0 & 1 \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            2 \\ 1 \\ 1
+                        \end{bmatrix}
+                        =
+                        \begin{bmatrix}
+                            \frac{3}{2} \\ 1 \\ 1
+                        \end{bmatrix}\\
+    \end{split}
+\end{equation}
+```
+
+## Lagrange Extraction
+
+## Tessellation Extraction

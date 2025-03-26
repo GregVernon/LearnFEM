@@ -57,6 +57,7 @@ book:
         - lectures/lecture_03/discontinuous_splines.qmd
         - lectures/lecture_03/continuous_splines.qmd
         - lectures/lecture_03/smooth_splines.qmd
+        - lectures/lecture_03/spline_extraction_operators.qmd
         - lectures/lecture_03/solving_pdes_with_usplines.qmd
     - part: lectures/lecture_04/intro.qmd
       chapters:
@@ -129,6 +130,5 @@ format:
         \newcommand{\DiracDelta}[2]{ \delta\left( #1 - #2 \right) }
         \newcommand{\DiracDeltaShort}[2]{ \delta^{#1}_{#2} }
         \newcommand{\defequals}{\stackrel{\text{def}}{=}}
-        \newcommand{\d}{\mathop{}\!{d}}
         \newcommand{\p}{\mathop{}\!{\partial}}
         \newcommand{\Index}{\mathrm{#1}}

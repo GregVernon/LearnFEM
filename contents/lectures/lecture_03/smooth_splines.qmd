@@ -217,7 +217,7 @@ classdef SplineSpace
 end
 ```
 
-The Cox--de Boor recursion foumla is provided in the equation
+The Cox--de Boor recursion formula is provided in the equation
 
 ```{=latex}
 \begin{equation}
@@ -337,8 +337,8 @@ The respective Bernstein basis functions for each element are
 
 ```{=latex}
 \begin{align*}
-    \Vector{B}_1 &= \begin{bmatrix} 1 - x \\ x \end{bmatrix} \\
-    \Vector{B}_2 &= \begin{bmatrix} 2 - x \\ x - 1 \end{bmatrix}
+    \Vector{B}^1 &= \begin{bmatrix} B^1_1 \\ B^1_2 \end{bmatrix} = \begin{bmatrix} 1 - x \\ x \end{bmatrix} \\
+    \Vector{B}^2 &= \begin{bmatrix} B^2_1 \\ B^2_2 \end{bmatrix} = \begin{bmatrix} 2 - x \\ x - 1 \end{bmatrix}
 \end{align*}
 ```
 
@@ -369,8 +369,10 @@ t = tiledlayout(5, 1);
 
 nexttile([4, 1])
 hold on
-fplot( left_basis, double( left_domain ), LineWidth=2, MeshDensity=23 * length( degree ) )
-fplot( right_basis, double( right_domain ), LineWidth=2, MeshDensity=23 * length( degree ) )
+fplot( left_basis, double( left_domain ), LineWidth=2, MeshDensity=23 * length( left_degree ) )
+fplot( right_basis, double( right_domain ), LineWidth=2, MeshDensity=23 * length( right_degree ) )
+xline( double( unique( [left_vertices, right_vertices] ) ), LineWidth=1, LineStyle="--" )
+axis padded
 
 nexttile()
 hold on
@@ -396,7 +398,7 @@ The constraint equation for this system, then, is:
 
 ```{=latex}
 \begin{equation}
-    B_2 = B_3
+    B_2^2(1) = B_3^1(1)
 \end{equation}
 ```
 

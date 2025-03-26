@@ -100,13 +100,17 @@ classdef Spline
 
         function supported_basis_ids = GetSupportedBasisIdsFromElementId( obj, elem_id )
             supported_basis_ids = [];
-            curr_basis_id = 0;
             for e = 1 : elem_id
                 elem_degree = GetElementDegree( obj, e );
                 elem_interface_ids = GetElementInterfaceIds( obj, e );
                 left_elem_continuity = GetInterfaceContinuity( obj, elem_interface_ids(1) );
+                if e == 1
+                    curr_basis_id = 0;
+                else
+                    curr_basis_id = curr_basis_id - left_elem_continuity;
+                end
                 for n = 1 : elem_degree + 1
-                    if ( n - 1 ) > left_elem_continuity
+                    if ( n - left_elem_continuity ) >= left_elem_continuity
                         curr_basis_id = curr_basis_id + 1;
                     end
                     if e == elem_id

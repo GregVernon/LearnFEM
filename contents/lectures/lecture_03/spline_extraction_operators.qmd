@@ -107,7 +107,7 @@ subplot( 2, 1, 2 )
 fplot( extracted_basis, double( domain ), LineWidth=2, MeshDensity=100 )
 ```
 
-### The Change of Basis Perspective
+### The Local Change of Basis Perspective
 
 An alternative approach to Bezier extraction utilizes the change of basis operation on each element of the spline.
 Recognize that the portions of the smooth spline's basis functions supported by each element are polynomials.
@@ -230,7 +230,7 @@ fplot( poly_basis, double( vertices(3:4) ), LineWidth=2 )
 ylim([0, 1])
 ```
 
-The extraction operators can then be computed as
+The change of basis operator for each element can then be computed as
 
 ```{matlab}
 clear
@@ -245,7 +245,7 @@ spline = Spline( spline_space );
 spline_coeffs = [ 1; 1; 2; 1; 1 ];
 
 num_elems = spline.GetNumElements();
-local_extraction_operator = cell( num_elems, 1 );
+local_cob_operator = cell( num_elems, 1 );
 for e = 1 : spline.GetNumElements()
     elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
     elem_degree = spline.GetElementDegree( e );
@@ -253,9 +253,9 @@ for e = 1 : spline.GetNumElements()
     local_spline_coeffs = spline_coeffs( elem_basis_ids );
     local_spline_basis = spline.basis( elem_basis_ids );
     local_bernstein_basis = PolynomialBasisFunction( "Bernstein", elem_degree, x, elem_domain );
-    local_extraction_operator{e} = ComputePolynomialChangeOfBasisOperator( local_spline_basis, local_bernstein_basis, elem_domain );
+    local_cob_operator{e} = ComputePolynomialChangeOfBasisOperator( local_spline_basis, local_bernstein_basis, elem_domain );
 end
-%celldisp( local_extraction_operator )
+%celldisp( local_cob_operator )
 ```
 
 ```{=latex}
@@ -282,7 +282,7 @@ end
 \end{equation}
 ```
 
-Which allows us to determine the coefficients of the Bernstein basis polynomials as
+Recall that the change of basis operator allows us to determine the coefficients of the Bernstein basis polynomials as
 ```{=latex}
 \begin{equation}
     \begin{split}
@@ -301,7 +301,7 @@ Which allows us to determine the coefficients of the Bernstein basis polynomials
         %
         \Vector{b}^2 &= \begin{bmatrix}
                             \frac{1}{2} & \frac{1}{2} & 0 \\
-                            1 & 1 & 0 \\
+                            0 & 1 & 0 \\
                             \frac{1}{2} & \frac{1}{2} & \frac{1}{2} \\
                         \end{bmatrix}
                         \begin{bmatrix}
@@ -314,7 +314,7 @@ Which allows us to determine the coefficients of the Bernstein basis polynomials
         %
         \Vector{b}^3 &= \begin{bmatrix}
                             \frac{1}{2} & \frac{1}{2} & 0 \\
-                            1 & 1 & 0 \\
+                            0 & 1 & 0 \\
                             0 & 0 & 1 \\
                         \end{bmatrix}
                         \begin{bmatrix}
@@ -345,7 +345,7 @@ for e = 1 : spline.GetNumElements()
     elem_degree = spline.GetElementDegree( e );
     elem_domain = spline.GetElementDomain( e );
     local_spline_coeffs = spline_coeffs( elem_basis_ids );
-    local_bernstein_coeffs = local_extraction_operator{e} * local_spline_coeffs;
+    local_bernstein_coeffs = local_cob_operator{e} * local_spline_coeffs;
     local_bernstein_basis = PolynomialBasisFunction( "Bernstein", elem_degree, x, elem_domain );
     for n = 1 : length( local_bernstein_basis )
         fplot( local_bernstein_coeffs(n) * local_bernstein_basis(n), double( elem_domain ), SeriesIndex=n, LineWidth=2 )
@@ -357,15 +357,15 @@ for e = 1 : spline.GetNumElements()
     elem_degree = spline.GetElementDegree( e );
     elem_domain = spline.GetElementDomain( e );
     local_spline_coeffs = spline_coeffs( elem_basis_ids );
-    local_bernstein_coeffs = local_extraction_operator{e} * local_spline_coeffs;
+    local_bernstein_coeffs = local_cob_operator{e} * local_spline_coeffs;
     local_bernstein_basis = PolynomialBasisFunction( "Bernstein", elem_degree, x, elem_domain );
     g = transpose( local_bernstein_coeffs ) * local_bernstein_basis;
     fplot( g, double( elem_domain ), Color="k", LineWidth=3 )
 end
-%celldisp( local_extraction_operator )
+%celldisp( local_cob_operator )
 ```
 
-And as might be obvious, we can apply the inverse of the Bezier extraction operator to compute the spline coefficients
+And as might be obvious, we can apply the inverse of this change of basis operator to compute the spline coefficients
 
 ```{=latex}
 \begin{equation}
@@ -445,50 +445,257 @@ And as might be obvious, we can apply the inverse of the Bezier extraction opera
 \end{equation}
 ```
 
-In addition to being able to use the Bezier extraction operator to compute the Bernstein coefficients, applying the *transpose* of the operator 
+In addition to being able to use the change of basis operator to compute the Bernstein coefficients, applying the *transpose* of the operator on the local Bernstein functions recovers the spline basis functions over each element
 
 ```{=latex}
 \begin{equation}
     \begin{split}
-        \Vector{b}^1 &= \begin{bmatrix}
+        \Vector{N}^1 &= \begin{bmatrix}
                             1 & 0 & 0 \\
-                            0 & 1 & 0 \\
-                            0 & \frac{1}{2} & \frac{1}{2} \\
+                            0 & 1 & \frac{1}{2} \\
+                            0 & 0 & \frac{1}{2} \\
                         \end{bmatrix}
                         \begin{bmatrix}
-                            1 \\ 1 \\ 2
-                        \end{bmatrix}
-                        =
-                        \begin{bmatrix}
-                            1 \\ 1 \\ \frac{3}{2}
-                        \end{bmatrix}\\
-        %
-        \Vector{b}^2 &= \begin{bmatrix}
-                            \frac{1}{2} & \frac{1}{2} & 0 \\
-                            1 & 1 & 0 \\
-                            \frac{1}{2} & \frac{1}{2} & \frac{1}{2} \\
-                        \end{bmatrix}
-                        \begin{bmatrix}
-                            1 \\ 2 \\ 1
+                            9x^2 - 6x + 1 \\ -18x^2 + 6x \\ 9x^2
                         \end{bmatrix}
                         =
                         \begin{bmatrix}
-                            \frac{3}{2} \\ 2 \\ \frac{3}{2}
+                            9x^2 - 6x + 1 \\ -\frac{27}{2}x^2 + 6x \\ \frac{9}{2}x^2
                         \end{bmatrix}\\
         %
-        \Vector{b}^3 &= \begin{bmatrix}
-                            \frac{1}{2} & \frac{1}{2} & 0 \\
-                            1 & 1 & 0 \\
+        \Vector{N}^2 &= \begin{bmatrix}
+                            \frac{1}{2} & 0 & 0 \\
+                            \frac{1}{2} & 1 & \frac{1}{2} \\
+                            0 & 0 & \frac{1}{2} \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            9x^2 - 12x + 4 \\ -18x^2 + 18x - 4 \\ 9x^2 -6x + 1
+                        \end{bmatrix}
+                        =
+                        \begin{bmatrix}
+                            \frac{9}{2}x^2 - 6x + 2 \\ -9x^2 +9x -\frac{3}{2} \\ \frac{9}{2}x^2 - 3x + \frac{1}{2}
+                        \end{bmatrix}\\
+        %
+        \Vector{N}^3 &= \begin{bmatrix}
+                            \frac{1}{2} & 0 & 0 \\
+                            \frac{1}{2} & 1 & 0 \\
                             0 & 0 & 1 \\
                         \end{bmatrix}
                         \begin{bmatrix}
-                            2 \\ 1 \\ 1
+                            9x^2 - 18x + 9 \\ -18x^2 + 30x - 12 \\ 9x^2 - 12x + 4
                         \end{bmatrix}
                         =
                         \begin{bmatrix}
-                            \frac{3}{2} \\ 1 \\ 1
+                            \frac{9}{2}x^2 - 9x + \frac{9}{2} \\ -\frac{27}{2}x^2 + 21x - \frac{15}{2} \\ 9x^2 - 12x + 4
                         \end{bmatrix}\\
     \end{split}
+\end{equation}
+```
+
+And, of course, the inverse of the operator transpose converts each element's spline basis functions into the local Bernstein functions:
+
+```{=latex}
+\begin{equation}
+    \begin{split}
+        \Vector{B}^1 &= \begin{bmatrix}
+                            1 & 0 & 0 \\
+                            0 & 1 & -1 \\
+                            0 & 0 & 2 \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            9x^2 - 6x + 1 \\ -\frac{27}{2}x^2 + 6x \\ \frac{9}{2}x^2
+                        \end{bmatrix}
+                        =
+                        \begin{bmatrix}
+                            9x^2 - 6x + 1 \\ -18x^2 + 6x \\ 9x^2
+                        \end{bmatrix}\\
+        %
+        \Vector{B}^2 &= \begin{bmatrix}
+                            2 & 0 & 0 \\
+                            -1 & 1 & -1 \\
+                            0 & 0 & 2 \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            \frac{9}{2}x^2 - 6x + 2 \\ -9x^2 +9x -\frac{3}{2} \\ \frac{9}{2}x^2 - 3x + \frac{1}{2}
+                        \end{bmatrix}
+                        =
+                        \begin{bmatrix}
+                            9x^2 - 12x + 4 \\ -18x^2 + 18x - 4 \\ 9x^2 -6x + 1
+                        \end{bmatrix}\\
+        %
+        \Vector{B}^3 &= \begin{bmatrix}
+                            2 & 0 & 0 \\
+                            -1 & 1 & 0 \\
+                            0 & 0 & 1 \\
+                        \end{bmatrix}
+                        \begin{bmatrix}
+                            \frac{9}{2}x^2 - 9x + \frac{9}{2} \\ -\frac{27}{2}x^2 + 21x - \frac{15}{2} \\ 9x^2 - 12x + 4
+                        \end{bmatrix}
+                        =
+                        \begin{bmatrix}
+                            9x^2 - 18x + 9 \\ -18x^2 + 30x - 12 \\ 9x^2 - 12x + 4
+                        \end{bmatrix}\\
+    \end{split}
+\end{equation}
+```
+
+Finally, these operators have practical in a finite element code within matrix assembly.
+Recall that, for example, within our scalar projection application we need to assembly the Gram matrix $\Matrix{D}$ and the force vector $\Vector{F}$.
+If we precompute the Bezier extraction operator, we can integrate the Bernstein polynomials and then multiply by the extraction operator to recover the integral of the spline basis functions:
+
+```{matlab}
+D = sym( zeros( length( spline.basis ) ) );
+for e = 1 : spline.GetNumElements
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
+    elem_degree = spline.GetElementDegree( e );
+    elem_domain = spline.GetElementDomain( e );
+    local_bernstein_basis = PolynomialBasisFunction( "Bernstein", elem_degree, x, elem_domain );
+    local_spline_basis = ( transpose( local_cob_operator{e} ) * local_bernstein_basis );
+    D_local = int(  local_spline_basis .* transpose( local_spline_basis ), elem_domain );
+    D(elem_basis_ids, elem_basis_ids) = D(elem_basis_ids, elem_basis_ids) + D_local;
+end
+display( D )
+```
+
+### The Global Change of Basis Perspective
+Previously we showed the Bezier extraction operator from the context of a local, *per-element*, change of basis.
+However, as you may have guessed, we can also compute a *global* change of basis.
+Importantly, we use the lower-continuity spline as our "to-basis" and the higher-continuity spline as our "from-basis":
+
+```{matlab}
+%| output: false
+function extraction_operator = ComputeSplineExtractionOperator( spline )
+    D = int( spline.dc_basis .* transpose( spline.dc_basis ), spline.GetSplineDomain() );
+    C = int( spline.dc_basis .* transpose( spline.basis ), spline.GetSplineDomain() );
+    extraction_operator = transpose( D \ C );
+end
+```
+
+```{matlab}
+clear
+
+x = sym( "x", "real" );
+degree = [2, 2, 2];
+continuity = [-1, 1, 1, -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
+spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
+spline = Spline( spline_space );
+spline_coeffs = [ 1; 1; 2; 1; 1 ];
+
+extraction_operator = ComputeSplineExtractionOperator( spline )
+```
+
+And note that now our assembly can be achieved by a series of matrix multiplication:
+
+```{matlab}
+R = extraction_operator;
+D_local = int( spline.dc_basis .* transpose( spline.dc_basis ), spline.GetSplineDomain() )
+( R * D_local )
+( R * D_local * transpose( R ) )
+( R * D_local ) * transpose( R )
+D_global = int( spline.basis .* transpose( spline.basis ), spline.GetSplineDomain() )
+```
+
+This is perhaps more readily understood by looking at an example with the continuous linear splines used in traditional finite element analysis.
+The traditional assembly algorithm
+
+```pseudocode
+#| html-indent-size: "1.2em"
+#| html-comment-delimiter: "//"
+#| html-line-number: true
+#| html-line-number-punc: ":"
+#| html-no-end: false
+#| pdf-placement: "htb!"
+#| pdf-line-number: true
+
+\begin{algorithm}
+    \caption{ Traditional Gram matrix assembly }
+    \begin{algorithmic}
+    \Procedure{AssembleGramMatrix}{}
+    \State $\Matrix{D} = \Matrix{0}_{\mathrm{N} \times \Matrix{N}}$
+    \For{ $\Index{e} \in \{ 1, \dots \mathrm{N}_{\Index{e}} \}$ }
+        \State $p = $ \Call{GetElementDegree}{$\Index{e}$}
+        \State $\Omega_{\Index{e}} = $ \Call{GetElementDomain}{$\Index{e}$}
+        \State $P = $ \Call{PolynomialBasis}{$p, \ \Omega_{\Index{e}}$}
+        \For{ $\Index{i} \in \{ 1, \dots, p + 1 \}$ }
+            \For{ $\Index{j} \in \{ 1, \dots, p + 1 \}$ }
+                \State $\Index{I} = $ \Call{LocalNodeIndexToGlobalNodeIndex}{$\Index{e}, \ \Index{i}$}
+                \State $\Index{J} = $ \Call{LocalNodeIndexToGlobalNodeIndex}{$\Index{e}, \ \Index{j}$}
+                \State $\Matrix{D}_{\Index{I}\Index{J}} = \Matrix{D}_{\Index{I}\Index{J}} + \int{ P_{\Index{i}} P_{\Index{j}}} \d \Omega_{\Index{e}} $
+            \EndFor
+        \EndFor
+    \EndFor
+    \State \Return{$\Matrix{D}$}
+    \EndProcedure
+  \end{algorithmic}
+\end{algorithm}
+```
+
+<!-- Again we precompute a mapping between a local element's node ids and the global node ids: -->
+<!-- ```{=latex}
+\begin{equation}
+    \Index{n}_g = \operatorname{LM}(\Index{n}_{\ell}, \Index{e}) = \begin{cases} 
+                                                                        \Index{e} & \text{if} \ \Index{n}_{\ell} = 1 \\ 
+                                                                        \Index{e} + 1 & \text{if} \ \Index{n}_{\ell} = 2 
+                                                                   \end{cases}
+\end{equation}
+``` -->
+
+Let's now look at the global extraction operator approach.
+First we compute the Gram matrix of the *discontinuous* linear spline we'll have an $\mathrm{N} \times \mathrm{N}$ matrix, where $\mathrm{N}$ are the number of global basis functions.
+Because the support of the discontinuous spline functions are limited to a single element, the resulting Gram matrix will have a block-diagonal structure.
+Let's represent the non-zero entries of the Gram matrix as $D_{\Index{i}\Index{j}}^{\Index{e}}$, where $\Index{i}$ and $\Index{j}$ represent the local basis function index on element ${\Index{e}}$.
+
+```{=latex}
+\begin{equation}
+    \Matrix{D} = \begin{bmatrix}
+                    D_{\Index{1}\Index{1}}^{\Index{1}} & D_{\Index{1}\Index{2}}^{\Index{1}} & 0                                  & 0 \\
+                    D_{\Index{2}\Index{1}}^{\Index{1}} & D_{\Index{2}\Index{2}}^{\Index{1}} & 0                                  & 0 \\
+                    0                                  & 0                                  & D_{\Index{1}\Index{1}}^{\Index{2}} & D_{\Index{1}\Index{2}}^{\Index{2}} \\
+                    0                                  & 0                                  & D_{\Index{2}\Index{1}}^{\Index{2}} & D_{\Index{2}\Index{2}}^{\Index{2}}
+                 \end{bmatrix}
+\end{equation}
+```
+
+The extraction operator for the continuous spline is 
+
+```{=latex}
+\begin{equation}
+    \Matrix{C} 
+    = 
+    \begin{bmatrix}
+        1 & 0 & 0 & 0 \\
+        0 & 1 & 1 & 0 \\
+        0 & 0 & 0 & 1 \\
+    \end{bmatrix}
+\end{equation}
+```
+
+Left-multiplying the initial Gram matrix by the extraction operator we have
+
+```{=latex}
+\begin{equation}
+    \Matrix{C} \Matrix{D}
+    = 
+    \begin{bmatrix}
+        D_{\Index{1}\Index{1}}^{\Index{1}} & D_{\Index{1}\Index{2}}^{\Index{1}} & 0                                  & 0 \\
+        D_{\Index{2}\Index{1}}^{\Index{1}} & D_{\Index{2}\Index{2}}^{\Index{1}} & D_{\Index{1}\Index{1}}^{\Index{2}} & D_{\Index{1}\Index{2}}^{\Index{2}} \\
+        0                                  & 0                                  & D_{\Index{2}\Index{1}}^{\Index{2}} & D_{\Index{2}\Index{2}}^{\Index{2}}
+    \end{bmatrix}
+\end{equation}
+```
+
+And right-multiplying this result by the transpose of the extraction operator then yields:
+```{=latex}
+\begin{equation}
+    \left( \Matrix{C} \Matrix{D} \right) \Matrix{C}^T
+    = 
+    \begin{bmatrix}
+        D_{\Index{1}\Index{1}}^{\Index{1}} & D_{\Index{1}\Index{2}}^{\Index{1}}                                      & 0 \\
+        D_{\Index{2}\Index{1}}^{\Index{1}} & D_{\Index{2}\Index{2}}^{\Index{1}} + D_{\Index{1}\Index{1}}^{\Index{2}} & D_{\Index{1}\Index{2}}^{\Index{2}} \\
+        0                                  & D_{\Index{2}\Index{1}}^{\Index{2}}                                      & D_{\Index{2}\Index{2}}^{\Index{2}}
+    \end{bmatrix}
 \end{equation}
 ```
 

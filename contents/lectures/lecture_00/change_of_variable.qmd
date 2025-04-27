@@ -76,7 +76,7 @@ function to_value = ChangeOfVariable( from_value, from_domain, to_domain )
     % SHIFT TO ZERO
     to_value = from_value - from_domain(1);
     % SCALE TO EQUAL RANGE
-    to_value = to_value * range( to_domain ) / range( from_domain );
+    to_value = to_value * ( to_domain(2) - to_domain(1) ) / ( from_domain(2) - from_domain(1) );
     % APPLY TO DOMAIN
     to_value = to_value + to_domain(1);
 end

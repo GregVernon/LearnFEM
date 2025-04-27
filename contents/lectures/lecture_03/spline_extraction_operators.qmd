@@ -699,6 +699,43 @@ And right-multiplying this result by the transpose of the extraction operator th
 \end{equation}
 ```
 
+In many texts, such as Hughes, the construction of the full matrices and vectors of the linear systems in Galerkin methods is known as *assembly*, and the algorithms that perform assembly referred to as *assembly algorithms*.
+These are often denoted in the following form:
+
+```{=latex}
+\begin{align}
+    \Matrix{K} &= \Assembly{ \Matrix{K}^{\Index{e}} } \\
+    \Vector{f} &= \Assembly{ \Vector{f}^{\Index{e}} }
+\end{align}
+```
+
 ## Lagrange Extraction
+
+It is should be obvious now that we can extract not just the Bernstein polynomials from a smooth-spline, but any polynomial basis.
+The two obvious approaches are to either:
+1. Compute the change of basis operator from the Bernstein basis to our desired polynomial basis, and then compose this operator with the Bezier extraction operator.
+2. Directly compute the desired polynomial basis' extraction operator via inner products as we did for Bezier extraction.
+
+However, interpolatory bases, such as the Lagrange basis, provide us with a third option: construction via interpolation.
+
+```{matlab}
+clear
+
+x = sym( "x", "real" );
+degree = [2, 2, 2];
+continuity = [-1, 1, 1, -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
+spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
+spline = Spline( spline_space );
+spline_coeffs = [ 1; 1; 2; 1; 1 ];
+
+continuity = [-1, 0, 0, -1];
+lagrange_space = SplineSpace( "Lagrange", x, degree, vertices, continuity );
+lagrange_spline = Spline( spline_space );
+
+
+extraction_operator = ComputeSplineExtractionOperator( spline )
+```
 
 ## Tessellation Extraction

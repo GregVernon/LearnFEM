@@ -107,12 +107,10 @@ classdef Spline
                 if e == 1
                     curr_basis_id = 0;
                 else
-                    curr_basis_id = curr_basis_id - left_elem_continuity;
+                    curr_basis_id = curr_basis_id - ( left_elem_continuity + 1 );
                 end
                 for n = 1 : elem_degree + 1
-                    if ( n - left_elem_continuity ) >= left_elem_continuity
-                        curr_basis_id = curr_basis_id + 1;
-                    end
+                    curr_basis_id = curr_basis_id + 1;
                     if e == elem_id
                         supported_basis_ids = [ supported_basis_ids; curr_basis_id ];
                     end

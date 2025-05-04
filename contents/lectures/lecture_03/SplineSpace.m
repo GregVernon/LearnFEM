@@ -52,6 +52,10 @@ classdef SplineSpace
             elem_domain = obj.vertices( elem_id : elem_id + 1 );
         end
         
+        function elem_vertex_ids = GetElementVertexIds( obj, elem_id )
+            elem_vertex_ids = [ elem_id : elem_id + 1 ];
+        end
+
         function elem_degree = GetElementDegree( obj, elem_id )
             elem_degree = obj.degree( elem_id );
         end

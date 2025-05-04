@@ -726,16 +726,153 @@ degree = [2, 2, 2];
 continuity = [-1, 1, 1, -1];
 domain = sym( [0, 1] );
 vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
-spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
+spline_space = SplineSpace( "Lagrange", x, degree, vertices, continuity );
 spline = Spline( spline_space );
 spline_coeffs = [ 1; 1; 2; 1; 1 ];
 
 continuity = [-1, 0, 0, -1];
 lagrange_space = SplineSpace( "Lagrange", x, degree, vertices, continuity );
-lagrange_spline = Spline( spline_space );
+lagrange_spline = Spline( lagrange_space );
 
+extraction_operator = sym( zeros( length( spline.basis ), length( spline.dc_basis ) ) );
+for e = 1 : length( degree )
+    elem_domain = vertices(e:e+1);
+    elem_degree = degree(e);
+    elem_nodes = linspace( elem_domain(1), elem_domain(2), elem_degree + 1 );
+    dc_basis_ids = spline.GetSupportedDCBasisIdsFromElementId(e)
+    for n = 1 : length( dc_basis_ids )
+        extraction_operator(:, dc_basis_ids(n)) = subs( spline.basis, x, elem_nodes(n) );
+    end
+end
+display( extraction_operator.' )
 
-extraction_operator = ComputeSplineExtractionOperator( spline )
+D = int( spline.dc_basis .* transpose( spline.dc_basis ), domain );
+C = int( spline.dc_basis .* transpose( spline.basis ), domain );
+D \ C
+%extraction_operator = ComputeSplineExtractionOperator( spline )
 ```
 
+The benefit of this interpolation approach is that we don't need to assemble and solve the change of basis linear system.
+
 ## Tessellation Extraction
+Finally, let's consider one final form of extraction.
+The previously presented extraction forms, while not *technically* change of basis operations as they change the continuity of the space, at least maintained the same polynomial degree over each element.
+This method discretizes the spline with linear simplicial sub-elements, in 2D or 3D these elements are triangles.
+Meshes composed of linear simplicial elements is often known as a "tessellation," hence the name.
+The motivation for this approach is tenuous, at best, in one-dimensional splines but is well founded in higher dimensions.
+
+The purpose of tessellation extraction is to relate a high-order smooth spline, upon which certain calculations may be expensive or hard (e.g., nonlinear, non-interpolatory), to a linear tessellation where these calculations may be easier (e.g., linear, interpolatory).
+A few examples include:
+
+* Approximating a forcing function or boundary condition through interpolation rather than $\mathcal{L}^2$ projection
+* Searching for potential mechanical contact regions
+* Providing initial guesses for contact patch boundaries, with refinement of the contact patch utilizing nonlinear methods, such as Newton's method, on the higher-order smooth spline
+
+Technically, there are a number of ways that one could produce the linear tessellation and the tessellation need not necessarily be defined on the same mesh as the spline nor is it necessary that it be defined on a finer mesh than the spline.
+However, in this text we will consider the case where uniformly subdivide each element of degree $p$ with $p$ linear sub-elements.
+
+```{matlab}
+function tess_spline_space = GenerateTessellationSubspace( spline_space )
+    for e = 1 : spline_space.GetNumElements()
+        elem_degree = spline_space.GetElementDegree(e);
+        elem_domain = spline_space.GetElementDomain(e);
+        if e == 1
+            degree = ones( 1, elem_degree );
+            continuity = [ -1 zeros( 1, elem_degree ) ];
+            vertices = linspace( elem_domain(1), elem_domain(2), elem_degree + 1 );
+        else
+            degree = [degree, ones( 1, elem_degree ) ];
+            continuity = [ continuity, zeros( 1, elem_degree ) ];
+            new_vertices = linspace( elem_domain(1), elem_domain(2), elem_degree + 1 );
+            vertices = [ vertices, new_vertices(2:end) ];
+            if e == spline_space.GetNumElements()
+                continuity(end) = -1;
+            end
+        end
+    end
+    tess_spline_space = SplineSpace( "Lagrange", spline_space.variate, degree, vertices, continuity );
+end
+```
+
+```{matlab}
+clear
+
+x = sym( "x", "real" );
+degree = [2, 2, 2];
+continuity = [-1, 1, 1, -1];
+domain = sym( [0, 1] );
+vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
+spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
+spline = Spline( spline_space );
+
+tess_spline_space = GenerateTessellationSubspace( spline_space );
+tess_spline = Spline( tess_spline_space );
+
+figure
+subplot( 2, 1, 1 )
+hold on
+fplot( spline.basis, double( domain ) );
+xline( double( vertices ), LineStyle=":" )
+
+subplot( 2, 1, 2 )
+hold on
+fplot( tess_spline.basis, double( domain ) );
+xline( double( vertices ), LineStyle=":" )
+
+D = int( spline.basis .* transpose( spline.basis ), domain );
+C = int( spline.basis .* transpose( tess_spline.basis ), domain );
+R = D \ C
+
+g(x) = sin( pi * x )^2;
+tess_coeffs = g( tess_spline_space.vertices )
+spline_coeffs =  transpose( R * transpose( tess_coeffs ) )
+
+figure
+subplot( 2, 1, 1 )
+hold on
+fplot( tess_coeffs * tess_spline.basis, double( domain ) )
+fplot( g, double( domain ), Color="k" )
+xline( double( vertices ), LineStyle=":" )
+
+subplot( 2, 1, 2 )
+hold on
+fplot( spline_coeffs * spline.basis, double( domain ) )
+fplot( g, double( domain ), Color="k" )
+xline( double( vertices ), LineStyle=":" )
+
+TL = sym( zeros( length( spline.basis ), length( tess_spline.basis ) ) );
+for n = 1 : length( tess_spline.basis )
+    TL(:, n) = subs( spline.basis, x, tess_spline_space.vertices(n) );
+end
+%for e = 1 : length( degree )
+%    elem_domain = vertices(e:e+1);
+%    elem_degree = degree(e);
+%    elem_nodes = linspace( elem_domain(1), elem_domain(2), elem_degree + 1 );
+%    tess_basis_ids = tess_spline.GetSupportedDCBasisIdsFromElementId(e)
+%    for n = 1 : length( tess_basis_ids )
+%        TL(:, tess_basis_ids(n)) = subs( spline.basis, x, elem_nodes(n) );
+%    end
+%end
+display( TL.' )
+
+spline_coeffs =  TL * tess_coeffs.'
+
+figure
+subplot( 2, 1, 1 )
+hold on
+fplot( tess_coeffs * tess_spline.basis, double( domain ) )
+fplot( g, double( domain ), Color="k" )
+xline( double( vertices ), LineStyle=":" )
+
+subplot( 2, 1, 2 )
+hold on
+fplot( TL * transpose( spline.basis ), double( domain ) )
+fplot( g, double( domain ), Color="k" )
+xline( double( vertices ), LineStyle=":" )
+
+%subplot( 2, 1, 2 )
+%hold on
+%fplot( spline_coeffs.' * spline.basis, double( domain ) )
+%fplot( g, double( domain ), Color="k" )
+%xline( double( vertices ), LineStyle=":" )
+```

@@ -106,32 +106,32 @@ format:
           }
         };
         </script>
-  pdf:
-    pdf-engine: xelatex
-    latex-auto-install: true
-    latex-clean: true
-    latex-tinytex: false
-    keep-tex: true
-    mainfont: "Times New Roman"
-    monofont: "JuliaMono"
-    documentclass: scrreprt
-    include-in-header:
-      text: |
-        \usepackage{amsmath}
-        \usepackage{amssymb}
-        \usepackage{stackrel}
-        \usepackage{mathpazo}
-        \usepackage{mathtools}
-        \usepackage{physics}
-        \usepackage{bm}
-        \newcommand{\Real}{\mathbb{R}}
-        \newcommand{\Inner}[2]{\left\langle #1, #2 \right\rangle}
-        \newcommand{\Vector}[1]{\mathbf{\mathit{#1}}}
-        \newcommand{\Matrix}[1]{\boldsymbol{\mathrm{#1}}}
-        \newcommand{\Assembly}[1]{ \mathop{\Large \boldsymbol{A}}\limits_{\mathrm{e}=1}^{n_{\mathrm{el}}} \bigl( #1 \bigr)} }
-        \newcommand{\ChangeBasisOp}[2]{\Matrix{R}_{\tiny{\Matrix{#1}\rightarrow \Matrix{#2}}}}
-        \newcommand{\DiracDelta}[2]{ \delta\left( #1 - #2 \right) }
-        \newcommand{\DiracDeltaShort}[2]{ \delta^{#1}_{#2} }
-        \newcommand{\defequals}{\stackrel{\text{def}}{=}}
-        \newcommand{\p}{\mathop{}\!{\partial}}
-        \newcommand{\Index}{\mathrm{#1}}
+  # pdf:
+  #   pdf-engine: xelatex
+  #   latex-auto-install: true
+  #   latex-clean: true
+  #   latex-tinytex: false
+  #   keep-tex: true
+  #   mainfont: "Times New Roman"
+  #   monofont: "JuliaMono"
+  #   documentclass: scrreprt
+  #   include-in-header:
+  #     text: |
+  #       \usepackage{amsmath}
+  #       \usepackage{amssymb}
+  #       \usepackage{stackrel}
+  #       \usepackage{mathpazo}
+  #       \usepackage{mathtools}
+  #       \usepackage{physics}
+  #       \usepackage{bm}
+  #       \newcommand{\Real}{\mathbb{R}}
+  #       \newcommand{\Inner}[2]{\left\langle #1, #2 \right\rangle}
+  #       \newcommand{\Vector}[1]{\mathbf{\mathit{#1}}}
+  #       \newcommand{\Matrix}[1]{\boldsymbol{\mathrm{#1}}}
+  #       \newcommand{\Assembly}[1]{ \mathop{\Large \boldsymbol{A}}\limits_{\mathrm{e}=1}^{n_{\mathrm{el}}} \bigl( #1 \bigr)} }
+  #       \newcommand{\ChangeBasisOp}[2]{\Matrix{R}_{\tiny{\Matrix{#1}\rightarrow \Matrix{#2}}}}
+  #       \newcommand{\DiracDelta}[2]{ \delta\left( #1 - #2 \right) }
+  #       \newcommand{\DiracDeltaShort}[2]{ \delta^{#1}_{#2} }
+  #       \newcommand{\defequals}{\stackrel{\text{def}}{=}}
+  #       \newcommand{\p}{\mathop{}\!{\partial}}
+  #       \newcommand{\Index}{\mathrm{#1}}

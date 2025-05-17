@@ -772,13 +772,14 @@ Technically, there are a number of ways that one could produce the linear tessel
 However, in this text we will consider the case where uniformly subdivide each element of degree $p$ with $p$ linear sub-elements.
 
 ```{matlab}
+%| output: false
 function tess_spline_space = GenerateTessellationSubspace( spline_space )
     for e = 1 : spline_space.GetNumElements()
         elem_degree = spline_space.GetElementDegree(e);
         elem_domain = spline_space.GetElementDomain(e);
         if e == 1
             degree = ones( 1, elem_degree );
-            continuity = [ -1 zeros( 1, elem_degree ) ];
+            continuity = [ -1, zeros( 1, elem_degree ) ];
             vertices = linspace( elem_domain(1), elem_domain(2), elem_degree + 1 );
         else
             degree = [degree, ones( 1, elem_degree ) ];
@@ -798,14 +799,21 @@ end
 clear
 
 x = sym( "x", "real" );
-degree = [2, 2, 2];
+degree = [ 2, 2, 2 ];
 continuity = [-1, 1, 1, -1];
 domain = sym( [0, 1] );
 vertices = linspace( domain(1), domain(2), length( degree ) + 1 );
 spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
 spline = Spline( spline_space );
 
-tess_spline_space = GenerateTessellationSubspace( spline_space );
+continuity(2:end-1) = 0;
+lag_spline_space = SplineSpace( "Lagrange", x, degree, vertices, continuity );
+lag_spline = Spline( lag_spline_space );
+
+figure
+fplot( lag_spline.basis, double( domain ) )
+
+tess_spline_space = GenerateTessellationSubspace( spline_space )
 tess_spline = Spline( tess_spline_space );
 
 figure
@@ -821,28 +829,37 @@ xline( double( vertices ), LineStyle=":" )
 
 D = int( spline.basis .* transpose( spline.basis ), domain );
 C = int( spline.basis .* transpose( tess_spline.basis ), domain );
+%D = int( tess_spline.basis .* transpose( tess_spline.basis ), domain );
+%C = int( tess_spline.basis .* transpose( spline.basis ), domain );
 R = D \ C
 
 g(x) = sin( pi * x )^2;
-tess_coeffs = g( tess_spline_space.vertices )
-spline_coeffs =  transpose( R * transpose( tess_coeffs ) )
+tess_coeffs = transpose( g( tess_spline_space.vertices ) )
+%spline_coeffs =  transpose( R ) * tess_coeffs
+spline_coeffs =  R * tess_coeffs
 
 figure
 subplot( 2, 1, 1 )
 hold on
-fplot( tess_coeffs * tess_spline.basis, double( domain ) )
+fplot( transpose( tess_coeffs ) * tess_spline.basis, double( domain ) )
 fplot( g, double( domain ), Color="k" )
 xline( double( vertices ), LineStyle=":" )
 
 subplot( 2, 1, 2 )
 hold on
-fplot( spline_coeffs * spline.basis, double( domain ) )
+fplot( transpose( spline_coeffs ) * spline.basis, double( domain ) )
 fplot( g, double( domain ), Color="k" )
 xline( double( vertices ), LineStyle=":" )
 
-TL = sym( zeros( length( spline.basis ), length( tess_spline.basis ) ) );
+D = int( spline.basis .* transpose( spline.basis ), domain );
+C = int( spline.basis .* transpose( lag_spline.basis ), domain );
+%D = int( tess_spline.basis .* transpose( tess_spline.basis ), domain );
+%C = int( tess_spline.basis .* transpose( spline.basis ), domain );
+LN = D \ C
+
+TL = sym( zeros( length( lag_spline.basis ), length( tess_spline.basis ) ) );
 for n = 1 : length( tess_spline.basis )
-    TL(:, n) = subs( spline.basis, x, tess_spline_space.vertices(n) );
+    TL(:, n) = subs( lag_spline.basis, x, tess_spline_space.vertices(n) );
 end
 %for e = 1 : length( degree )
 %    elem_domain = vertices(e:e+1);
@@ -855,24 +872,18 @@ end
 %end
 display( TL.' )
 
-spline_coeffs =  TL * tess_coeffs.'
+spline_coeffs =  LN * TL * tess_coeffs
 
 figure
 subplot( 2, 1, 1 )
 hold on
-fplot( tess_coeffs * tess_spline.basis, double( domain ) )
+fplot( transpose( tess_coeffs ) * tess_spline.basis, double( domain ) )
 fplot( g, double( domain ), Color="k" )
 xline( double( vertices ), LineStyle=":" )
 
 subplot( 2, 1, 2 )
 hold on
-fplot( TL * transpose( spline.basis ), double( domain ) )
+fplot( transpose( spline_coeffs ) * spline.basis, double( domain ) )
 fplot( g, double( domain ), Color="k" )
 xline( double( vertices ), LineStyle=":" )
-
-%subplot( 2, 1, 2 )
-%hold on
-%fplot( spline_coeffs.' * spline.basis, double( domain ) )
-%fplot( g, double( domain ), Color="k" )
-%xline( double( vertices ), LineStyle=":" )
 ```

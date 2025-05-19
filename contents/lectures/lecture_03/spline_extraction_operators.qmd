@@ -855,11 +855,11 @@ D = int( spline.basis .* transpose( spline.basis ), domain );
 C = int( spline.basis .* transpose( lag_spline.basis ), domain );
 %D = int( tess_spline.basis .* transpose( tess_spline.basis ), domain );
 %C = int( tess_spline.basis .* transpose( spline.basis ), domain );
-LN = D \ C
+NL = D \ C
 
-TL = sym( zeros( length( lag_spline.basis ), length( tess_spline.basis ) ) );
+LT = sym( zeros( length( lag_spline.basis ), length( tess_spline.basis ) ) );
 for n = 1 : length( tess_spline.basis )
-    TL(:, n) = subs( lag_spline.basis, x, tess_spline_space.vertices(n) );
+    LT(:, n) = subs( lag_spline.basis, x, tess_spline_space.vertices(n) );
 end
 %for e = 1 : length( degree )
 %    elem_domain = vertices(e:e+1);
@@ -867,12 +867,12 @@ end
 %    elem_nodes = linspace( elem_domain(1), elem_domain(2), elem_degree + 1 );
 %    tess_basis_ids = tess_spline.GetSupportedDCBasisIdsFromElementId(e)
 %    for n = 1 : length( tess_basis_ids )
-%        TL(:, tess_basis_ids(n)) = subs( spline.basis, x, elem_nodes(n) );
+%        LT(:, tess_basis_ids(n)) = subs( spline.basis, x, elem_nodes(n) );
 %    end
 %end
-display( TL.' )
-
-spline_coeffs =  LN * TL * tess_coeffs
+display( LT.' )
+NLT = NL * LT
+spline_coeffs =  NLT * tess_coeffs
 
 figure
 subplot( 2, 1, 1 )
@@ -886,4 +886,100 @@ hold on
 fplot( transpose( spline_coeffs ) * spline.basis, double( domain ) )
 fplot( g, double( domain ), Color="k" )
 xline( double( vertices ), LineStyle=":" )
+```
+
+To stress the importance of this result, let's compare the convergence rate of tessellation extraction against an Galerkin formulation for the scalar projection problem.
+
+```{matlab}
+%| output: true
+x = sym( "x", "real" );
+bvp = ScalarProjectionBVP;
+bvp.variate = x;
+bvp.domain = [0, 1];
+bvp.target_fun = sin( pi * x )^2;
+
+n = (1:7);
+l2_err_galerkin = zeros( size( n ) );
+dofs_galerkin = zeros( size( n ) );
+for ii = 1 : length( n )
+    num_elements = 2.^n(ii);
+    degree = 2 * ones( 1, num_elements );
+    continuity = [-1, 1 * ones( 1, num_elements - 1 ) -1];
+    vertices = linspace( bvp.domain(1), bvp.domain(2), num_elements + 1 );
+    spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
+    spline = Spline( spline_space );
+    u = ScalarProjection( spline_space, bvp );
+    l2_err_galerkin(ii) = ComputeL2Error( bvp.target_fun, u, bvp.domain, "fast" );
+    dofs_galerkin(ii) = length( spline.basis );
+end
+
+l2_err_tessext = zeros( size( n ) );
+dofs_tessext = zeros( size( n ) );
+for ii = 1 : length( n )
+    % Build U-spline
+    num_elements = 2.^n(ii);
+    degree = 2 * ones( 1, num_elements );
+    continuity = [-1, 1 * ones( 1, num_elements - 1 ) -1];
+    vertices = linspace( bvp.domain(1), bvp.domain(2), num_elements + 1 );
+    spline_space = SplineSpace( "Bernstein", x, degree, vertices, continuity );
+    spline = Spline( spline_space );
+
+    % Build Lagrange Spline
+    continuity(2:end-1) = 0;
+    lag_spline_space = SplineSpace( "Lagrange", x, degree, vertices, continuity );
+    lag_spline = Spline( lag_spline_space );
+
+    % Build Tessellation Spline
+    tess_spline_space = GenerateTessellationSubspace( spline_space );
+    tess_spline = Spline( tess_spline_space );
+
+    % Build extraction operators
+    D = int( spline.basis .* transpose( spline.basis ), bvp.domain );
+    C = int( spline.basis .* transpose( lag_spline.basis ), bvp.domain );
+    NL = D \ C;
+
+    LT = sym( zeros( length( lag_spline.basis ), length( tess_spline.basis ) ) );
+    for n1 = 1 : length( tess_spline.basis )
+        LT(:, n1) = subs( lag_spline.basis, x, tess_spline_space.vertices(n1) );
+    end
+
+    NLT = NL * LT;
+
+    % Interpolate the target function with the tessellation
+    tess_coeffs = transpose( subs( bvp.target_fun, tess_spline_space.vertices ) );
+
+    % Apply extraction to recover spline coefficients
+    spline_coeffs = NLT * tess_coeffs;
+
+    % Recover approximate function as U-spline
+    u = transpose( spline_coeffs ) * spline.basis;
+
+    % Compute error 
+    l2_err_tessext(ii) = ComputeL2Error( bvp.target_fun, u, bvp.domain, "fast" );
+    dofs_tessext(ii) = length( tess_spline.basis );
+end
+```
+
+```{matlab}
+%| echo: false
+%| output: true
+
+dofs_galerkin
+l2_err_galerkin
+
+dofs_tessext
+l2_err_tessext
+
+figure
+hold on;
+plot( dofs_galerkin, l2_err_galerkin, LineWidth=2 )
+plot( dofs_tessext, l2_err_tessext, LineWidth=2 )
+ax = gca;
+ax.XScale = "log";
+ax.YScale = "log";
+ax.Box = "on";
+ax.XGrid = "on";
+ax.YGrid = "on";
+ax.XMinorGrid = "on";
+ax.YMinorGrid = "on";
 ```

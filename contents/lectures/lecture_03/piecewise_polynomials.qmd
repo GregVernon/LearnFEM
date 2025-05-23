@@ -23,3 +23,40 @@ One solution to these issues is to use multiple, relatively low-order polynomial
 These *piecewise-polynomials*, also known as *splines*, are the foundation of modern numerical methods such as the finite element and *finite volume* methods, although this fact is perhaps not widely understood by many practitioners.
 
 
+```{matlab}
+%| output: false
+%| echo: false
+function l2_error = ComputeL2Error( target_fun, approx_fun, domain, method )
+    if method == "exact"
+        if symFunType( approx_fun ) == "piecewise"
+            l2_error = sym(0);
+            fc = GetPiecewiseSolutionComponents( approx_fun );
+            for ii = 1 : length( fc.functions )
+                l2_error_fun = simplify( ( target_fun - fc.functions{ii} )^2, Steps=10 );
+                l2_error = l2_error + sqrt( int( l2_error_fun, fc.domains(ii,:) ) );
+            end
+        else
+            l2_error_fun = simplify( ( target_fun - approx_fun )^2, Steps=10 );
+            l2_error = sqrt( int( l2_error_fun, domain ) );
+        end
+    elseif method == "fast"
+        if symFunType( approx_fun ) == "piecewise"
+            l2_error = sym(0);
+            fc = GetPiecewiseSolutionComponents( approx_fun );
+            for ii = 1 : length( fc.functions )
+                l2_error_fun = simplify( ( target_fun - fc.functions{ii} )^2, Steps=10 );
+                l2_error_fun = matlabFunction( l2_error_fun );
+                l2_error_fun_vpa = @(x) double( vpa( l2_error_fun(x), 32 ) );
+                domain = double( fc.domains(ii,:) );
+                l2_error = l2_error + sqrt( integral( l2_error_fun_vpa, domain(1), domain(2), reltol=1e-12 ) );
+            end
+        else
+            l2_error_fun = simplify( ( target_fun - approx_fun )^2, Steps=10 );
+            l2_error_fun = matlabFunction( l2_error_fun );
+            l2_error_fun_vpa = @(x) double( vpa( l2_error_fun(x), 32 ) );
+            domain = double( domain );
+            l2_error = sqrt( integral( l2_error_fun_vpa, domain(1), domain(2), reltol=1e-12 ) );
+        end
+    end
+end
+```

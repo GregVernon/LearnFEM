@@ -8,6 +8,7 @@ clear
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
 addpath( "../lecture_00/" )
+addpath( "../lecture_03/" )
 ```
 
 # Numerical Computations
@@ -45,7 +46,7 @@ We can then compare the performance of evaluated vs cached symbolic computations
 ```{matlab}
 %| output: true
 
-degree = 1;
+degree = 2;
 x = sym( -1 / sqrt( 3 ) );
 domain = sym( [0, 1] );
 t1 = timeit( @()BernsteinBasis( degree, x, domain ) );
@@ -165,10 +166,120 @@ t5 = tElapsed / num_evals;
 %| output: true
 %| echo: false
 disp( "Hard-coded Numerical Calcuation: " + num2str( t5 ) + " seconds")
-disp( "Evaluated numerical is ~" + num2str( round( t1 / t5 ) ) + "x faster than evaluated symbolic" )
-disp( "Hard-coded numerical is ~" + num2str( round( t4 / t5 ) ) + "x faster than evaluated numerical" )
+disp( "Evaluated numerical is ~" + num2str( round( t1 / t3 ) ) + "x faster than evaluated symbolic" )
+disp( "Hard-coded numerical is ~" + num2str( round( t3 / t5 ) ) + "x faster than evaluated numerical" )
+disp( "Hard-coded numerical is ~" + num2str( round( t1 / t5 ) ) + "x faster than evaluated symbolic" )
 ```
 
 Wow!
 This hard-coded function runs in ~15 *nanoseconds* on my machine, approximately *500x* faster than the evaluated numerical approach, and approximately *one million* times faster than the original symbolic approach.
 It is for this reason that many finite element codes hard-code quadrature schemes and related basis function values, and often result in code that can appear daunting for the initiate -- speed is king.
+
+## Sparse Arrays
+
+One challenge with finite element methods is the assembled linear systems are often large. 
+For a linear system, $\Matrix{A}\Vector{x} = \Vector{b}$ with $N$ basis functions -- or, more precisely, $N$ degrees of freedom (DOFs) -- the matrix $\Matrix{A}$ will have shape $N \times N$ and have $N^2$ entries.
+Each of these entries is stored, almost universally in FEM, as a floating-point number with double-precision requiring 64-bits of memory.
+There are 8 bits in one byte of memory, thus there are 8 bytes per double-precision floating-precision (DFP) number.
+
+Let's consider the case for the $L^2$ function approximation with a linear spline basis.
+
+```{matlab}
+%| output: true
+%| echo: true
+
+clear
+
+x = sym( "x", "real" );
+basis_name = "Bernstein";
+n = (0:4);
+for ii = 1 : length( n )
+    num_elements = 2 ^ n(ii);
+    degree = 1 * ones( 1, num_elements );
+    continuity = [-1, 0 * ones( 1, num_elements - 1 ) -1];
+    domain = sym( [0, 1] );
+    vertices = linspace( domain(1), domain(2), num_elements + 1 );
+    spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+    spline = Spline( spline_space );
+
+    bvp = ScalarProjectionBVP();
+    bvp.variate = x;
+    bvp.target_fun = sin( pi * x )^2;
+    bvp.domain = domain;
+
+    [u, D{ii}, F, basis, d] =  ScalarProjection( spline_space, bvp );
+    num_zeros(ii,1) = sum( isAlways( D{ii}(:) == 0 ) );
+    num_nonzeros(ii,1) = numel( D{ii} ) - num_zeros(ii);
+end
+```
+
+```{matlab}
+%| echo: false
+figure
+hold on
+bar( n, [ num_nonzeros, num_zeros ], "stacked" )
+%bar( n, [ num_nonzeros, num_zeros ], "stacked", DisplayName=['# Zeros', '# Non-Zeros'] )
+legend( {'# Non-Zeros', '# Zeros'}, Location="NorthWest" )
+
+ax = gca;
+ax.Box = "on";
+ax.XTick = n;
+ax.XTickLabels = 2 .^ n;
+ax.YScale = "linear";
+ax.YGrid = "on";
+ax.YMinorGrid = "off";
+%ylim( [0, 10^ceil( log10( max( num_zeros + num_nonzeros ) ) ) ] )
+```
+
+```{matlab}
+%| echo: false
+figure
+plot( n, num_nonzeros ./ ( num_nonzeros + num_zeros ) )
+%plot( 2.^n, num_nonzeros ./ ( num_nonzeros + num_zeros ) )
+
+ax = gca;
+ax.Box = "on";
+ax.XTick = n;
+ax.XTickLabels = 2 .^ n;
+ax.XScale = "linear";
+ax.YScale = "log";
+ax.XGrid = "on";
+ax.YGrid = "on";
+ax.YMinorGrid = "on";
+```
+
+```{matlab}
+%| echo: false
+
+figure
+subplot( 1, 2, 1 )
+pcolor( isAlways( D{3} == 0 ) )
+axis tight
+axis equal
+colormap gray
+ax = gca;
+ax.YDir = "reverse";
+
+
+subplot( 1, 2, 2 )
+pcolor( isAlways( D{end} == 0 ) )
+axis equal
+axis tight
+colormap gray
+ax = gca;
+ax.YDir = "reverse";
+```
+
+As you can see, as we increase the number elements the ratio of elements that are zero increases.
+We can reduce memory usage by ignoring zeros and instead storing the matrix in a format known as a *sparse matrix* that simply stores the non-zero entries in an array that defines each entry's value and the row and column that it is located at in the matrix.
+While it isn't strictly necessary that a sparse matrix "ignore" zeros (it could be any number that occurs exactly many times) we know that the spline basis functions have local support and are thus exactly zero over elements they are not supported.
+It's also possible to store the $\Vector{b}$ vector as a sparse vector, however the memory savings achieved by a sparse vector are not as drastic as they are for sparse matrices.
+
+```{matlab}
+%|output: false
+%|echo: false
+
+D_full = double( D{end} );
+D_sparse = sparse( double( D_full ) );
+```
+

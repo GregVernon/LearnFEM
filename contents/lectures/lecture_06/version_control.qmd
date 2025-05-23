@@ -1,0 +1,147 @@
+# Version Control with Git
+
+The most important software development practice is version control.
+Put plainly, version control is a more powerful "save" functionality that stores a history of your work at "snapshots" in time that you decide.
+There are several different version control systems, but we will use the *git* system.
+The git system is quite sophisticated with numerous capabilities including local branches, worktrees, cherry-picking, and supports multiple workflows.
+Furthermore, due to the proliferation of *free* git-hosting websites such as [GitHub](https://www.github.com), [GitLab](https://www.gitlab.com), [Bitbucket](https://www.bitbucket.org), and [Codeberg](https://www.codeberg.org), it is easy to backup and share your code with others without needing to pay for data-storage services.
+
+If you are already experienced with git, feel free to use any capbility or workflow that you feel comfortable using.
+You are welcome to use any git-hosting website you wish, but I will only provide guidance for GitHub in this test --- though I anticipate a future version of this text will use Codeberg.
+
+## Creating a GitHub Project
+
+We begin by creating a GitHub project, which will host your *git repository* that contains your code.
+The following list provides a step-by-step list of what to do if you've never used GitHub before, with hyperlinks to GitHub's official documentation.
+I encourage you add their [Getting Starting](https://docs.github.com/en/get-started) webpage to your bookmarks to review.
+
+1. [Create an account](https://docs.github.com/en/get-started/start-your-journey/creating-an-account-on-github)
+    * You only need a free account.
+2. [Create a new repository for your code](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-new-repository)
+    * DO NOT create 
+    * I will use the name `learning_fem` for the name of the project throughout this text.
+3. [Install Git](https://git-scm.com/downloads)
+4. [Install the GitHub command-line interface (GitHub CLI)](https://cli.github.com)
+    * You may alternatively install [GitHub Desktop](https://github.com/apps/desktop), a graphical user interface application that may assist folks who are not familiar with command-line interfaces (CLI), also known as terminal user interfaces (TUI). However, it's highly encouraged that you become familiar with CLI/TUI applications as it's a powerful skill for any computer user to have.
+5. [Clone your GitHub repository to your computer]()
+    * You can use the following recipe to clone your repository using the `gh` and `git` commands provided by GitHub CLI
+    ```zsh
+    # Interactive login to GitHub
+    gh auth login
+
+    # Configure git to use GitHub CLI as the credential helper for all authenticated hosts
+    gh auth setup-git
+
+    # Setup your git user name
+    git config --global user.name "<Your Name>"
+    git config --global user.email "<your_email>@<domain>"
+
+    # Navigate to folder you want to put your repository
+    cd <path to folder>
+
+    # Clone your repository -- replace <thing> with the prompted value
+    git clone https://github.com/<YourUsername>/<YourRepoName>.git
+
+    # Navigate to your repository folder
+    cd <YourRepoName>
+    ```
+
+## Working with Git
+
+While `git` has many subcommands, there are a few that we will use most often.
+These include the commands to:
+
+* Stage files for commiting
+    * `git add <file>`
+* Move files and folders
+    * `git mv <oldpath/oldname> <newpath/newname>`
+* Remove files and folders
+    * `git rm -f <file>`
+    * `git rm -rf <folder>`
+* View lists of staged, changed, untracked files
+    * `git status`
+* Commit files to repository
+    * `git commit -m "<useful commit message>"`
+* Push repository updates to GitHub (remote) server
+    * `git push`
+
+Let's try using these to make our first commit.
+Using the command line we'll create a "Read Me" file: `README.md`
+
+```zsh
+echo # Learning FEM > README.md
+echo A repository where I write an FEM code >> README.md
+```
+
+Now, if you run `git status` in your terminal you should see something like:
+```console
+On branch main
+
+No commits yet
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	README.md
+
+nothing added to commit but untracked files present (use "git add" to track)
+```
+
+You can see that our `README.md` file is listed as an untracked file.
+We want to put this into our repository, which we can do by first `git add`-ing it -- which "stages" it for committing:
+
+```zsh
+git add README.md
+git status
+```
+
+And you should now see
+
+```console
+% git add README.md 
+On branch main
+
+No commits yet
+
+Changes to be committed:
+  (use "git rm --cached <file>..." to unstage)
+	new file:   README.md
+```
+
+Which tells us that it's ready to be committed.
+Let's now `git commit` this file to our repository.
+Note that `git commit` *requires* that you provide a message for your commit: `git commit -m "<Message Here>"`
+While the message is allowed to be empty (`""`), I *highly* encourage you get in the habit of providing a short informative message.
+For example:
+
+```zsh
+git commit -m "Add the README file"
+```
+
+```console
+[main (root-commit) 89db6f3] Add the README file
+ 1 file changed, 2 insertions(+)
+ create mode 100644 README.md
+```
+
+And now let's push our change to our remote GitHub repository:
+
+```zsh
+git push
+```
+
+```console
+Enumerating objects: 3, done.
+Counting objects: 100% (3/3), done.
+Delta compression using up to 10 threads
+Compressing objects: 100% (2/2), done.
+Writing objects: 100% (3/3), 279 bytes | 279.00 KiB/s, done.
+Total 3 (delta 0), reused 0 (delta 0), pack-reused 0
+To https://github.com/GregVernon/learning_fem.git
+ * [new branch]      main -> main
+ ```
+
+ Congratulations!
+ You've now written your very first GitHub commit!
+ There's so much more to learn about Git and GitHub, I can't possibly cover it all.
+ But if you strongly feel I've egregiously missed something, let me know and I'll try to incorporate it into this intoductory section.
+ For now, I'll refer you to the official GitHub documentation, Google, or your favorite AI chatbot to help you with any Git issues.

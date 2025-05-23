@@ -69,6 +69,9 @@ book:
     - part: lectures/lecture_05/intro.qmd
       chapters:
         - lectures/lecture_05/numerical_core_algorithms.qmd
+    - part: lectures/lecture_06/intro.qmd
+      chapters:
+        - lectures/lecture_06/version_control.qmd
 
     # - summary.qmd
     # - references.qmd

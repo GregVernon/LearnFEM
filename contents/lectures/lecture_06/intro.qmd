@@ -1,0 +1,16 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+```
+
+# Writing an FEM Code
+
+The first portion of this text introduced the finite element method with a focus on "seeing the math", with not much thought given to performance nor development best practices.
+The next major portion of this text will focus on developing a (moderately) performant FEM code using good, if not best, software development practices.
+We will use the same general framework for our software as we did in the previous portions of this text, however, and will utilize previously-written routines to aid development.

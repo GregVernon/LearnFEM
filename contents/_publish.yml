@@ -1,0 +1,4 @@
+- source: project
+  netlify:
+    - id: 9f3386a2-481a-4e3c-8ca0-982c3e0f93fb
+      url: https://dancing-valkyrie-6d9626.netlify.app

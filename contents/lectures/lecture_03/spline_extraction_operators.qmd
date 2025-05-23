@@ -898,7 +898,7 @@ bvp.variate = x;
 bvp.domain = [0, 1];
 bvp.target_fun = sin( pi * x )^2;
 
-n = (1:7);
+n = (1:5);
 l2_err_galerkin = zeros( size( n ) );
 dofs_galerkin = zeros( size( n ) );
 for ii = 1 : length( n )
@@ -964,11 +964,11 @@ end
 %| echo: false
 %| output: true
 
-dofs_galerkin
-l2_err_galerkin
+dofs_galerkin;
+l2_err_galerkin;
 
-dofs_tessext
-l2_err_tessext
+dofs_tessext;
+l2_err_tessext;
 
 figure
 hold on;
@@ -983,3 +983,5 @@ ax.YGrid = "on";
 ax.XMinorGrid = "on";
 ax.YMinorGrid = "on";
 ```
+
+Almost magically, the tessellation extraction approach converges *at the exact same rate* as the full Galerkin method using high-order splines!

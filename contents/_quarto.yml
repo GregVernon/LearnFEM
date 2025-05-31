@@ -72,7 +72,7 @@ book:
     - part: lectures/lecture_06/intro.qmd
       chapters:
         - lectures/lecture_06/version_control.qmd
-
+        - lectures/lecture_06/test_driven_development.qmd
     # - summary.qmd
     # - references.qmd
 

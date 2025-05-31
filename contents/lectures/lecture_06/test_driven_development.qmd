@@ -1,0 +1,154 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+```
+
+# Software Testing
+
+Most, if not all, modern programming languages provide functionality for evaluating and comparing the output of functions, defining and capturing errors, and writing code that *tests* the functionality of your code at various levels of program integration.
+These tests can be used to verify that your code works, as expected (if not as intended), as you add new functionality, fix bugs, refactor, or cleanup your codebase.
+When users (or management) asks you *"how can I be sure the code is correct?"* you can answer by showing them the test-suite.
+
+## Writing Tests in Matlab
+Matlab has [three different options](https://www.mathworks.com/help/matlab/matlab_prog/ways-to-write-unit-tests.html) for writing tests: [script-based tests](https://www.mathworks.com/help/matlab/matlab_prog/write-script-based-unit-tests.html), [function-based tests](https://www.mathworks.com/help/matlab/matlab_prog/function-based-unit-tests.html), and [class-based tests](https://www.mathworks.com/help/matlab/matlab_prog/class-based-unit-tests.html).
+These are ordered by increasing complexity, but also by increasing functionality.
+For this text we will utilize the class-based testing framework as it will provide us with desired functionality and is perhaps most transferable to other languages.
+
+As an overview of how class-based testing works, imagine we have a Matlab function, `AddTwoNumbers` that is defined by the file `AddTwoNumbers.m`:
+
+```{matlab}
+%| output: false
+function [result] = AddTwoNumbers( num_1, num_2 )
+    arguments
+        num_1 (1,1) {mustBeNumeric}
+        num_2 (1,1) {mustBeNumeric}
+    end
+    result = num_1 + num_2;
+end
+```
+
+We then create a separate file, `Test_AddTwoNumbers.m` that contains a class `Test_AddTwoNumbers` that defines `Test` methods that verify the behavior of our function.
+Note that we have tests that verify the behavior with correct inputs, as well as the behaviour with incorrect inputs.
+
+```matlab
+classdef Test_AddTwoNumbers < matlab.unittest.TestCase
+    methods (Test)
+        function test_InputTwoDoubles_ReturnDouble( testCase )
+            expected = 5.0;
+            computed = AddTwoNumbers( 2.0, 3.0 );
+            testCase.verifyEqual( expected, computed, AbsTol=1e-15 );
+        end
+
+        function test_InputTwoStrings_ReturnError( testCase )
+            expected = 'MATLAB:validators:mustBeNumeric';
+            computed = @() AddTwoNumbers( "2.0", "3.0" );
+            testCase.verifyThat( computed, matlab.unittest.constraints.Throws( expected ) )
+        end
+
+        function test_InputTwoNumericArrays_ReturnError( testCase )
+            expected = 'MATLAB:validation:IncompatibleSize';
+            computed = @() AddTwoNumbers( [1, 2], [3, 4] );
+            testCase.verifyThat( computed, matlab.unittest.constraints.Throws( expected ) )
+        end
+    end
+end
+```
+
+We can then run our tests with the following commands:
+
+```{matlab}
+import matlab.unittest.TestSuite
+suiteClass = TestSuite.fromClass( ?Test_AddTwoNumbers );
+run( suiteClass )
+```
+
+And we can see that all our tests have passed!
+
+## Test-Driven Development
+
+Test-driven development (TDD) is a methodology for developing code that is based upon the principles of software testing.
+Essentially the idea is that before writing new functionality (or fixing a bug) one should first write a test that defines the desired (or expected) behavior.
+For example, in our finite element code we know one of the core capabilities we need is change of variable.
+Rather than immediately starting to write our `ChangeOfVariable` function, we first write our unit tests in `Test_ChangeOfVariable`:
+
+```matlab
+classdef Test_ChangeOfVariable < matlab.unittest.TestCase
+    methods (Test) % Functionality
+        function test_InputUnitDomain_ReturnUnitDomain( testCase )
+            from_domain = [0, 1];
+            to_domain = [0, 1];
+            from_value = [ 0.0, 0.5, 1.0 ];
+            expected = [ 0.0, 0.5, 1.0 ];
+            for ii = 1 : length( expected )
+                computed = ChangeOfVariable( from_domain, to_domain, from_value(ii) );
+                testCase.verifyEqual( computed, expected(ii), AbsTol=1e-12 );
+            end
+        end
+
+        function test_InputUnitDomain_ReturnBiunitDomain( testCase )
+            from_domain = [0, 1];
+            to_domain = [-1, 1];
+            from_value = [ 0.0, 0.5, 1.0 ];
+            expected = [ -1.0, 0.0, 1.0 ];
+            for ii = 1 : length( expected )
+                computed = ChangeOfVariable( from_domain, to_domain, from_value(ii) );
+                testCase.verifyEqual( computed, expected(ii), AbsTol=1e-12 );
+            end
+        end
+
+        function test_InputBiunitDomain_ReturnUnitDomain( testCase )
+            from_domain = [-1, 1];
+            to_domain = [0, 1];
+            from_value = [ -1.0, 0.0, 1.0 ];
+            expected = [ 0.0, 0.5, 1.0 ];
+            for ii = 1 : length( expected )
+                computed = ChangeOfVariable( from_domain, to_domain, from_value(ii) );
+                testCase.verifyEqual( computed, expected(ii), AbsTol=1e-12 );
+            end
+        end
+    end
+
+    methods (Test) % Argument handling
+        function test_InputTwoNumericArrays_ReturnError( testCase )
+            from_domain = [-1, 1];
+            to_domain = [0, 1];
+            from_value = [ -1.0, 0.0, 1.0 ];
+            expected = 'MATLAB:validation:IncompatibleSize';
+            computed = @() ChangeOfVariable( from_domain, to_domain, from_value );
+            testCase.verifyThat( computed, matlab.unittest.constraints.Throws( expected ) )
+        end
+    end
+end
+```
+
+We can then write our function that we believe will satisfy these tests:
+
+```{matlab}
+%| output: false
+function to_value = ChangeOfVariable( from_domain, to_domain, from_value )
+    arguments
+        from_domain (1,2) {mustBeNumeric}
+        to_domain   (1,2) {mustBeNumeric}
+        from_value  (1,1) {mustBeNumeric}
+    end
+    % SHIFT TO ZERO
+    to_value = from_value - from_domain(1);
+    % SCALE TO EQUAL RANGE
+    to_value = to_value * ( to_domain(2) - to_domain(1) ) / ( from_domain(2) - from_domain(1) );
+    % APPLY TO DOMAIN
+    to_value = to_value + to_domain(1);
+end
+```
+
+and then test to verify:
+
+```{matlab}
+suiteClass = TestSuite.fromClass( ?Test_ChangeOfVariable );
+run( suiteClass )
+```
+
+It works!

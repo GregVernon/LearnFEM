@@ -1,10 +1,11 @@
-**/.MATLABDriveTag
-*.asv
-
 /.quarto/
 
+# MATLAB
+**/.MATLABDriveTag
+*.asv
 *.m
 
+# Renders
 __pycache__/
 _book/
 /env/
@@ -14,6 +15,9 @@ _book/
 /lecture_02/*_files
 /lecture_03/*_files
 /lecture_04/*_files
+/lecture_05/*_files
+/lecture_06/*_files
+*.html
 *.quarto_ipynb
 
 # LATEX

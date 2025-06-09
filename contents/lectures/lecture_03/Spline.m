@@ -145,6 +145,65 @@ classdef Spline
         end
     end
 
+    % Compute information about the spline
+    methods
+        function basis_deriv = ComputeBasisDerivatives( obj, deriv )
+            variate = obj.spline_space.variate;
+            num_element = obj.GetNumElements();
+            num_basis = length( obj.basis );
+            basis_deriv = sym( zeros( num_basis, 1 ) );
+            for e = 1 : num_element
+                elem_continuity = obj.GetElementContinuity( e );
+                elem_domain = obj.GetElementDomain( e );
+                elem_basis_ids = obj.GetSupportedBasisIdsFromElementId( e );
+                for n = 1 : length( elem_basis_ids )
+                    global_basis_id = elem_basis_ids(n);
+                    if e == 1
+                        inclusive = [ true, false ];
+                    elseif e == num_element
+                        inclusive = [ ( elem_continuity(1) - deriv >= 0 ), true ];
+                    else
+                        inclusive = [ ( elem_continuity(1) - deriv >= 0 ), false ];
+                    end
+                    c = obj.GetPiecewiseBasisComponents( obj.basis(global_basis_id) );
+                    for ii = 1 : size( c.domains, 1 )
+                        domain = c.domains(ii,:);
+                        if all( isAlways( domain == elem_domain ) )
+                            if      inclusive(1) &&  inclusive(2)
+                                condition = domain(1) <= variate & variate <= domain(2);
+                            elseif ~inclusive(1) &&  inclusive(2)
+                                condition = domain(1) <  variate & variate <= domain(2);
+                            elseif  inclusive(1) && ~inclusive(2)
+                                condition = domain(1) <= variate & variate <  domain(2);
+                            elseif ~inclusive(1) && ~inclusive(2)
+                                condition = domain(1) <  variate & variate <  domain(2);
+                            end
+                            func = diff( c.functions{ii}, variate, deriv );
+                            basis_deriv(global_basis_id) = basis_deriv(global_basis_id) + piecewise( condition, func, 0 );
+                        end
+                    end
+                end
+            end
+        end
+
+        function components = GetPiecewiseBasisComponents( obj, fun )
+            c = children( fun );
+            f = c(:,1);
+            d = c(:,2);
+            domain = sym( [] );
+            for ii = 1 : length( d )
+                if islogical( d{ii} ) == false
+                    di = children( d{ii} );
+                    di = children( di{2} );
+                    domain(end+1,:) = [di{1}, di{2}];
+                end
+            end
+            [~, sidx] = sort( domain( :, 1 ), "ascend" );
+            components.domains = domain(sidx,:);
+            components.functions = f(sidx);
+        end
+    end
+
     % USpline
     methods
 

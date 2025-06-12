@@ -5,6 +5,7 @@ jupyter: mkernel
 ```{matlab}
 %| include: false
 clear
+startup
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
 addpath( "../lecture_00/" )
@@ -14,7 +15,13 @@ addpath( "../lecture_02/" )
 
 ## Solving Physics Problems with U-splines
 
+Now that we have the ability to construct splines (meshes) of arbitrary degree and continuity we can explore their effectiveness in solving our physics problems.
+The only fundamental difference now are that the solution space (`sol_space`) argument that the solver functions operate on now represents a spline basis, not a single polynomial basis.
+
 ### Scalar Projection
+
+We begin with the $L^2$ function projection problem.
+Notice that the changes to our function to support a spline basis, rather than a single polynomial basis, are minimal.
 
 ```{matlab}
 %| output: false
@@ -47,7 +54,7 @@ function [u, D, F, basis, d] = ScalarProjection( sol_space, bvp )
     target_fun = bvp.target_fun;
 
     % Solve the BVP
-    basis = @(deriv) diff( spline.basis, variate, deriv );
+    basis = @(deriv) spline.ComputeBasisDerivatives( deriv );
     [D, F] = ApplyGoverningEquations();
     [D, F] = ApplyBoundaryConditions( D, F );
     d = D \ F;
@@ -59,7 +66,84 @@ function [u, D, F, basis, d] = ScalarProjection( sol_space, bvp )
 end
 ```
 
+```{matlab}
+%| output: true
+clear
+x = sym( "x", "real" );
+
+bvp = ScalarProjectionBVP;
+bvp.target_fun = sin( pi * x )^2 + cos( x ) - 1;
+bvp.variate = x;
+bvp.domain = sym( [0, 1] );
+
+domain = sym( [0, 1] );
+basis_name = "Bernstein";
+num_elements = 4;
+degree = 2 * ones( 1, num_elements );
+continuity = [-1, 1 * ones( 1, num_elements - 1 ) -1];
+vertices = linspace( domain(1), domain(2), num_elements + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+
+[u, M, F, basis, d] = ScalarProjection( spline_space, bvp );
+```
+
+```{matlab}
+%| output: true
+%| echo: false
+
+figure
+hold on
+fplot( bvp.target_fun, double( bvp.domain ), LineWidth=4, Color="k", DisplayName="$f(x)$" )
+uc = GetPiecewiseSolutionComponents( u );
+for ii = 1 : length( uc.functions )
+    fplot( uc.functions{ii}, double( uc.domains(ii,:) ), LineWidth=2, SeriesIndex=ii, DisplayName="$\tilde{f}_{" + num2str( ii ) + "}(x)$")
+end
+legend()
+```
+
+<!-- ```{matlab}
+%| output: true
+clear
+x = sym( "x", "real" );
+
+bvp = ScalarProjectionBVP;
+bvp.target_fun = sin( pi * x )^2 + cos( x ) - 1;
+bvp.variate = x;
+bvp.domain = sym( [0, 1] );
+
+domain = sym( [0, 1] );
+basis_name = "Bernstein";
+p = 1:3
+n = 1:4;
+for ii = 1 : length( p )
+    for jj = 1 : length( n )
+        num_elements = 2^n(jj);
+        degree = p(ii) * ones( 1, num_elements );
+        continuity = [-1, ( p(ii) - 1 ) * ones( 1, num_elements - 1 ) -1];
+        vertices = linspace( domain(1), domain(2), num_elements + 1 );
+        spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+        [u, D, F, basis, d] = ScalarProjection( spline_space, bvp );
+        num_dofs(jj,ii) = length( d );
+        err(jj,ii) = ComputeL2Error( bvp.target_fun, u, bvp.domain, "fast" );
+    end
+end
+
+figure
+hold on
+for ii = 1 : length( p )
+    plot( num_dofs(:,ii), err(:,ii), LineWidth=2, Marker="o", MarkerFaceColor="auto", DisplayName="p=" + num2str( p(ii) ) )
+end
+legend()
+ax = gca;
+ax.XScale = "log";
+ax.YScale = "log";
+``` -->
+
+
 ### Poisson Equation
+
+Similarly, we can slightly modify the Poisson equation solver to admit a spline basis:
+
 ```{matlab}
 %| output: false
 function [u, M, F, basis, d] = PoissonEquation( sol_space, bvp )
@@ -98,7 +182,7 @@ function [u, M, F, basis, d] = PoissonEquation( sol_space, bvp )
     h = bvp.prescribed_slope;
 
     % Solve the BVP
-    basis = @(deriv) diff( spline.basis, variate, deriv );
+    basis = @(deriv) spline.ComputeBasisDerivatives( deriv );
     [M, F] = ApplyGoverningEquation();
     [M, F] = ApplyBoundaryConditions( M, F );
     d = M \ F;
@@ -110,8 +194,172 @@ function [u, M, F, basis, d] = PoissonEquation( sol_space, bvp )
 end
 ```
 
-### Steady-state Heat Transfer
 ```{matlab}
+%| output: true
+clear
+x = sym( "x", "real" );
+
+bvp = PoissonEquationBVP();
+bvp.variate = x;
+bvp.domain = sym( [0, 1] );
+bvp.distributed_load = sin( 2 * pi * x ) + ( x - 1 )^2;
+bvp.prescribed_value = 1;
+bvp.prescribed_slope = 0;
+
+basis_name = "Bernstein";
+num_elements = 4;
+degree = 2 * ones( 1, num_elements );
+continuity = [-1, 1 * ones( 1, num_elements - 1 ) -1];
+vertices = linspace( bvp.domain(1), bvp.domain(2), num_elements + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+
+U = ExactPoissonSolution( bvp ).U;
+[u, M, F, basis, d] = PoissonEquation( spline_space, bvp );
+```
+
+```{matlab}
+%| output: true
+%| echo: false
+
+figure
+hold on
+fplot( U, double( bvp.domain ), LineWidth=4, Color="k", DisplayName="$f(x)$" )
+uc = GetPiecewiseSolutionComponents( u );
+for ii = 1 : length( uc.functions )
+    fplot( uc.functions{ii}, double( uc.domains(ii,:) ), LineWidth=2, SeriesIndex=ii, DisplayName="$\tilde{f}_{" + num2str( ii ) + "}(x)$")
+end
+legend()
+```
+
+However, something interesting happens if we use an inter-element continuity of zero:
+
+```{matlab}
+%| output: true
+clear
+x = sym( "x", "real" );
+
+bvp = PoissonEquationBVP();
+bvp.variate = x;
+bvp.domain = sym( [0, 1] );
+bvp.distributed_load = sin( 2 * pi * x ) + ( x - 1 )^2;
+bvp.prescribed_value = 1;
+bvp.prescribed_slope = 0;
+
+basis_name = "Bernstein";
+num_elements = 4;
+degree = 2 * ones( 1, num_elements );
+continuity = [-1, 0 * ones( 1, num_elements - 1 ) -1];
+vertices = linspace( bvp.domain(1), bvp.domain(2), num_elements + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+
+U = ExactPoissonSolution( bvp ).U;
+[u, M, F, basis, d] = PoissonEquation( spline_space, bvp );
+```
+
+It fails to solve, why?
+In the figures below we plot one of the global basis functions and its first two derivatives.
+Recall that our weak formulation for this problem requires that we integrate the second derivative of our basis:
+
+```{=latex}
+\begin{equation*}
+    \Inner{\frac{d^2 u}{dx^2}}{\frac{d^2 u}{dx^2}} = \Inner{\frac{d^2 u}{dx^2}}{-f}
+    \longrightarrow
+    \int_{\Omega}{ \frac{d^2 u}{dx^2}\frac{d^2 u}{dx^2} } \d{\Omega} = -\int_{\Omega}{ \frac{d^2 u}{dx^2}{f} } \d{\Omega}
+\end{equation*}
+```
+
+However, as we see in the plots below, the second derivative of the spline basis function is undefined at one of the internal interfaces as denoted by the $\circ$ marker.
+In fact, the derivative of the spline basis is undefined at every internal interface.
+Put succinctly, the solution to the weak form does not exist within the function space (vector space) of our spline basis --- it exists in the Sobolev space $\Sobolev{2}{2}$ or, equivalently, the Hilbert space $\Hilbert{2}$.
+
+```{matlab}
+%| echo: false
+b0 = basis(0);
+b1 = basis(1);
+b2 = basis(2);
+
+figure
+subplot( 3, 1, 1 )
+hold on
+fplot( b0(3), double( bvp.domain ), LineWidth=2 )
+xline( double( vertices ), LineWidth=1, LineStyle="--", Layer="bottom" )
+ylabel( "$\frac{d^{0}}{d x^{0}}  N_{3}(x) $", Rotation=0 )
+axis padded
+
+subplot( 3, 1, 2 )
+hold on
+fplot( b1(3), double( bvp.domain ), LineWidth=2 )
+xline( double( vertices ), LineWidth=1, LineStyle="--", Layer="bottom" )
+ylabel( "$\frac{d^{1}}{d x^{1}}  N_{3}(x)$", Rotation=0 )
+axis padded
+
+subplot( 3, 1, 3 )
+hold on
+fplot( b2(3), double( bvp.domain ), LineWidth=2 )
+xline( double( vertices ), LineWidth=1, LineStyle="--", Layer="bottom" )
+scatter( vertices(2), limit( b2(3), x, vertices(2), "left" ), SeriesIndex=1, LineWidth=2, Marker="o", MarkerFaceColor="auto" )
+ylabel( "$\frac{d^{2}}{d x^{2}}  N_{3}(x)$", Rotation=0 )
+axis padded
+```
+
+If, however, we build a spline with $\Continuity{1}$-continuity, then the second derivatives are defined throughout the domain and thus square-integrable (i.e., support $\Sobolev{2}{2}$):
+
+```{matlab}
+%| echo: false
+clear
+x = sym( "x", "real" );
+
+basis_name = "Bernstein";
+domain = sym( [0, 1] );
+num_elements = 4;
+degree = 2 * ones( 1, num_elements );
+continuity = [-1, 1 * ones( 1, num_elements - 1 ) -1];
+vertices = linspace( domain(1), domain(2), num_elements + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+spline = Spline( spline_space );
+basis = @(deriv) spline.ComputeBasisDerivatives( deriv );
+
+b0 = basis(0);
+b1 = basis(1);
+b2 = basis(2);
+
+figure
+subplot( 3, 1, 1 )
+hold on
+fplot( b0(3), double( domain ), LineWidth=2 )
+xline( double( vertices ), LineWidth=1, LineStyle="--", Layer="bottom" )
+ylabel( "$\frac{d^{0}}{d x^{0}}  N_{3}(x) $", Rotation=0 )
+axis padded
+
+subplot( 3, 1, 2 )
+hold on
+fplot( b1(3), double( domain ), LineWidth=2 )
+xline( double( vertices ), LineWidth=1, LineStyle="--", Layer="bottom" )
+ylabel( "$\frac{d^{1}}{d x^{1}}  N_{3}(x)$", Rotation=0 )
+axis padded
+
+subplot( 3, 1, 3 )
+hold on
+fplot( b2(3), double( domain ), LineWidth=2 )
+xline( double( vertices ), LineWidth=1, LineStyle="--", Layer="bottom" )
+ylabel( "$\frac{d^{2}}{d x^{2}}  N_{3}(x)$", Rotation=0 )
+axis padded
+```
+
+While crisis is averted with this higher-continuity spline, there are a few challenges imposed by this requirement on the spline basis that shaped the history of the finite element method.
+The first of these is that, in order to support a $\Continuity{1}$-basis, the basis must have degree $p\geq 2$.
+Quadratic polynomials are more computationally expensive to evaluate and integrate, thus with limited compute resources and a desire to maximize speed and complexity of simulation models it would be desirable to use a linear polynomial basis, which would only support a $\Continuity{0}$ spline basis.
+Furthermore, as previously mentioned, building smoothness in a spline is, in general, an NP-hard problem.
+While methods were developed for one-dimensional problems, real problems in 2- and 3-dimensions require unstructured meshes for which no methods existed for building a smooth basis --- until, that is, the very-recent development of the U-spline.
+In the next chapter we will investigate additional mathematical techniques to allow us to use these lower-degree spline basis.
+For now, however, we continue with the solution of our physics problems using splines of sufficient support.
+
+### Steady-state Heat Transfer
+
+As we previously stated, the (steady-state) heat equation is equivalent to the Poisson equation with a non-unitary scale factor applied to the Laplacian term.
+
+```{matlab}
+%| output: false
 function [u, M, F, basis, d] = HeatEquation( sol_space, bvp )
 
     % Subroutines
@@ -127,8 +375,8 @@ function [u, M, F, basis, d] = HeatEquation( sol_space, bvp )
         end
 
         function [M, F] = NeumannBoundaryCondition()
-            M = subs( basis(1) .* transpose( basis(1) ), variate, domain(1) );
-            F = subs( basis(1) * h, variate, domain(1) );
+            M = limit( basis(1), variate, domain(1), "right" ) .* transpose( limit( basis(1), variate, domain(1), "right" ) );
+            F = limit( basis(1), variate, domain(1), "right" ) * h;
         end
 
         [MD, FD] = DirichletBoundaryCondition();
@@ -149,7 +397,7 @@ function [u, M, F, basis, d] = HeatEquation( sol_space, bvp )
     h = bvp.prescribed_heat_flux;
 
     % Solve the BVP
-    basis = @(deriv) diff( spline.basis, variate, deriv );
+    basis = @(deriv) spline.ComputeBasisDerivatives( deriv );
     [M, F] = ApplyGoverningEquation();
     [M, F] = ApplyBoundaryConditions( M, F );
     d = M \ F;
@@ -159,6 +407,42 @@ function [u, M, F, basis, d] = HeatEquation( sol_space, bvp )
     u = simplify( u, Steps=10 );
     u = symfun( u, variate );
 end
+```
+
+```{matlab}
+clear
+
+x = sym( "x", "real" );
+
+bvp = HeatEquationBVP();
+bvp.variate = x;
+bvp.domain = sym( [-12, 12] );
+bvp.thermal_conductivity = 100;
+bvp.distributed_heat_load = 50 * sin( pi * x / 6 );
+bvp.prescribed_temperature = 293.15;
+bvp.prescribed_heat_flux = 0;
+
+basis_name = "Bernstein";
+num_elements = 4;
+degree = 2 * ones( 1, num_elements );
+continuity = [-1, 1 * ones( 1, num_elements - 1 ), -1];
+vertices = linspace( bvp.domain(1), bvp.domain(2), num_elements + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+
+T = ExactHeatSolution( bvp ).U;
+t = HeatEquation( spline_space, bvp );
+```
+
+```{matlab}
+%| echo: false
+figure
+hold on
+fplot( T, double( bvp.domain ), LineWidth=4, Color="k", DisplayName="$u(x)$" )
+tc = GetPiecewiseSolutionComponents( t );
+for ii = 1 : length( tc.functions )
+    fplot( tc.functions{ii}, double( tc.domains(ii,:) ), LineWidth=2, SeriesIndex=ii, DisplayName="$\tilde{u}_{" + num2str( ii ) + "}(x)$")
+end
+legend()
 ```
 
 ### Steady-state Diffusion
@@ -332,6 +616,7 @@ end
 
 ```{matlab}
 %| output: true
+clear
 t = sym( "t", "real" );
 basis_name = "Bernstein";
 num_elements = 40;

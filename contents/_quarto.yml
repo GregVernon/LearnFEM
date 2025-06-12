@@ -94,6 +94,9 @@ format:
             packages: {'[+]': ['mathtools', 'physics']},
             macros: {
               Real: "{\\mathbb R}",
+              Sobolev: ["\\mathcal{W}^{#1,#2}", 2],
+              Hilbert: ["\\mathcal{H}^{#1}", 1],
+              Continuity: ["\\mathcal{C}^{#1}", 1],
               Inner: ["\\left\\langle #1, #2 \\right\\rangle", 2],
               Index: ["\\mathrm{#1}", 1],
               Vector: ["\\boldsymbol{\\mathit{#1}}", 1],

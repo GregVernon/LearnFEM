@@ -91,12 +91,18 @@ spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
 %| output: true
 %| echo: false
 
+spline = Spline( spline_space );
+
 figure
 hold on
-fplot( bvp.target_fun, double( bvp.domain ), LineWidth=4, Color="k", DisplayName="$f(x)$" )
-uc = GetPiecewiseSolutionComponents( u );
-for ii = 1 : length( uc.functions )
-    fplot( uc.functions{ii}, double( uc.domains(ii,:) ), LineWidth=2, SeriesIndex=ii, DisplayName="$\tilde{f}_{" + num2str( ii ) + "}(x)$")
+fplot( bvp.target_fun, double( spline.GetSplineDomain()  ), LineWidth=4, Color="k", DisplayName="$u(x)$" )
+for e = 1 : spline.GetNumElements()
+    elem_domain = spline.GetElementDomain( e );
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
+    elem_basis = spline.basis(elem_basis_ids);
+    elem_coeffs = d(elem_basis_ids);
+    elem_solution = transpose( elem_coeffs ) * elem_basis;
+    fplot( elem_solution, double( elem_domain ), LineWidth=2, SeriesIndex=e, DisplayName="$\tilde{u}_{" + num2str( e ) + "}(x)$")
 end
 legend()
 ```
@@ -221,12 +227,18 @@ U = ExactPoissonSolution( bvp ).U;
 %| output: true
 %| echo: false
 
+spline = Spline( spline_space );
+
 figure
 hold on
-fplot( U, double( bvp.domain ), LineWidth=4, Color="k", DisplayName="$f(x)$" )
-uc = GetPiecewiseSolutionComponents( u );
-for ii = 1 : length( uc.functions )
-    fplot( uc.functions{ii}, double( uc.domains(ii,:) ), LineWidth=2, SeriesIndex=ii, DisplayName="$\tilde{f}_{" + num2str( ii ) + "}(x)$")
+fplot( U, double( spline.GetSplineDomain()  ), LineWidth=4, Color="k", DisplayName="$u(x)$" )
+for e = 1 : spline.GetNumElements()
+    elem_domain = spline.GetElementDomain( e );
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
+    elem_basis = spline.basis(elem_basis_ids);
+    elem_coeffs = d(elem_basis_ids);
+    elem_solution = transpose( elem_coeffs ) * elem_basis;
+    fplot( elem_solution, double( elem_domain ), LineWidth=2, SeriesIndex=e, DisplayName="$\tilde{u}_{" + num2str( e ) + "}(x)$")
 end
 legend()
 ```
@@ -435,17 +447,29 @@ t = HeatEquation( spline_space, bvp );
 
 ```{matlab}
 %| echo: false
+spline = Spline( spline_space );
+[u, M, F, basis, d] = HeatEquation( spline_space, bvp );
+
 figure
 hold on
-fplot( T, double( bvp.domain ), LineWidth=4, Color="k", DisplayName="$u(x)$" )
-tc = GetPiecewiseSolutionComponents( t );
-for ii = 1 : length( tc.functions )
-    fplot( tc.functions{ii}, double( tc.domains(ii,:) ), LineWidth=2, SeriesIndex=ii, DisplayName="$\tilde{u}_{" + num2str( ii ) + "}(x)$")
+fplot( T, double( spline.GetSplineDomain()  ), LineWidth=4, Color="k", DisplayName="$u(x)$" )
+for e = 1 : spline.GetNumElements()
+    elem_domain = spline.GetElementDomain( e );
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
+    elem_basis = spline.basis(elem_basis_ids);
+    elem_coeffs = d(elem_basis_ids);
+    elem_solution = transpose( elem_coeffs ) * elem_basis;
+    fplot( elem_solution, double( elem_domain ), LineWidth=2, SeriesIndex=e, DisplayName="$\tilde{u}_{" + num2str( e ) + "}(x)$")
 end
 legend()
 ```
 
 ### Steady-state Diffusion
+Contrasting to the Poisson equation, and the related heat equation, the steady-state diffusion problem only requires a single derivate to be "square-integrable" -- it exists in the Sobolev space $\Sobolev{1}{2}$ (Hilbert space: $\Hilbert{1}$).
+This means that we can use a spline basis whose basis functions have continuity of zero or greater (i.e. \$Continuity{\geq 0}$).
+Again, this has long been a desired property of finite element methods, as building a continuous basis is as simple as using an interpolatory basis on a mesh whose elements share their boundary nodes with their neighbors.
+While this is not necessarily a trivial matter for complex three-dimensional geometries, this is still much simpler than building a smooth basis.
+
 ```{matlab}
 %| output: false
 function [u, A, B, basis, d] = SteadyStateDiffusionEquation( sol_space, bvp )
@@ -459,8 +483,8 @@ function [u, A, B, basis, d] = SteadyStateDiffusionEquation( sol_space, bvp )
     function [A, B] = ApplyBoundaryConditions( A, B )
 
         function [A, B] = ConcentrationBoundaryCondition()
-            A = subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
-            B = subs( basis(0) .* g, variate, domain(1) );
+            A = limit( basis(0), variate, domain(1), "right" ) .* transpose( limit( basis(0), variate, domain(1), "right" ) );
+            B = limit( basis(0), variate, domain(1), "right" ) .* g;
         end
 
         [AC, BC] = ConcentrationBoundaryCondition();
@@ -479,7 +503,7 @@ function [u, A, B, basis, d] = SteadyStateDiffusionEquation( sol_space, bvp )
     g = bvp.prescribed_concentration;
 
     % Solve the BVP
-    basis = @(deriv) diff( spline.basis, variate, deriv );
+    basis = @(deriv) spline.ComputeBasisDerivatives( deriv );
     [A, B] = ApplyGoverningEquation();
     [A, B] = ApplyBoundaryConditions( A, B );
     d = A \ B;
@@ -491,9 +515,53 @@ function [u, A, B, basis, d] = SteadyStateDiffusionEquation( sol_space, bvp )
 end
 ```
 
-### Euler-Bernoulli Beam Equation
+```{matlab}
+clear
+
+x = sym( "x", "real" );
+
+bvp = SteadyStateDiffusionBVP();
+bvp.variate = x;
+bvp.domain = sym( [0, 1] );
+bvp.diffusion_coefficient = sym( 1e-9 );
+bvp.diffusion_flux = x * 1e-6;
+bvp.prescribed_concentration = 1e4;
+
+basis_name = "Bernstein";
+num_elements = 4;
+degree = 1 * ones( 1, num_elements );
+continuity = [-1, 0 * ones( 1, num_elements - 1 ), -1];
+vertices = linspace( bvp.domain(1), bvp.domain(2), num_elements + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+
+U = ExactSteadyStateDiffusionSolution( bvp ).U;
+u = SteadyStateDiffusionEquation( spline_space, bvp );
+```
 
 ```{matlab}
+%| echo: false
+[u, A, B, basis, d] = SteadyStateDiffusionEquation( spline_space, bvp );
+spline = Spline( spline_space );
+
+figure
+hold on
+fplot( U, double( spline.GetSplineDomain()  ), LineWidth=4, Color="k", DisplayName="$u(x)$" )
+for e = 1 : spline.GetNumElements()
+    elem_domain = spline.GetElementDomain( e );
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
+    elem_basis = spline.basis(elem_basis_ids);
+    elem_coeffs = d(elem_basis_ids);
+    elem_solution = transpose( elem_coeffs ) * elem_basis;
+    fplot( elem_solution, double( elem_domain ), LineWidth=2, SeriesIndex=e, DisplayName="$\tilde{u}_{" + num2str( e ) + "}(x)$")
+end
+legend()
+```
+
+### Euler-Bernoulli Beam Equation
+Whereas the steady-state diffusion equation 
+
+```{matlab}
+%| output: false
 function [u, A, B, basis, d] = EulerBernoulliBeamEquation( sol_space, bvp )
 
     % Subroutines
@@ -505,23 +573,23 @@ function [u, A, B, basis, d] = EulerBernoulliBeamEquation( sol_space, bvp )
     function [A, B] = ApplyBoundaryConditions( A, B )
 
         function [A, B] = DisplacementBoundaryCondition()
-            A = subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
-            B = subs( basis(0) .* g, variate, domain(1) );
+            A = limit( basis(0), variate, domain(1), "right" ) .* transpose( limit( basis(0), variate, domain(1), "right" ) );
+            B = limit( basis(0), variate, domain(1), "right" ) .* g;
         end
 
         function [A, B] = SlopeBoundaryCondition()
-            A = subs( basis(1) .* transpose( basis(1) ), variate, domain(1) );
-            B = subs( basis(1) .* h, variate, domain(1) );
+            A = limit( basis(1), variate, domain(1), "right" ) .* transpose( limit( basis(1), variate, domain(1), "right" ) );
+            B = limit( basis(1), variate, domain(1), "right" ) .* h;
         end
 
         function [A, B] = MomentBoundaryCondition()
-            A = subs( basis(2) * ( E * I ) .* transpose( basis(2) ), variate, domain(2) );
-            B = subs( basis(2) .* M, variate, domain(2) );
+            A = limit( basis(2) * ( E * I ), variate, domain(2), "left" ) .* transpose( limit( basis(2), variate, domain(2), "left" ) );
+            B = limit( basis(2), variate, domain(2), "left" ) .* M;
         end
 
         function [A, B] = ShearBoundaryCondition()
-            A = subs( basis(3) * ( E * I ) .* transpose( basis(3) ), variate, domain(2) );
-            B = -subs( basis(3) .* Q, variate, domain(2) );
+            A = limit( basis(3) * ( E * I ), variate, domain(2), "left" ) .* transpose( limit( basis(3), variate, domain(2), "left" ) );
+            B = -limit( basis(3), variate, domain(2), "left" ) .* Q;
         end
 
         [AD, BD] = DisplacementBoundaryCondition();
@@ -547,7 +615,7 @@ function [u, A, B, basis, d] = EulerBernoulliBeamEquation( sol_space, bvp )
     h = bvp.prescribed_slope;
 
     % Solve the BVP
-    basis = @(deriv) diff( spline.basis, variate, deriv );
+    basis = @(deriv) spline.ComputeBasisDerivatives( deriv );
     [A, B] = ApplyGoverningEquation();
     [A, B] = ApplyBoundaryConditions( A, B );
     d = A \ B;
@@ -559,8 +627,55 @@ function [u, A, B, basis, d] = EulerBernoulliBeamEquation( sol_space, bvp )
 end
 ```
 
+```{matlab}
+clear
+
+x = sym( "x", "real" );
+
+bvp = EulerBernoulliBeamBVP();
+bvp.variate = x;
+bvp.domain = sym( [0, 1] );
+bvp.elastic_modulus = sym( 200e9 );
+bvp.second_moment_inertia = sym( 0.1 ) * sym( 0.1^3 ) / sym( 12 );
+bvp.distributed_load = 1e3 * x^1;
+bvp.moment_load = sym( 3e3 );
+bvp.shear_load = sym( -5e3 );
+bvp.prescribed_displacement = sym( 0 );
+bvp.prescribed_slope = sym( 0 );
+
+basis_name = "Bernstein";
+num_elements = 4;
+degree = 4 * ones( 1, num_elements );
+continuity = [-1, 3 * ones( 1, num_elements - 1 ), -1];
+vertices = linspace( bvp.domain(1), bvp.domain(2), num_elements + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+
+U = ExactEulerBernoulliBeamSolution( bvp ).U;
+u = EulerBernoulliBeamEquation( spline_space, bvp );
+```
+
+```{matlab}
+%| echo: false
+[u, A, B, basis, d] = EulerBernoulliBeamEquation( spline_space, bvp );
+spline = Spline( spline_space );
+
+figure
+hold on
+fplot( U, double( spline.GetSplineDomain()  ), LineWidth=4, Color="k", DisplayName="$u(x)$" )
+for e = 1 : spline.GetNumElements()
+    elem_domain = spline.GetElementDomain( e );
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
+    elem_basis = spline.basis(elem_basis_ids);
+    elem_coeffs = d(elem_basis_ids);
+    elem_solution = transpose( elem_coeffs ) * elem_basis;
+    fplot( elem_solution, double( elem_domain ), LineWidth=2, SeriesIndex=e, DisplayName="$\tilde{u}_{" + num2str( e ) + "}(x)$")
+end
+legend()
+```
+
 ### Damped Harmonic Oscillator
 ```{matlab}
+%| output: false
 function [u, A, F, basis, d] = SpringDashpotSystem( sol_space, bvp )
 
     function [A, F] = ApplyGoverningEquations()
@@ -573,8 +688,8 @@ function [u, A, F, basis, d] = SpringDashpotSystem( sol_space, bvp )
 
     function [A, F] = ApplyBoundaryConditions( A, F )
         function [A, F] = DisplacementBoundaryCondition()
-            A = subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
-            F = subs( basis(0) * g, variate, domain(1) );
+            A = limit( basis(0), variate, domain(1), "right" ) .* transpose( limit( basis(0), variate, domain(1), "right" ) );
+            F = limit( basis(0), variate, domain(1), "right" ) .* g;
         end
 
         function [A, F] = SlopeBoundaryCondition()
@@ -602,7 +717,7 @@ function [u, A, F, basis, d] = SpringDashpotSystem( sol_space, bvp )
     h = bvp.initial_velocity;
 
     % Solve the BVP
-    basis = @(deriv) diff( spline.basis, variate, deriv );
+    basis = @(deriv) spline.ComputeBasisDerivatives( deriv );
     [A, F] = ApplyGoverningEquations();
     [A, F] = ApplyBoundaryConditions( A, F );
     d = A \ F;
@@ -638,20 +753,6 @@ bvp.initial_velocity = sym( 0 );
 
 Y = ExactSpringDashpotSystem( bvp ).U;
 y = SpringDashpotSystem( spline_space, bvp );
-
-D0y = diff( y, 0 );
-D1y = diff( y, 1 );
-D2y = diff( y, 2 );
-m = bvp.mass;
-c = bvp.damping_coefficient;
-k = bvp.spring_stiffness;
-w = bvp.weight;
-err_fun = m * D2y + c * D1y + k * D0y - w;
-approx_error = sqrt( int( err_fun^2, domain ) )
-double( vpa( approx_error, 16 ) )
-
-%l2_error = ComputeL2Error( Y, y, bvp.domain, "fast" );
-%l2_error = vpa( abs( l2_error ), 32 );
 ```
 
 ```{matlab}
@@ -659,12 +760,20 @@ double( vpa( approx_error, 16 ) )
 %| output: true
 figure
 
-subplot( 2, 1, 1 )
 hold on
 fplot( Y, double( bvp.domain ), Color="k"    , LineWidth=4 )
 fplot( y, double( bvp.domain ), SeriesIndex=1, LineWidth=3 )
-
-subplot( 2, 1, 2 )
-%fplot( spline.basis, double( bvp.domain ), LineWidth=1 )
-fplot( sqrt( err_fun^2 ), double( bvp.domain ) )
 ```
+
+We once again investigate the performance of the method, now using these piecewise polynomials.
+As we see below, it's gotten even worse than before we started!
+
+```{matlab}
+time_fun = @()SpringDashpotSystem( spline_space, bvp );
+t_elapsed = timeit( time_fun, 1 );
+disp( "Elapsed time: " + num2str( t_elapsed, 2 ) + " seconds" )
+```
+
+We've gone from a few seconds to about a minute, and that's even with a less accurate solution than before... so what gives?
+Why did we even bother with piecewise polynomials?
+The answer is that piecewise polynomials are *part* of the total solution.

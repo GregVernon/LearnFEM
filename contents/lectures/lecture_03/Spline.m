@@ -6,8 +6,7 @@ classdef Spline
 
     % Derived properties
     properties
-        local_dc_extraction_operators
-        local_c0_extraction_operators
+        local_extraction_operators
         spline_dc_extraction_operator
         spline_c0_extraction_operator
         dc_basis
@@ -20,6 +19,7 @@ classdef Spline
             obj.spline_space = spline_space;
             obj = obj.InitializeDCBasis();
             obj.basis = obj.ComputeSplineBasis();
+            obj = obj.InitializeLocalExtractionOperators();
         end
     end
 
@@ -43,6 +43,15 @@ classdef Spline
                         obj.dc_basis(local_dc_basis_ids(n)) = piecewise( elem_domain(1) <= variate & variate < elem_domain(2), local_basis(n), sym( 0 ) );
                     end
                 end
+            end
+        end
+
+        function obj = InitializeLocalExtractionOperators( obj )
+            obj.local_extraction_operators = {};
+            num_element = obj.GetNumElements();
+            for e = 1 : num_element
+                R = ComputeLocalExtractionOperator( obj, e );
+                obj.local_extraction_operators{e} = R;
             end
         end
     end
@@ -117,6 +126,17 @@ classdef Spline
                 end
             end
         end
+
+        function supported_element_ids = GetSupportedElementIdsFromBasisId( obj, basis_id )
+            supported_element_ids = [];
+            num_elements = obj.GetNumElements();
+            for elem_id = 1 : num_elements
+                supported_basis_ids = obj.GetSupportedBasisIdsFromElementId( elem_id );
+                if ismember( basis_id, supported_basis_ids )
+                    supported_element_ids = [ supported_element_ids; elem_id ];
+                end
+            end
+        end
     end
 
     % Get information about individual interfaces of the spline
@@ -147,6 +167,17 @@ classdef Spline
 
     % Compute information about the spline
     methods
+        function R = ComputeLocalExtractionOperator( obj, elem_id )
+            elem_basis_name = obj.GetBasisName();
+            elem_degree = obj.GetElementDegree( elem_id );
+            variate = obj.GetVariate();
+            elem_domain = obj.GetElementDomain( elem_id );
+            elem_poly_basis = PolynomialBasisFunction( elem_basis_name, elem_degree, variate, elem_domain );
+            elem_basis_ids = obj.GetSupportedBasisIdsFromElementId( elem_id );
+            elem_spline_basis = obj.basis(elem_basis_ids);
+            R = ComputePolynomialChangeOfBasisOperator( elem_spline_basis, elem_poly_basis, elem_domain );
+        end
+        
         function basis_deriv = ComputeBasisDerivatives( obj, deriv )
             variate = obj.spline_space.variate;
             num_element = obj.GetNumElements();
@@ -185,7 +216,7 @@ classdef Spline
                 end
             end
         end
-
+        
         function components = GetPiecewiseBasisComponents( obj, fun )
             c = children( fun );
             f = c(:,1);
@@ -201,6 +232,55 @@ classdef Spline
             [~, sidx] = sort( domain( :, 1 ), "ascend" );
             components.domains = domain(sidx,:);
             components.functions = f(sidx);
+        end
+    end
+
+    % Quadrature
+    methods
+        function [qp, w] = ComputeFunctionMaximaQuadrature( obj )
+            num_basis = length( obj.basis );
+            qp = sym( zeros( num_basis, 1 ) );
+            for n = 1 : num_basis
+                qp(n) = obj.ComputeFunctionMaxima( n );
+            end
+            domain = obj.GetSplineDomain();
+            w = LinearMomentFitting( obj.basis, domain, transpose( qp ) );
+        end
+
+        function [xmax, fmax] = ComputeFunctionMaxima( obj, basis_idx )
+            supported_elem_ids = obj.GetSupportedElementIdsFromBasisId( basis_idx );
+            options = optimoptions( "fmincon", SpecifyObjectiveGradient=true, HessianFcn="objective", Algorithm="trust-region-reflective", SubproblemAlgorithm="factorization", StepTolerance=1e-24, FunctionTolerance=1e-24, OptimalityTolerance=1e-24, ConstraintTolerance=1e-24, HonorBounds=false, Display="none" );
+            fmin = inf;
+            for ii = 1 : length( supported_elem_ids )
+                element_id = supported_elem_ids(ii);
+                elem_basis_name = obj.GetBasisName();
+                elem_degree = obj.GetElementDegree( element_id );
+                variate = obj.GetVariate();
+                elem_domain = obj.GetElementDomain( element_id );
+                elem_poly_basis = PolynomialBasisFunction( elem_basis_name, elem_degree, variate, elem_domain );
+                elem_ext_op = obj.local_extraction_operators{element_id};
+                elem_cob_op = transpose( elem_ext_op );
+                supported_basis_ids = obj.GetSupportedBasisIdsFromElementId( element_id );
+                row =  supported_basis_ids == basis_idx ;
+                elem_basis = simplify( elem_cob_op(row, :) * elem_poly_basis );
+                elem_basis_grad = diff( elem_basis, variate, 1 );
+                elem_basis_hess = diff( elem_basis, variate, 2 );
+                % elem_basis_fun = matlabFunction( -1 * elem_basis );
+                % elem_basis_grad_fun = matlabFunction( -1 * elem_basis_grad );
+                % elem_basis_hess_fun = matlabFunction( -1 * elem_basis_hess );
+                elem_basis_fun = @(x) double( vpa( subs( -1 * elem_basis, variate, x ), 24 ) );
+                elem_basis_grad_fun = @(x) double( vpa( subs( -1 * elem_basis_grad, variate, x ), 24 ) );
+                elem_basis_hess_fun = @(x) double( vpa( subs( -1 * elem_basis_hess, variate, x ), 24 ) );
+                obj_fun = @(x) deal( elem_basis_fun(x), elem_basis_grad_fun(x), elem_basis_hess_fun(x) );
+                x0 = double( mean( elem_domain ) );
+                [x, f] = fmincon( obj_fun, x0, [], [], [], [], double( elem_domain(1) ), double( elem_domain(2) ), [], options );
+                if f < fmin
+                    fmin = f;
+                    xmin = x;
+                end
+            end
+            fmax = -1 * fmin;
+            xmax = xmin;
         end
     end
 

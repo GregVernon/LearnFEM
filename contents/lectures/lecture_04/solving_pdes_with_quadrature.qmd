@@ -1,0 +1,265 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+startup
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../lecture_00/" )
+addpath( "../lecture_01/" )
+addpath( "../lecture_02/" )
+addpath( "../lecture_03/" )
+```
+
+## Solving Physics Problems with U-splines and Quadrature
+
+### Scalar Projection
+
+
+```{matlab}
+%| output: false
+function [u, D, F, basis, d] = ScalarProjection( sol_space, bvp )
+
+    function [D, F] = ApplyGoverningEquations()
+        basis_name = spline.spline_space.basis_name;
+        D = sym( zeros( length( spline.basis ), length( spline.basis ) ) );
+        F = sym( zeros( length( spline.basis ), 1 ) );
+        for e = 1 : spline.GetNumElements()
+            elem_domain = spline.GetElementDomain( e );
+            elem_degree = spline.GetElementDegree( e );
+            elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
+            elem_extraction_operator = spline.local_extraction_operators(e);
+            elem_basis = PolynomialBasisFunction( basis_name, elem_degree, variate, elem_domain );
+            num_qp = ceil( ( 2 * elem_degree + 1 ) / 2 );
+            [qp, weights] = GetQuadratureScheme( elem_domain, num_qp, "Legendre" );
+            DL = sym( zeros( length( elem_basis ), length( elem_basis ) ) );
+            for ln1 = 1 : length( elem_basis_ids )
+                for ln2 = 1 : length( elem_basis_ids )
+                    integrand = elem_basis(ln1) * elem_basis(ln2);
+                    for q = 1 : num_qp
+                        DL(ln1, ln2) = DL(ln1, ln2) + subs( integrand, variate, qp(q) ) * weights(q);
+                    end
+                end
+            end
+            DL = transpose( elem_extraction_operator ) * DL;
+            D(elem_basis_ids, elem_basis_ids) = D(elem_basis_ids, elem_basis_ids) + DL;
+            FL = sym( zeros( length( elem_basis ), 1 ) );
+            for ln1 = 1 : length( elem_basis_ids )
+                integrand = elem_basis(ln1) * target_fun;
+                for q = 1 : num_qp
+                    FL(ln1) = FL(ln1) + subs( integrand, variate, qp(q) ) * weights(q);
+                end
+            end
+            FL = transpose( elem_extraction_operator ) * FL;
+            F(elem_basis_ids) = F(elem_basis_ids) + FL;
+        end
+    end
+
+    function [D, F] = ApplyBoundaryConditions( D, F )
+        function [D, F] = LeftFunctionValue( D, F )
+            D = D + subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
+            F = F + subs( basis(0) * target_fun, variate, domain(1) );
+        end
+        function [D, F] = RightFunctionValue( D, F )
+            D = D + subs( basis(0) .* transpose( basis(0) ), variate, domain(2) );
+            F = F + subs( basis(0) * target_fun, variate, domain(2) );
+        end
+        [D, F] = LeftFunctionValue( D, F );
+        [D, F] = RightFunctionValue( D, F );
+    end
+    
+    % Unpack the solution space
+    variate = sol_space.variate;
+    spline = Spline( sol_space );
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    target_fun = bvp.target_fun;
+
+    % Solve the BVP
+    basis = @(deriv) spline.ComputeBasisDerivatives( deriv );
+    [D, F] = ApplyGoverningEquations();
+    [D, F] = ApplyBoundaryConditions( D, F );
+    d = D \ F;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = symfun( u, variate );
+    u = simplify( u, Steps=10 );
+end
+```
+
+```{matlab}
+%| output: true
+clear
+x = sym( "x", "real" );
+
+bvp = ScalarProjectionBVP;
+bvp.target_fun = sin( pi * x )^2 + cos( x ) - 1;
+bvp.variate = x;
+bvp.domain = sym( [0, 1] );
+
+domain = sym( [0, 1] );
+basis_name = "Bernstein";
+num_elements = 4;
+degree = 2 * ones( 1, num_elements );
+continuity = [-1, 1 * ones( 1, num_elements - 1 ) -1];
+vertices = linspace( domain(1), domain(2), num_elements + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+
+[u, M, F, basis, d] = ScalarProjection( spline_space, bvp );
+```
+
+```{matlab}
+%| output: true
+%| echo: false
+spline = Spline( spline_space );
+
+figure
+hold on
+fplot( bvp.target_fun, double( spline.GetSplineDomain()  ), LineWidth=4, Color="k", DisplayName="$u(x)$" )
+for e = 1 : spline.GetNumElements()
+    elem_domain = spline.GetElementDomain( e );
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
+    elem_basis = spline.basis(elem_basis_ids);
+    elem_coeffs = d(elem_basis_ids);
+    elem_solution = transpose( elem_coeffs ) * elem_basis;
+    fplot( elem_solution, double( elem_domain ), LineWidth=2, SeriesIndex=e, DisplayName="$\tilde{u}_{" + num2str( e ) + "}(x)$")
+end
+legend()
+```
+
+
+```{matlab}
+time_fun = @()ScalarProjection( spline_space, bvp );
+t_elapsed = timeit( time_fun, 1 );
+disp( "Elapsed time: " + num2str( t_elapsed, 2 ) + " seconds" )
+```
+
+```{matlab}
+%| output: false
+function [u, D, F, basis, d] = ScalarProjection( sol_space, bvp )
+
+    function [D, F] = ApplyGoverningEquations()
+        basis_name = spline.spline_space.basis_name;
+        %D = transpose( spline.basis ) .* spline.basis;
+        %F = transpose( spline.basis ) .* target_fun;
+        %D = subs( D, variate, qp );
+        [x_qp, w_qp] = spline.ComputeFunctionMaximaQuadrature();
+        D = sym( zeros( length( spline.basis ), length( spline.basis ) ) );
+        for n1 = 1 : length( spline.basis )
+            n1_supported_elems = spline.GetSupportedElementIdsFromBasisId( n1 );
+            n1_domain = [ spline.GetElementDomain( n1_supported_elems(1) ), spline.GetElementDomain( n1_supported_elems(end) ) ];
+            n1_domain = [ n1_domain(1), n1_domain(end) ];
+            for n2 = 1 : length( spline.basis )
+                n2_supported_elems = spline.GetSupportedElementIdsFromBasisId( n2 );
+                n2_domain = [ spline.GetElementDomain( n2_supported_elems(1) ), spline.GetElementDomain( n2_supported_elems(end) ) ];
+                n2_domain = [ n2_domain(1), n2_domain(end) ];
+                if any( ismember( n1_supported_elems, n2_supported_elems ) );
+                    active_domain = [ max( [ n1_domain(1), n2_domain(1) ] ), min( [ n1_domain(2), n2_domain(2) ] ) ];
+                    active_qp = isAlways( x_qp >= active_domain(1) ) & isAlways( x_qp <= active_domain(2) );
+                    integrand = spline.basis(n1) * spline.basis(n2);
+                    D(n1, n2) = transpose( w_qp(active_qp) ) * subs( integrand, variate, x_qp(active_qp) );
+                end
+            end
+        end
+        F = sym( zeros( length( spline.basis ), 1 ) );
+        for n1 = 1 : length( spline.basis )
+            n1_supported_elems = spline.GetSupportedElementIdsFromBasisId( n1 );
+            active_domain = [ spline.GetElementDomain( n1_supported_elems(1) ), spline.GetElementDomain( n1_supported_elems(end) ) ];
+            active_domain = [ active_domain(1), active_domain(end) ];
+            active_qp = isAlways( x_qp >= active_domain(1) ) & isAlways( x_qp <= active_domain(2) );
+            integrand = spline.basis(n1) * target_fun;
+            F(n1) = transpose( w_qp(active_qp) ) * subs( integrand, variate, x_qp(active_qp) );
+        end
+    end
+
+    function [D, F] = ApplyBoundaryConditions( D, F )
+        function [D, F] = LeftFunctionValue( D, F )
+            D = D + subs( basis(0) .* transpose( basis(0) ), variate, domain(1) );
+            F = F + subs( basis(0) * target_fun, variate, domain(1) );
+        end
+        function [D, F] = RightFunctionValue( D, F )
+            D = D + subs( basis(0) .* transpose( basis(0) ), variate, domain(2) );
+            F = F + subs( basis(0) * target_fun, variate, domain(2) );
+        end
+        [D, F] = LeftFunctionValue( D, F );
+        [D, F] = RightFunctionValue( D, F );
+    end
+    
+    % Unpack the solution space
+    variate = sol_space.variate;
+    spline = Spline( sol_space );
+
+    % Unpack the BVP parameters
+    domain = bvp.domain;
+    target_fun = bvp.target_fun;
+
+    % Solve the BVP
+    basis = @(deriv) spline.ComputeBasisDerivatives( deriv );
+    [D, F] = ApplyGoverningEquations();
+    [D, F] = ApplyBoundaryConditions( D, F );
+    d = D \ F;
+    u = transpose( d ) * basis(0);
+
+    % Post-process the solution
+    u = symfun( u, variate );
+    u = simplify( u, Steps=10 );
+end
+```
+
+```{matlab}
+%| output: true
+clear
+x = sym( "x", "real" );
+
+bvp = ScalarProjectionBVP;
+bvp.target_fun = sin( pi * x )^2 + cos( x ) - 1;
+bvp.variate = x;
+bvp.domain = sym( [0, 1] );
+
+domain = sym( [0, 1] );
+basis_name = "Bernstein";
+num_elements = 4;
+degree = 2 * ones( 1, num_elements );
+continuity = [-1, 1 * ones( 1, num_elements - 1 ) -1];
+vertices = linspace( domain(1), domain(2), num_elements + 1 );
+spline_space = SplineSpace( basis_name, x, degree, vertices, continuity );
+
+[u, M, F, basis, d] = ScalarProjection( spline_space, bvp );
+```
+
+```{matlab}
+%| output: true
+%| echo: false
+spline = Spline( spline_space );
+
+figure
+hold on
+fplot( bvp.target_fun, double( spline.GetSplineDomain()  ), LineWidth=4, Color="k", DisplayName="$u(x)$" )
+for e = 1 : spline.GetNumElements()
+    elem_domain = spline.GetElementDomain( e );
+    elem_basis_ids = spline.GetSupportedBasisIdsFromElementId( e );
+    elem_basis = spline.basis(elem_basis_ids);
+    elem_coeffs = d(elem_basis_ids);
+    elem_solution = transpose( elem_coeffs ) * elem_basis;
+    fplot( elem_solution, double( elem_domain ), LineWidth=2, SeriesIndex=e, DisplayName="$\tilde{u}_{" + num2str( e ) + "}(x)$")
+end
+legend();
+```
+
+
+```{matlab}
+time_fun = @()ScalarProjection( spline_space, bvp );
+t_elapsed = timeit( time_fun, 1 );
+disp( "Elapsed time: " + num2str( t_elapsed, 2 ) + " seconds" )
+```
+
+```{matlab}
+time_fun = @()spline.ComputeFunctionMaximaQuadrature();
+t_elapsed = timeit( time_fun, 2 );
+disp( "Elapsed time: " + num2str( t_elapsed, 2 ) + " seconds" )
+```

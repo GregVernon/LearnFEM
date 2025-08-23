@@ -1,0 +1,12 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+```
+
+# Conitnuous Integration and Continuous Deployment
+
+The last best-practice that we'll discuss in this text is Continuous Integration / Continuous Deployment (CI/CD).

@@ -49,7 +49,7 @@ MarkupSafe==3.0.2
 matlabengine==24.2.1
 matplotlib-inline==0.1.7
 mistune==3.0.2
-mkernel @ git+https://github.com/allefeld/mkernel.git@e625560bece002917feff585dc9d0d7cea9aa3c4
+mkernel @ git+https://github.com/allefeld/mkernel.git@9a06cecdc5092dbb6cdc00793c7db910abea7edb
 nbclient==0.10.0
 nbconvert==7.16.4
 nbformat==5.10.4

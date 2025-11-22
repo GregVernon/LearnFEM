@@ -1,4 +1,5 @@
 /.quarto/
+mkernel_python_env
 
 # MATLAB
 **/.MATLABDriveTag

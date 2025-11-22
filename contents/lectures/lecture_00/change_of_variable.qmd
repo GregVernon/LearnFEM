@@ -7,78 +7,323 @@ jupyter: mkernel
 clear
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../util" )
 ```
 
 # Change of Variable
 
-A core concept in finite elements is that of change of variable.
-Immediately, we will use this concept to simplify numerical integration (quadrature), though later this will lead to the idea of parent elements and mapping to/from various configurations utilized within finite element implemntations, for example: *parametric*, *reference*, *current* configurations.
+A core concept in finite elements is that of change of variable, which is often used to simplify mathematical operations by casting the problem into a different domain.
+One such example is in integration, where change of variable appears as *integration by substitution* -- and we will later apply this concept to simplify numerical integration (quadrature)[^1].
 
-As a simple example of this, let us imagine that we have some function, $f(x)$, that we wish to integrate over the domain $[2, 7]$.
-Let us further imagine that we have inherited some code that only supports integration over the domain $[-1, 1]$.
-How can we proceed?
+[^1]: This will eventually lead to the idea of parent elements and mapping to/from various configurations utilized within finite element implementations, for example: *parametric*, *reference*, *current* configurations.
 
-Let's imagine that we could define some function, $g(\xi), \xi \in [-1, 1]$, such that $f(x) = g(\xi)$.
-That is, when we evaluate $g(\xi)$ at some value in the domain $[-1, 1]$, it evaluates to its "equivalent" value in the function $f(x)$ in the domain $[2, 7]$.
-By "equivalent" we mean that if we evaluate $g(\xi)$ at its left boundary, it should be equivalent to evaluating $f(x)$ at its left boundary: $f(2) = g(-1)$.
-Similarly evaluating at the right boundaries should be equivalent, $f(7) = g(1)$; evaluating each at their midpoint should be equivalent, $f(4.5) = g(0)$, and so on.
+## Integration by substitution
+Recall the chain rule for differentiation in one dimension:
 
-We can do this if we allow for $x$ to be a function (a *mapping*) that allows us to convert some value of $\xi$ into a value for $x$.
-We can write this mapping as $x(\xi)$, and the inverse of this mapping as $\xi(x)$.
-So how can we write a function that maps between the two domains?  
-Let's step through this logically, choosing to modify the domain of $\xi$ so that we determine $x$.
+::: {.callout-note icon=false}
+## Chain rule
 
-1. Scale $[-1, 1]$ so that it has the same have the same range ("length") as $[2, 7]$.
-   ```{=latex}
-   \begin{align*}
-      \left( \frac{7 - 2}{ 1 - ^{-}1} \right) \cdot [-1, 1] \\
-      2.5 \cdot [-1, 1] \\
-      [-1 \cdot 2.5, 1 \cdot 2.5] \\
-      [-2.5, 2.5]
-   \end{align*}
-   ```
-2. Shift the modified domain so that its lower bound equals the other
-   ```{=latex}
-   \begin{align*}
-      (2 - ^{-}2.5) + [-2.5, 2.5] \\
-      4.5 + [-2.5, 2.5] \\
-      [-2.5 + 4.5, 2.5 + 4.5] \\
-      [2, 7]
-   \end{align*}
-   ```
+Assume the function $h(x)$ can be written as $$h(x) = f(g(x)),$$ then the chain rule is $$h^{\prime}(x) = f^{\prime}(g(x)) \cdot g^{\prime}(x).$$
 
-Ok, so that seems to work! 
-But we used words to describe what we wanted to do, and then showed with actual numbers, making it a bit hard to see the algebra that's occurring -- which we want to know so that we can write code to implement the operation.
-To help us see the structure, lets replace the numbers with variables:
+:::
 
-1. Scale $[\xi_0, \xi_1]$ so that it has the same have the same range ("length") as $[x_0, x_1]$.
-   - $\left( \frac{x_1 - x_0}{\xi_1 - \xi_0} \right) \cdot [\xi_0, \xi_1]$
-2. Shift the modified domain so that its lower bound equals the other
-   - $\left(x_0 - \xi_0\right) + \left( \left( \frac{x_1 - x_0}{\xi_1 - \xi_0} \right) \cdot [\xi_0, \xi_1] \right )$
+Given the chain rule we can define the substitution formula for integration by 
 
-Now, recognizing that $[\xi_0, \xi_1]$ simply represents two possible values of $\xi$, let's replace the array with $\xi$ and rewrite as a function
-$$
-x(\xi) = \left(x_0 - \xi_0\right) + \left( \frac{x_1 - x_0}{\xi_1 - \xi_0} \right) \xi
-$$
+::: {.callout-note icon=false}
+## Substitution formula for integration
+Assume that the function, $f(x)$ has the antiderivative $F(x)$, i.e., $$F^{\prime}(x) = f(x).$$
 
-Similarly we can find the inverse function
+```{=latex}
+\begin{equation}
+   \int_{x_0}^{x_1}{f( g(x) ) \cdot g^{\prime}(x) \d{x}} \equiv \int_{x_0}^{x_1}{F^{\prime}(g(x)) \cdot g^{\prime}(x) \d{x}} 
+\end{equation}
+```
 
-$$
-\xi(x) = \left(\xi_0 - x_0\right) + \left( \frac{\xi_1 - \xi_0}{x_1 - x_0} \right) x
-$$
+Making the substitution $u = g(x)$, then leads to $\d{u} = g^{\prime}(x) \d{x}$ and results in:
 
-Noting the similar structure of these two mappings, let's now write a function that simply maps from some domain to some other domain using change of variable.
+```{=latex}
+\begin{equation}
+      \int_{x_0}^{x_1}{F^{\prime}(g(x)) \cdot g^{\prime}(x) \d{x}} \equiv \int_{u_0=g(x_0)}^{u_1=g(x_1)}{F^{\prime}(u) \d{u}} % \int_{g(x_0)}^{g(x_1)}{f(u) \d{u}} 
+\end{equation}
+```
+
+Integrating we have:
+
+```{=latex}
+\begin{equation}
+   \int_{u_0=g(x_0)}^{u_1=g(x_1)}{F^{\prime}(u) \d{u}} \equiv F(g(x_1)) - F(g(x_0)) \equiv \int_{g(x_0)}^{g(x_1)}{F^{\prime}(u) \d{u}}
+\end{equation}
+```
+
+```{=latex}
+\begin{equation}
+   \int_{g(x_0)}^{g(x_1)}{F^{\prime}(u) \d{u}} \equiv \int_{g(x_0)}^{g(x_1)}{f(u) \d{u}}
+\end{equation}
+```
+
+And thus we arrive at the substitution formula for integration:
+
+```{=latex}
+\begin{equation}
+   \begin{split}
+      \int_{x_0}^{x_1}{f( g(x) ) \cdot g^{\prime}(x) \d{x}} \equiv \int_{g(x_0)}^{g(x_1)}{f(u) \d{u}}
+   \end{split}
+\end{equation}
+```
+:::
+
+The importance of the substitution formula for integration is that it allows us to make the following equivalencies:
+
+::: {.callout-note icon=false}
+## Equivalence of integrals under change of variables
+
+```{=latex}
+\begin{equation}
+   \int_{x_0}^{x_1} f(x) \d{x} = \int_{\xi(x_0)}^{\xi(x_1)} f( x( \xi ) ) \cdot x^{\prime}(\xi) \d{\xi}
+\end{equation}
+```
+
+```{=latex}
+\begin{equation}
+   \int_{\xi_0}^{\xi_1} g(\xi) \d{\xi} = \int_{x(\xi_0)}^{x(\xi_1)} g( \xi( x ) ) \cdot \xi^{\prime}(x) \d{x} 
+\end{equation}
+```
+:::
+
+
+## Affine map
+An affine map is any mapping that preserves collinearity and ratios of distances[@weisstein_affine] or, to put another way, is a combination of a linear transformation and a translation.
+
+::: {.callout-note icon=false}
+## Affine map
+An affine map $\xi: \Real^n \rightarrow \Real^n$ has the form:
+
+ ```{=latex}
+\begin{equation}
+   \xi(\Vector{x}) = \Matrix{A}\Vector{x} + \Vector{b},
+\end{equation}
+```
+
+where $\Vector{x} \in \Real^n$ and $\Matrix{A}$ is a linear transformation of $\Real^n$.
+:::
+
+Some common affine mappings, in geometric terms, include scaling, rotation, translation, and shear.
+The affine map that we first concern ourselves with is the one-dimensional affine map, which combines scaling and translation:
+
+```{=latex}
+\begin{equation}
+   \xi(x) = \Scalar{a} x + \Scalar{b}, \quad \Scalar{a}, \Scalar{b} \in \Real{}
+\end{equation}
+```
+
+There are two unknowns in this map, $\Scalar{a}$ and $\Scalar{b}$, which we can solve for by creating a system of two unique equations -- if we know the values of $x$ and $\xi$ in both:
+
+```{=latex}
+\begin{equation}
+   \begin{split}
+      \Scalar{\xi}_0 &= \Scalar{a} \Scalar{x}_0 + \Scalar{b} \\
+      \Scalar{\xi}_1 &= \Scalar{a} \Scalar{x}_1 + \Scalar{b} \\
+   \end{split}
+\end{equation}
+```
+
+Which we can rewrite in matrix form:
+
+```{=latex}
+\begin{equation}
+   \begin{bmatrix}
+      \Scalar{\xi}_0 \\
+      \Scalar{\xi}_1 \\
+   \end{bmatrix}
+   %
+   =
+   %
+   \begin{bmatrix}
+      \Scalar{x}_0 & 1 \\
+      \Scalar{x}_1 & 1 \\
+   \end{bmatrix}
+   %
+   \begin{bmatrix}
+      a \\
+      b \\
+   \end{bmatrix}
+\end{equation}
+```
+
+In practice, this affine mapping often arises in applications where we have two domains in $\Real^1$ upon which we impose the affine map:
+
+```{=latex}
+\begin{equation}
+   \begin{split}
+      x   &= \ClosedDomainOneDim{\Scalar{x}_0}{\Scalar{x}_1} \\
+      \xi &= \ClosedDomainOneDim{\Scalar{\xi}_0}{\Scalar{\xi}_1} \\
+      \xi &= \xi(x)
+   \end{split}
+\end{equation}
+```
+
+And since we know, trivially, the mapping at both boundaries we can fill-in our two equations and solve for the unknowns.
+
+::: {.callout-tip icon=false}
+## Example: Computing an affine map
+Consider the two domains:
+
+```{=latex}
+\begin{equation}
+   \begin{split}
+      x   &= \ClosedDomainOneDim{2}{7} \\
+      \xi &= \ClosedDomainOneDim{-1}{1} \\
+   \end{split}
+\end{equation}
+```
+
+For which we wish to define the affine map $\xi(\Scalar{x})$.
+
+```{=latex}
+\begin{align*}
+   \begin{bmatrix}
+      -1 \\
+      1 \\
+   \end{bmatrix}
+   &=
+   \begin{bmatrix}
+      2 & 1 \\
+      7 & 1\\
+   \end{bmatrix}
+   \begin{bmatrix}
+      a \\
+      b
+   \end{bmatrix} \\
+   %%%%%%%%%%%%%%%%
+   \begin{bmatrix}
+      a \\
+      b
+   \end{bmatrix}
+   &=
+   \left(
+      \begin{bmatrix}
+         2 & 1 \\
+         7 & 1\\
+      \end{bmatrix}
+   \right)^{-1}
+   \begin{bmatrix}
+      -1 \\
+      1 \\
+   \end{bmatrix} \\
+   %%%%%%%%%%%%%%%%
+   \begin{bmatrix}
+      a \\
+      b
+   \end{bmatrix}
+   &=
+   \begin{bmatrix}
+      \frac{-1}{5} & \frac{1}{5} \\
+      \frac{7}{5} & \frac{-2}{5}\\
+   \end{bmatrix}
+   \begin{bmatrix}
+      -1 \\
+      1 \\
+   \end{bmatrix} \\
+   %%%%%%%%%%%%%%%%
+   \begin{bmatrix}
+      a \\
+      b
+   \end{bmatrix}
+   &=
+   \begin{bmatrix}
+      \frac{2}{5} \\
+      \frac{-9}{5}
+   \end{bmatrix}
+\end{align*}
+```
+
+Inserting the solution into the affine map yields:
+
+```{=latex}
+\begin{equation}
+   \xi(x) = \frac{2}{5} x - \frac{9}{5}
+\end{equation}
+```
+:::
+
+```{matlab}
+%| echo: false
+range = @(vec) max( vec ) - min( vec );                      
+ax2norm = @(x,y,ax) [ ax.Position(3)*((x-ax.XLim(1))./range(ax.XLim))+ ax.Position(1)
+                      ax.Position(4)*((y-ax.YLim(1))./range(ax.YLim))+ ax.Position(2) ];
+                      
+fig = figure;
+ax = gca; ax.NextPlot = "add";
+plot( ax, [2, 7], [ 1, 1], Color="w", LineStyle="None", MarkerSize=16, Marker="|", MarkerFaceColor="w", MarkerEdgeColor="w" )
+plot( ax, [2, 7], [ 1, 1], Color="w", LineWidth=1, MarkerSize=10, Marker="square", MarkerFaceColor="w", MarkerEdgeColor="w" )
+text( ax, 2, 0.9, "$2$", Interpreter="latex", FontSize=24, VerticalAlignment="top", HorizontalAlignment="center" )
+text( ax, 7, 0.9, "$7$", Interpreter="latex", FontSize=24, VerticalAlignment="top", HorizontalAlignment="center" )
+text( ax, 4.5, 1.5, "$x$", Interpreter="latex", FontSize=24, HorizontalAlignment="center" )
+
+plot( ax, [-1, 1], [ 0, 0], Color="w", LineWidth=1, MarkerSize=10, Marker="square", MarkerFaceColor="w", MarkerEdgeColor="w" )
+text( ax, -1, -0.1, "$-1$", Interpreter="latex", FontSize=24, VerticalAlignment="top", HorizontalAlignment="center" )
+text( ax,  1, -0.1, "$1$", Interpreter="latex", FontSize=24, VerticalAlignment="top", HorizontalAlignment="center" )
+text( ax,  0, -0.5, "$\xi$", Interpreter="latex", FontSize=24, HorizontalAlignment="center" )
+
+ax.FontSize=24;
+ax.XLim = [-2, 8];
+ax.YLim = [-1, 2];
+ax.XAxis.Visible = "off";
+ax.YAxis.Visible = "off";
+ax.XAxisLocation = "origin";
+ax.Box = "off";
+ax.XLimitMethod = "padded";
+ax.TickDir = "both";
+ax.Color = fig.Color;
+
+xy_1 = ax2norm( 3, 0.9, ax );
+xy_2 = ax2norm( -0.6, 0.1, ax );
+annotation( "textarrow", [xy_1(1), xy_2(1)], [xy_1(1), xy_2(1)], String="$\xi(x)$", Interpreter="latex", Parent=ax, Units="Normalized" );
+
+```
+
+We can modify our substitution formula for integration to account for an affine map.
+Note that as our affine map, $\frac{\d{\xi}}{\d{x}}$, is equivalent to a Jacobian matrix of size $1\times1$ we will refer to this term as the *Jacobian*, $\Jacobian$.
+Note that because our affine map is linear, its derivative will be a constant and thus we can apply the integration rule for constants to pull the Jacobian out of the integral
+
+
+::: {.callout-note icon=false}
+## Substitution formula for integration with affine map
+If we let $u = \xi(x)$ then we have
+
+```{=latex}
+\begin{equation}
+   \begin{split}
+      \int_{x_0}^{x_1}{f( \xi(x) ) \cdot \xi'(x) \d{x}} &\equiv \int_{\xi(x_0)}^{\xi(x_1)}{f(\xi) \d{\xi}} \equiv \int_{\xi(x_0)}^{\xi(x_1)}{f(\xi) \d{\xi}}\\
+      %
+      \int_{x_0}^{x_1}{f( \xi(x) ) \cdot \xi'(x) \d{x}} &\equiv \int_{\xi(x_0)}^{\xi(x_1)}{f(\xi) \d{\xi}} \equiv \int_{\xi(x_0)}^{\xi(x_1)}{f(\xi) \d{\xi}}\\
+   \end{split}
+\end{equation}
+```
+:::
+
+
+
+```{=latex}
+\begin{equation}
+   \int_{a}^{b}{f( \Scalar{a} x + \Scalar{b} ) \cdot a \d{x}} \equiv \int_{\xi(a)}^{\xi(b)}{f(\xi) \d{\xi}} 
+\end{equation}
+```
+
+
+Let's now write a function that simply maps from some domain to some other domain using change of variable.
 
 ```{matlab}
 %| echo: true
 %| output: false
 function to_value = ChangeOfVariable( from_value, from_domain, to_domain )
-    % SHIFT TO ZERO
-    to_value = from_value - from_domain(1);
-    % SCALE TO EQUAL RANGE
-    to_value = to_value * ( to_domain(2) - to_domain(1) ) / ( from_domain(2) - from_domain(1) );
-    % APPLY TO DOMAIN
-    to_value = to_value + to_domain(1);
+    % ASSEMBLE LINEAR SYSTEM
+    A = [ from_domain(1) 1; from_domain(2) 1 ];
+    b = [ to_domain(1); to_domain(2) ];
+    % SOLVE FOR COEFFICIENTS
+    sol = A \ b;
+    % COMPUTE MAPPING
+    to_value = sol(1) * from_value + sol(2);
 end
 ```
 
@@ -97,76 +342,209 @@ display( from_values )
 display( to_values )
 ```
 
-Now let's see what happens when we use the change of variable in an actual function.  
-First let's choose a function defined over $x$ and map it to $\xi$, using the mapping $x(\xi)$.
+Now let's see what happens when we use the change of variable in an actual function, using the mapping $x(\xi)$:
+
+::: {.callout-tip icon=false}
+## Example: $f(\xi) \rightarrow g(x(\xi))$
+```{=latex}
+\begin{align*}
+   f(\xi) &= -\frac{128 x^4}{1875} + \frac{2144 x^3}{1875} - \frac{12592 x^2}{1875} + \frac{30736 x}{1875} - \frac{8736}{625} \\
+   x(\xi) &= \frac{5}{2} \xi + \frac{9}{2} \\
+   g( x(\xi) ) &= -\frac{8 \xi^4}{3} - \frac{4 \xi^3}{3} + \frac{8\xi^2}{3} + \frac{4 \xi}{3} \\ 
+\end{align*}
+```
 
 ```{matlab}
-%| output: true
+%| output: false
 x = sym( "x", "real" );
 x_domain = sym( [2, 7] );
 xi = sym( "xi", "real" );
 xi_domain = sym( [-1, 1] );
 
-f = str2sym( "exp( x ) * cos( pi * x )" );
+f_x = - (128*x^4)/1875 + (2144*x^3)/1875 - (12592*x^2)/1875 + (30736*x)/1875 - 8736/625;
 x_xi = ChangeOfVariable( xi, xi_domain, x_domain );
-g = subs( f, x, x_xi );
-```
-
-```{=latex}
-\begin{align*}
-   f(x) &= \cos( \pi x ) \exp{x} \\
-   x(\xi) &= 2.5 \xi + 4.5 \\
-   g( x(\xi) ) &= \cos( \pi x(\xi) ) \exp(x(\xi))  \\ &= \cos( \pi ( 2.5 \xi + 4.5 ) ) \exp( 2.5 \xi + 4.5 )
-\end{align*}
+f_x_xi = subs( f_x, x, x_xi );
 ```
 
 ```{matlab}
 %| echo: false
 figure
 subplot( 2, 1, 1 )
-fplot( f, double( x_domain ), LineWidth=2 )
+hold on
+cmap = lines(2);
+farea( f_x, [2, 3.25], ax=gca, FaceColor=cmap(1,:) );
+farea( f_x, [3.25, 4.5], ax=gca, FaceColor=cmap(2,:) );
+farea( f_x, [4.5, 7], ax=gca, FaceColor=cmap(1,:) );
+fplot( f_x, [-2, 2], LineStyle=":", LineWidth=2, SeriesIndex=1 )
+fplot( f_x, [2, 7],  LineStyle="-", LineWidth=2, SeriesIndex=1 )
+fplot( f_x, [7, 8],  LineStyle=":", LineWidth=2, SeriesIndex=1 )
 ax1 = gca;
-ax1.XLim = [-2 8];
+ax1.XLim = [-2, 8];
+ax1.YLim = [-0.5, 1.5];
+ax1.XLabel.String = "$x$";
+ax1.XLabel.Interpreter = "latex";
+ax1.YLabel.String = "$f(x)$";
+ax1.YLabel.Interpreter = "latex";
 
 subplot( 2, 1, 2 )
-fplot( g, double( xi_domain ), LineWidth=2 )
+hold on
+farea( f_x_xi, [-1, -0.5], ax=gca, FaceColor=cmap(1,:) );
+farea( f_x_xi, [-0.5, 0], ax=gca, FaceColor=cmap(2,:) );
+farea( f_x_xi, [0, 1], ax=gca, FaceColor=cmap(1,:) );
+fplot( f_x_xi, [-2, -1], LineStyle=":", LineWidth=2, SeriesIndex=1 )
+fplot( f_x_xi, [-1, 1], LineStyle="-", LineWidth=2, SeriesIndex=1 )
+fplot( f_x_xi, [1, 8],  LineStyle=":", LineWidth=2, SeriesIndex=1 )
 ax2 = gca;
-ax2.XLim = [-2 8];
+ax2.XLim = [-2, 8];
+ax2.YLim = [-0.5, 1.5];
+ax2.XLabel.String = "$\xi$";
+ax2.XLabel.Interpreter = "latex";
+ax2.YLabel.String = "$g(\xi(x))$";
+ax2.YLabel.Interpreter = "latex";
 ```
+
+We compute the integral of $f(x)$ and compare it against the result from the substitution formula for integration:
+
+```{matlab}
+%| output: false
+%| echo: false
+
+I1 = int( f_x, x );
+I2 = int( f_x_xi, xi ) * diff( x_xi, xi );
+```
+
+```{=latex}
+\begin{equation*}
+   \begin{split}
+      \int_{2}^{7}{ f(x) \d{x} } &\equiv \int_{2}^{7}{ -\frac{128 x^4}{1875} + \frac{2144 x^3}{1875} - \frac{12592 x^2}{1875} + \frac{30736 x}{1875} - \frac{8736}{625} \d{x} } \\
+      %
+      &= \left[ -\frac{128 x^5}{9375} + \frac{536 x^4}{1875} - \frac{12592 x^3}{5625} + \frac{15368 x^2}{1875} - \frac{8736 x}{625} \right]_2^7 \\
+      %
+      &= \frac{16}{9} = 1.\overline{777}
+   \end{split}
+\end{equation*}
+```
+
+And comparing against the change of variables approach:
+
+```{=latex}
+\begin{equation*}
+   \begin{split}
+      \int_{x(-1)}^{x(1)}{ g( \xi(x) ) \frac{ \d{\xi(x)}}{\d{x}} \d{\xi} } &\equiv \int_{2}^{7}{ \left( -\frac{8 \xi^4}{3} - \frac{4 \xi^3}{3} + \frac{8 \xi^2}{3} + \frac{4 \xi }{3} \right) \frac{5}{2} \d{\xi} } \\
+      %
+      &= \left[ -\frac{4 \xi^5}{3} - \frac{5 \xi^4}{6} + \frac{20 \xi^3}{9} + \frac{5 \xi^2}{3} \right]_{2}^{7} \\
+      %
+      &= \frac{16}{9} = 1.\overline{777}
+   \end{split}
+\end{equation*}
+```
+:::
 
 And again on another function, this time using the mapping $\xi(x)$:
 
-```{matlab}
-%| output: true
-x = sym( "x", "real" );
-x_domain = sym( [1, 2] );
-xi = sym( "xi", "real" );
-xi_domain = sym( [0, pi] );
+::: {.callout-tip icon=false}
+## Example: $f(\xi) \rightarrow g(\xi(x))$
+First let's choose a function defined over $\xi$ and map it to $x$, using the mapping $\xi(x)$.
 
-f = str2sym( "xi^cos( 4*xi )" );
+```{=latex}
+\begin{align*}
+   f(\xi) &= \frac{\exp\left( -\frac{ (\xi - \mu)^2 }{ 2\sigma^2 } \right)}{\sqrt{ 2\pi\sigma^2}} \\
+   \\
+   \xi(x) &= \frac{2}{5} x - \frac{9}{5} \\
+   \\
+   f( \xi(x) ) &= \frac{\exp\left( -\frac{ \left( \left( \frac{2}{5} x - \frac{9}{5} \right) - \mu \right)^2 }{ 2\sigma^2 } \right)}{\sqrt{2\pi\sigma^2}}
+\end{align*}
+```
+
+Where, for this example, $\mu = 0$ and $\sigma = \frac{3}{4}$.
+
+```{matlab}
+%| output: false
+x = sym( "x", "real" );
+x_domain = sym( [2, 7] );
+xi = sym( "xi", "real" );
+xi_domain = sym( [-1, 1] );
+
+sigma = sym( 0.75 );
+mu = sym( 0 );
+f_xi = ( 1 / ( sqrt( 2 * pi * sigma^2 ) ) ) * exp( - ( xi - mu )^2 / ( 2 * sigma^2 ) );
 xi_x = ChangeOfVariable( x, x_domain, xi_domain );
-g = subs( f, xi, xi_x );
+f_xi_x = subs( f_xi, xi, xi_x );
 ```
 
 ```{matlab}
 %| echo: false
 figure
 subplot( 2, 1, 1 )
-fplot( f, double( xi_domain ), LineWidth=2 )
+hold on
+cmap = lines(2);
+farea( f_xi, [-1, 1], ax=gca, FaceColor=cmap(1,:) );
+fplot( f_xi, [-2, -1], LineStyle=":", LineWidth=2, SeriesIndex=1 )
+fplot( f_xi, [-1, 1],  LineStyle="-", LineWidth=2, SeriesIndex=1 )
+fplot( f_xi, [1, 8],  LineStyle=":", LineWidth=2, SeriesIndex=1 )
 ax1 = gca;
-ax1.XLim = [-1 pi+1];
+ax1.XLim = [-2 8];
+ax1.XLabel.String = "$\xi$";
+ax1.XLabel.Interpreter = "latex";
+ax1.YLabel.String = "$f(\xi)$";
+ax1.YLabel.Interpreter = "latex";
 
 subplot( 2, 1, 2 )
-fplot( g, double( x_domain ), LineWidth=2 )
+hold on
+farea( f_xi_x, [2, 7], ax=gca, FaceColor=cmap(1,:) );
+fplot( f_xi_x, [-2, 2], LineStyle=":", LineWidth=2, SeriesIndex=1 )
+fplot( f_xi_x, [2, 7],  LineStyle="-", LineWidth=2, SeriesIndex=1 )
+fplot( f_xi_x, [7, 8],  LineStyle=":", LineWidth=2, SeriesIndex=1 )
 ax2 = gca;
-ax2.XLim = [-1 pi+1];
+ax2.XLim = [-2 8];
+ax2.XLabel.String = "$x$";
+ax2.XLabel.Interpreter = "latex";
+ax2.YLabel.String = "$g(\xi(x))$";
+ax2.YLabel.Interpreter = "latex";
+```
+
+And now let's compute the integral of $f(x)$ and compare it against the result from the substitution formula for integration:
+
+```{matlab}
+%| output: false
+%| echo: false
+
+I1 = int( f_xi, xi );
+I2 = int( f_xi_x * diff( xi_x, x ), x );
 ```
 
 ```{=latex}
-\begin{align*}
-   f(x) &= \xi^{\cos( 4 \xi )} \\
-   x(\xi) &= \pi ( x - 1 ) \\
-   g( x(\xi) ) &= \xi(x)^{\cos( 4 \xi(x) )} \\ 
-               &= \left( \pi \left( x - 1 \right) \right)^{\cos{ \left( 4 \left( \pi \left( x - 1 \right) \right) \right) } }
-\end{align*}
+\begin{equation*}
+   \begin{split}
+      % ( 1 / ( sqrt( 2 * pi * sigma^2 ) ) ) * exp( - ( x - mu )^2 / ( 2 * sigma^2 ) )
+      \int_{-1}^{1}{ f(\xi) \d{\xi} } &\equiv \int_{-1}^{1}{\frac{ \exp\left( -\frac{ ( \xi - 0 )^2}{2 \left( \frac{3}{4} \right)^2 }\right) }{\sqrt{2\pi \left( \frac{3}{4} \right)^2}}  \d{\xi} } \\
+      \\
+      &= \left[ \frac{\erf\left( \frac{2 \sqrt{2} \xi}{3} \right)}{2} \right]_{-1}^{1} \\
+      \\
+      &= \erf\left( \frac{2 \sqrt{2}}{3} \right) \approx 0.8176
+   \end{split}
+\end{equation*}
 ```
+
+And comparing against the change of variables approach:
+
+```{=latex}
+\begin{equation*}
+   \begin{split}
+      % ( 1 / ( sqrt( 2 * pi * sigma^2 ) ) ) * exp( - ( x - mu )^2 / ( 2 * sigma^2 ) )
+      \int_{\xi(2)}^{\xi(7)}{ g(\xi(x)) \cdot \xi^{\prime}(x) \d{x} } &\equiv \int_{-1}^{1}{\frac{ \exp\left( -\frac{ \left( \left( \frac{2}{5} x - \frac{9}{5} \right) - 0 \right)^2}{2 \left( \frac{3}{4} \right)^2 }\right) }{\sqrt{2\pi \left( \frac{3}{4} \right)^2}} \cdot \frac{2}{5}  \d{x} } \\
+      \\
+      &= \left[ \frac{\erf\left( \sqrt{2} \left( \frac{4 x}{15} - \frac{6}{5} \right) \right)}{2} \right]_{-1}^{1} \\
+      \\
+      &= \erf\left( \frac{2 \sqrt{2}}{3} \right) \approx 0.8176
+   \end{split}
+\end{equation*}
+```
+
+:::
+
+
+### References
+
+::: {#refs}
+:::

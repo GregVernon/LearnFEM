@@ -33,7 +33,7 @@ target_fun = sin( pi * x )^2 + cos( x ) - 1;
 ```{matlab}
 %| echo: false
 figure
-fplot( target_fun, double( domain ), LineWidth=4, Color="k" )
+fplot( target_fun, double( domain ), LineWidth=4, Color="w" )
 ```
 
 And let's further suppose that we wish to approximate this function with a quartic polynomial, let's use the monomial basis
@@ -319,7 +319,7 @@ approx_fun = transpose( d ) * basis;
 %| echo: false
 figure
 hold on
-fplot( target_fun, double( domain ), LineWidth=4, Color="k",     DisplayName="$f(x)$" )
+fplot( target_fun, double( domain ), LineWidth=4, Color="w",     DisplayName="$f(x)$" )
 fplot( approx_fun, double( domain ), LineWidth=3, SeriesIndex=1, DisplayName="$\tilde{f}(x)$" )
 ```
 
@@ -349,21 +349,41 @@ But first, let's collect our work above to write a function that performs the sc
 
 ```{matlab}
 %| output: false
-function [u, M, F, basis, d] = ScalarProjection( target_fun, basis_name, degree, domain )
+%| echo: false
+classdef PolynomialSolutionSpace
+    properties
+        basis_name
+        degree
+        variate
+        domain
+    end
+end
+```
+
+```{matlab}
+%| output: false
+function [u, M, F, basis, d] = ScalarProjection( fun, sol_space )
 
     function D = AssembleGramMatrix()
-        D = int( basis * transpose( basis ), domain );
+        D = int( basis .* transpose( basis ), domain );
     end
 
     function F = AssembleForceVector()
-        F = int( basis * target_fun, domain );
+        F = int( basis .* target_fun, domain );
     end
 
-    variate = symvar( target_fun );
-    if isempty( variate )
-        variate = sym( "x", "real" );
-    end
-    basis = PolynomialBasisFunction( basis_name, degree, variate, domain );
+    % Unpack the solution space
+    variate = sol_space.variate;
+    basis_name = sol_space.basis_name;
+    degree = sol_space.degree;
+    sol_domain = sol_space.domain;
+    
+    % Unpack the function parameters
+    target_fun = fun.target_fun;
+    domain = fun.domain;
+
+    % Solve
+    basis = PolynomialBasisFunction( basis_name, degree, variate, sol_domain );
     M = AssembleGramMatrix();
     F = AssembleForceVector();
     d = M \ F;
@@ -389,11 +409,15 @@ Now lets see what happens if we use a high-order polynomial for our approximatio
 %| echo: true
 %| output: false
 x = sym( "x", "real" );
-target_fun = sin( pi * x )^2 + cos( x ) - 1;
-domain = sym( [0, 1] );
-degree = 4;
-basis_name = "Monomial";
-[u, M, F, basis, d] = ScalarProjection( target_fun, basis_name, degree, domain );
+fun.target_fun = sin( pi * x )^2 + cos( x ) - 1;
+fun.domain = [0, 1]
+
+sol_space = PolynomialSolutionSpace();
+sol_space.variate = x;
+sol_space.domain = [0, 1];
+sol_space.degree = 4;
+sol_space.basis_name = "Monomial";
+[u, M, F, basis, d] = ScalarProjection( fun, sol_space );
 ```
 
 ```{matlab}
@@ -418,17 +442,22 @@ We can perform a "degree-refinement study" to explore and quantify the improveme
 
 ```{matlab}
 %| echo: false
+clear
 x = sym( "x", "real" );
-target_fun = sin( pi * x )^2 + cos( x ) - 1;
-domain = sym( [0, 1] );
-basis_name = "Monomial";
-[u, M, F, basis, d] = ScalarProjection( target_fun, basis_name, degree, domain );
+fun.target_fun = sin( pi * x )^2 + cos( x ) - 1;
+fun.domain = [0, 1];
+
+sol_space = PolynomialSolutionSpace();
+sol_space.variate = x;
+sol_space.domain = [0, 1];
+sol_space.basis_name = "Monomial";
 
 degree = 0 : 6;
 l2_error = sym( zeros( size( degree ) ) );
 for p = degree
-    approx_fun = ScalarProjection( target_fun, basis_name, p, domain );
-    l2_error(p+1) = vpa( ComputeL2Error( target_fun, approx_fun, domain, "exact" ), 32 );
+    sol_space.degree = p;
+    approx_fun = ScalarProjection( fun, sol_space );
+    l2_error(p+1) = vpa( ComputeL2Error( fun.target_fun, approx_fun, fun.domain, "exact" ), 32 );
 end
 ```
 
@@ -436,7 +465,7 @@ end
 %| echo: false
 figure
 cmap = colormap( "lines" );
-plot( degree, l2_error, LineWidth=2, Marker="o", MarkerFaceColor=cmap(1,:), MarkerEdgeColor="k" )
+plot( degree, l2_error, LineWidth=2, Marker="o", MarkerFaceColor=cmap(1,:), MarkerEdgeColor="w" )
 ax = gca;
 xlabel( "Degree" )
 ylabel( "$L^2$ Error" )
@@ -453,8 +482,8 @@ basis_functions = string( fieldnames( condition ) );
 for ii = 1 : length( basis_functions )
     basis_name = basis_functions(ii);
     for p = degree 
-        basis = PolynomialBasisFunction( basis_name, p, x, domain );
-        D = int( basis .* transpose( basis ), domain );
+        basis = PolynomialBasisFunction( basis_name, p, x, sol_space.domain );
+        D = int( basis .* transpose( basis ),sol_space.domain );
         eigvals = ComputeEigenvalues( D, 1e-12, 1e4 );
         condition.(basis_name)(end+1) = max(eigvals) / min( eigvals );
     end
@@ -472,18 +501,4 @@ ylabel( "Condition Number" )
 grid on
 ax.YScale = "log";
 legend( Location="northwest" )
-```
-
-```{matlab}
-%| echo: false
-[u, D, F, basis, d] = ScalarProjection( target_fun, "Monomial", 12, domain );
-Dd = double( D );
-Fd = double( F );
-dd = inv( Dd ) * Fd;
-ud = transpose( dd ) * basis;
-
-figure
-hold on
-fplot( target_fun, double( domain ), LineWidth=4, Color="k" )
-fplot( u, double( domain ), LineWidth=2, SeriesIndex=1 )
 ```

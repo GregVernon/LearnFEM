@@ -1,0 +1,18 @@
+---
+jupyter: mkernel
+---
+
+```{matlab}
+%| include: false
+clear
+setappdata(0, "MKernel_plot_backend", "inline")
+setappdata(0, "MKernel_plot_format", "svg")
+```
+
+# Linear Partial Differential Equations
+Many physics problems are described as *differential equations* (DE), which describe how one or more variables change in relation to others.
+When only a single independent variable is used we call it an *ordinary differential equation* (ODE) and when more than one independent variable are used we call it a *partial differential equation* (PDE).
+
+There is another major classifications of PDEs: Linear and Nonlinear.
+In this section we will only concern ourselves with linear PDEs.  
+Whether working with linear or nonlinear PDEs, however, it is useful to reason about them in *operator* form.

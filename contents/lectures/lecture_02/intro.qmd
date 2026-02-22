@@ -1,2 +1,1 @@
 # Solving Physics Problems with the Galerkin Method
-

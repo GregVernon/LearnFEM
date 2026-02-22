@@ -39,10 +39,12 @@ book:
         - lectures/lecture_00/inner_products.qmd
         - lectures/lecture_00/change_of_basis.qmd
         - lectures/lecture_00/dirac_delta_function.qmd
+        - lectures/lecture_00/linear_partial_differential_equations.qmd
     - part: lectures/lecture_01/intro.qmd
       chapters:
         - lectures/lecture_01/galerkin_function_approximation.qmd
         - lectures/lecture_01/galerkin_function_approximation_with_boundary_conditions.qmd
+        # - lectures/lecture_01/galerkin_function_approximation_with_boundary_conditions_1.qmd
     - part: lectures/lecture_02/intro.qmd
       chapters:
         - lectures/lecture_02/galerkin_poisson_equation.qmd
@@ -89,10 +91,10 @@ format:
         <script>
         window.MathJax = {
           loader: {
-            load: ['[tex]/mathtools', '[tex]/physics']
+            load: ['[tex]/mathtools', '[tex]/physics', '[tex]/ams']
           },
           tex: {
-            packages: {'[+]': ['mathtools', 'physics']},
+            packages: {'[+]': ['mathtools', 'physics', 'ams']},
             macros: {
               Real: "{\\mathbb R}",
               Sobolev: ["\\mathcal{W}^{#1,#2}", 2],
@@ -100,12 +102,12 @@ format:
               Continuity: ["\\mathcal{C}^{#1}", 1],
               Inner: ["\\left\\langle #1, #2 \\right\\rangle", 2],
               Index: ["\\mathrm{#1}", 1],
-              ClosedDomainOneDim: [ "\\left\[ {#1},\\ {#2} \\right\]", 2],
+              ClosedDomainOneDim: ["\\left\[ #1, #2 \\right\]", 2],
               Scalar: ["\\mathrm{#1}", 1],
               Vector: ["\\boldsymbol{\\mathit{#1}}", 1],
               Matrix: ["\\boldsymbol{\\mathrm{#1}}", 1],
               Jacobian: ["\\boldsymbol{\\mathit{J}}"],
-              Assembly: ["{\\mathop{\\Large \\boldsymbol{\\mathrm{A}}}\\limits_{\\mathrm{e}=1}^{n_{\\mathrm{el}}} \\bigl( #1 \\bigr)}", 1],
+              Assembly: ["\\mathop{\\Large \\boldsymbol{\\mathrm{A}}}\\limits_{\\mathrm{e}=1}^{n_{\\mathrm{el}}} \\bigl( #1 \\bigr)", 1],
               ChangeBasisOp: ["\\Matrix{R}_{\\tiny{\\Matrix{#1} \\rightarrow \\Matrix{#2}}}", 2],
               DiracDelta: ["\\delta\\left( #1 - #2 \\right)", 2],
               DiracDeltaShort: ["\\delta^{#1}_{#2}", 2],

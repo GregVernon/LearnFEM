@@ -113,7 +113,7 @@ U(x) = ExactPoissonSolution( bvp ).U;
 
 ```{matlab}
 figure
-fplot( U, [0 1], LineWidth=4, Color="k" )
+fplot( U, [0 1], LineWidth=4, Color="w" )
 ```
 ## The Galerkin Approach
 
@@ -483,13 +483,19 @@ Take a moment to notice how concise the above routine is, again thanks to our us
 
 ```{matlab}
 x = sym( "x" );
-f(x) = 5*x^0;
-g = 1;
-h = 1;
-basis_name = "Monomial";
-degree = 2;
-domain = [0, 1];
-u(x) = PoissonEquation( basis_name, degree, domain, f, g, h );
+bvp = PoissonEquationBVP;
+bvp.distributed_load = 5 * x^0;
+bvp.prescribed_value = 1;
+bvp.prescribed_slope = 1;
+bvp.domain = [0, 1];
+
+sol_space = PolynomialSolutionSpace;
+sol_space.variate = x;
+sol_space.domain = [0, 1];
+sol_space.degree = 2;
+sol_space.basis_name = "Monomial";
+
+u(x) = PoissonEquation( sol_space, bvp );
 ```
 
 ```{=latex}
@@ -530,7 +536,7 @@ l2_error = vpa( l2_error, 16 );
 figure
 subplot( 2, 1, 1 )
 hold on
-fplot( U, domain, LineWidth=4, Color="k" )
+fplot( U, domain, LineWidth=4, Color="w" )
 fplot( u, domain, LineWidth=3, SeriesIndex=1 )
 
 subplot( 2, 1, 2 )
@@ -567,7 +573,7 @@ l2_error = vpa( l2_error, 16 );
 figure
 subplot( 2, 1, 1 )
 hold on
-fplot( U, domain, LineWidth=4, Color="k" )
+fplot( U, domain, LineWidth=4, Color="w" )
 fplot( u, domain, LineWidth=3, SeriesIndex=1 )
 
 subplot( 2, 1, 2 )

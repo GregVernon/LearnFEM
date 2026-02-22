@@ -285,12 +285,17 @@ figure
 
 subplot( 2, 1, 1 )
 hold on
-fplot( Y, double( bvp.domain ), Color="k"    , LineWidth=4 )
-fplot( y, double( bvp.domain ), SeriesIndex=1, LineWidth=3 )
+fplot( Y, double( bvp.domain ), Color="w"    , LineWidth=4, DisplayName="$$u$$" )
+fplot( y, double( bvp.domain ), SeriesIndex=1, LineWidth=3, DisplayName="$$\tilde{u}$$" )
+xlabel( "$$t$$", Interpreter="latex" )
+ylabel( "$$y$$", Interpreter="latex" )
+legend( Interpreter="latex" )
 
 subplot( 2, 1, 2 )
 X = linspace( 0, 1, 1e4 );
 plot( X, subs( sqrt( ( Y - y ).^2 ), t, X ), Color="r", LineWidth=1 )
+xlabel( "$$t$$", Interpreter="latex" )
+ylabel( "$$|| u - \tilde{u}||_2$$", Interpreter="latex" )
 ```
 
 While not perfect, our approach has yielded a fairly accurate solution to this problem.

@@ -36,8 +36,26 @@ We modify the Galerkin statement function from the previous section to include t
 \end{equation}
 ```
 
-We need to determine how to enforce our boundary conditions; it's not immediately clear how we could enforce the boundary conditions in general.
-But let's consider these under our change of basis perspective: we want to represent $g(0)$ and $g(1)$ in our finite basis:
+We need to determine how to enforce our boundary conditions.
+The methods we can take broadly fall into one of two categories: 
+
+- *Weak-enforcement* 
+    - Boundary conditions are defined as a weak-formulation.
+    - Boundary conditions not strictly enforced but may be "arbitrarily close".
+- *Strong-enforcement*
+    - A basis is chosen that interpolates the boundary condition.
+    - Boundary conditions are strictly enforced.
+
+## Weakly-enforced boundary conditions
+We'll enumerate the methods first, before diving into each.
+
+1. Penalty method
+    a. With Dirac Delta function
+    b. With function evaluation
+2. Lagrange multipliers
+
+### Penalty Method
+We begin by applying our change of basis perspective to the boundary conditions; we want to represent $g(0)$ and $g(1)$ in our finite basis:
 
 ```{=latex}
 \begin{align}
@@ -80,8 +98,6 @@ For simplicity, we introduce the notation $\DiracDeltaShort{x}{a}$ as shorthand 
     T_{\Index{i}} = \Inner{M_{\Index{i}}}{\DiracDeltaShort{x}{0}}
 \end{equation}
 ```
-
-and $
 
 And thus the boundary condition at $x=0$ can be written as
 
@@ -202,43 +218,59 @@ Thus we have three sets of equations:
 \end{align}
 ```
 
-Which we can assemble into a single equation:
+The penalty method approach allows us to control how strictly the solution should respect the boundary conditions.
+This is done by introducing a scalar parameter, $\rho \in [0, \infty)$, called the *penalty factor*, that scales each boundary condition's respective system of equations.
+When $\rho = 0$ the boundary condition is removed from consideration in the solution and in the limit as $\rho \rightarrow \infty$ the boundary condition is exactly satisfied in the solution.
+
+We rewrite our systems of equations for the penalty-method approach as:
+
+```{=latex}
+\begin{align}
+    \begin{bmatrix} \Inner{ M_{\Index{i}} }{ M_{\Index{j}} } \end{bmatrix} \Vector{t} &= \begin{bmatrix} \Inner{ M_{\Index{j}} }{ g(x) } \end{bmatrix} \\
+    %
+    \rho \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{0}} } \end{bmatrix} \Vector{t} &= \rho \begin{bmatrix} \Inner{M_{\Index{j}}}{g(0)} \end{bmatrix} \\
+    %
+    \rho \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{1}} } \end{bmatrix} \Vector{t} &= \rho \begin{bmatrix} \Inner{M_{\Index{j}}}{g(1)} \end{bmatrix} \\
+\end{align}
+```
+
+We can assemble these equations into a single equation:
 
 ```{=latex}
 \begin{equation}
     \begin{bmatrix} \Inner{M_{\Index{i}}}{M_{\Index{j}}} \end{bmatrix} \Vector{t} 
     + 
-    \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{0}} } \end{bmatrix} \Vector{t} 
+    \rho \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{0}} } \end{bmatrix} \Vector{t} 
     +
-    \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{1}} } \end{bmatrix} \Vector{t}
+    \rho \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{1}} } \end{bmatrix} \Vector{t}
     = 
     \begin{bmatrix} \Inner{M_{\Index{i}}}{g(x)} \end{bmatrix} 
     +
-    \begin{bmatrix} \Inner{ \Inner{M_{\Index{i}}}{\DiracDeltaShort{x}{0}} }{g(0)} \end{bmatrix}
+    \rho \begin{bmatrix} \Inner{ \Inner{M_{\Index{i}}}{\DiracDeltaShort{x}{0}} }{g(0)} \end{bmatrix}
     +
-    \begin{bmatrix} \Inner{ \Inner{M_{\Index{i}}}{\DiracDeltaShort{x}{1}} }{g(1)} \end{bmatrix}
+    \rho \begin{bmatrix} \Inner{ \Inner{M_{\Index{i}}}{\DiracDeltaShort{x}{1}} }{g(1)} \end{bmatrix}
 \end{equation}
 ```
 
-which simplifies to
+Factoring out the $\Vector{t}$ this simplifies to
 
 ```{=latex}
 \begin{equation}
     \left(
         \begin{bmatrix} \Inner{M_{\Index{i}}}{M_{\Index{j}}} \end{bmatrix} 
         + 
-        \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{0}} } \end{bmatrix}
+        \rho \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{0}} } \end{bmatrix}
         +
-        \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{1}} } \end{bmatrix} 
+        \rho \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{1}} } \end{bmatrix} 
     \right)
     \Vector{t}
     = 
     \left(
         \begin{bmatrix} \Inner{M_{\Index{i}}}{g(x)} \end{bmatrix} 
         +
-        \begin{bmatrix} \Inner{ \Inner{M_{\Index{i}}}{\DiracDeltaShort{x}{0}} }{g(0)} \end{bmatrix}
+        \rho \begin{bmatrix} \Inner{ \Inner{M_{\Index{i}}}{\DiracDeltaShort{x}{0}} }{g(0)} \end{bmatrix}
         +
-        \begin{bmatrix} \Inner{ \Inner{M_{\Index{i}}}{\DiracDeltaShort{x}{1}} }{g(1)} \end{bmatrix}
+        \rho \begin{bmatrix} \Inner{ \Inner{M_{\Index{i}}}{\DiracDeltaShort{x}{1}} }{g(1)} \end{bmatrix}
     \right)
 \end{equation}
 ```
@@ -248,18 +280,18 @@ or, in expanded matrix form
 ```{=latex}
 \begin{equation}
     \begin{bmatrix}
-        \Inner{M_{\Index{1}}}{M_{\Index{1}}} + \Inner{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{0}} } + \Inner{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{1}} } & \cdots & \Inner{M_{\Index{1}}}{M_{\Index{n}}} + \Inner{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{n}} }{\DiracDeltaShort{x}{0}} } + \Inner{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{n}} }{\DiracDeltaShort{x}{1}} }\\
+        \Inner{M_{\Index{1}}}{M_{\Index{1}}} + \rho \Inner{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{0}} } + \rho \Inner{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{1}} } & \cdots & \Inner{M_{\Index{1}}}{M_{\Index{n}}} + \rho \Inner{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{n}} }{\DiracDeltaShort{x}{0}} } + \rho \Inner{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{n}} }{\DiracDeltaShort{x}{1}} }\\
         \vdots & \ddots & \vdots \\
-        \Inner{M_{\Index{m}}}{M_{\Index{1}}} + \Inner{ \Inner{ M_{\Index{m}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{0}} } + \Inner{ \Inner{ M_{\Index{m}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{1}} } & \cdots & \Inner{M_{\Index{m}}}{M_{\Index{n}}} + \Inner{ \Inner{ M_{\Index{m}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{n}} }{\DiracDeltaShort{x}{0}} } + \Inner{ \Inner{ M_{\Index{m}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{n}} }{\DiracDeltaShort{x}{1}} }\\
+        \Inner{M_{\Index{m}}}{M_{\Index{1}}} + \rho \Inner{ \Inner{ M_{\Index{m}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{0}} } + \rho \Inner{ \Inner{ M_{\Index{m}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{1}} }{\DiracDeltaShort{x}{1}} } & \cdots & \Inner{M_{\Index{m}}}{M_{\Index{n}}} + \rho \Inner{ \Inner{ M_{\Index{m}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{n}} }{\DiracDeltaShort{x}{0}} } + \rho \Inner{ \Inner{ M_{\Index{m}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{n}} }{\DiracDeltaShort{x}{1}} }\\
     \end{bmatrix}
     \begin{bmatrix}
         t_1 \\ \vdots \\ t_\Index{n}
     \end{bmatrix}
     =
     \begin{bmatrix}
-        \Inner{M_{\Index{1}}}{g(x)} + \Inner{ \Inner{M_{\Index{1}}}{\DiracDeltaShort{x}{0}} }{g(0)} + \Inner{ \Inner{M_{\Index{1}}}{\DiracDeltaShort{x}{1}} }{g(1)} \\
+        \Inner{M_{\Index{1}}}{g(x)} + \rho \Inner{ \Inner{M_{\Index{1}}}{\DiracDeltaShort{x}{0}} }{g(0)} + \rho \Inner{ \Inner{M_{\Index{1}}}{\DiracDeltaShort{x}{1}} }{g(1)} \\
         \vdots \\
-        \Inner{M_{\Index{m}}}{g(x)} + \Inner{ \Inner{M_{\Index{m}}}{\DiracDeltaShort{x}{0}} }{g(0)} + \Inner{ \Inner{M_{\Index{m}}}{\DiracDeltaShort{x}{1}} }{g(1)} \\
+        \Inner{M_{\Index{m}}}{g(x)} + \rho \Inner{ \Inner{M_{\Index{m}}}{\DiracDeltaShort{x}{0}} }{g(0)} + \rho \Inner{ \Inner{M_{\Index{m}}}{\DiracDeltaShort{x}{1}} }{g(1)} \\
     \end{bmatrix}
 \end{equation}
 ```
@@ -268,36 +300,63 @@ We can modify our original `ScalarProjection` function to support these boundary
 
 ```{matlab}
 %| output: false
-function [u, D, F, basis, d] = ScalarProjection( target_fun, basis_name, degree, domain )
-
-    function D = AssembleGramMatrix()
-        D = int( basis * transpose( basis ), domain );
+%| echo: false
+classdef PolynomialSolutionSpace
+    properties
+        basis_name
+        degree
+        variate
+        domain
+        penalty
     end
+end
+```
 
-    function F = AssembleForceVector()
-        F = int( basis * target_fun, domain );
+```{matlab}
+%| output: false
+function [u, D, F, basis, d] = ScalarProjection( fun, sol_space )
+
+    function [D, F] = ApplyGoverningEquation()
+        function D = AssembleGramMatrix()
+            D = int( basis * transpose( basis ), domain );
+        end
+
+        function F = AssembleForceVector()
+            F = int( basis * target_fun, domain );
+        end
+        D = AssembleGramMatrix();
+        F = AssembleForceVector();
     end
 
     function [D, F] = ApplyBoundaryConditions( D, F )
-        function [D, F] = LeftFunctionValue( D, F )
-            D = D + int( dirac( variate - domain(1) ) * ( basis .* transpose( basis ) ), [-inf, inf] );
-            F = F + int( ( dirac( variate - domain(1) ) * basis ) * ( dirac( variate - domain(1) ) * target_fun ), [-inf, inf] );
+        function [D, F] = LeftFunctionValue()
+            D = subs( ( basis ) .* transpose( basis ), variate, domain(1) );
+            F = subs( basis * target_fun, variate, domain(1) );
         end
-        function [D, F] = RightFunctionValue( D, F )
-            D = D + int( dirac( variate - domain(2) ) * ( basis .* transpose( basis ) ), [-inf, inf] );
-            F = F + int( basis * ( dirac( variate - domain(2) ) * target_fun ), [-inf, inf] );
+        function [D, F] = RightFunctionValue()
+            D = subs( ( basis ) .* transpose( basis ), variate, domain(2) );
+            F = subs( basis * target_fun, variate, domain(2) );
         end
-        [D, F] = LeftFunctionValue( D, F );
-        [D, F] = RightFunctionValue( D, F );
+        [DL, FL] = LeftFunctionValue();
+        [DR, FR] = RightFunctionValue();
+        D = D + penalty * ( DL + DR );
+        F = F + penalty * ( FL + FR );
     end
 
-    variate = symvar( target_fun );
-    if isempty( variate )
-        variate = sym( "x", "real" );
-    end
-    basis = PolynomialBasisFunction( basis_name, degree, variate, domain );
-    D = AssembleGramMatrix();
-    F = AssembleForceVector();
+    % Unpack the solution space
+    variate = sol_space.variate;
+    basis_name = sol_space.basis_name;
+    degree = sol_space.degree;
+    sol_domain = sol_space.domain;
+    penalty = sol_space.penalty;
+    
+    % Unpack the function parameters
+    target_fun = fun.target_fun;
+    domain = fun.domain;
+
+    % Solve
+    basis = PolynomialBasisFunction( basis_name, degree, variate, sol_domain );
+    [D, F] = ApplyGoverningEquation();
     [D, F] = ApplyBoundaryConditions( D, F );
     d = D \ F;
     u = transpose( d ) * basis;
@@ -305,21 +364,339 @@ end
 ```
 
 ```{matlab}
+clear
 x = sym( "x", "real" );
-domain = sym( [0, 1] );
-target_fun = sin( pi * x )^2 + cos( x ) - 1;
-domain = sym( [0, 1] );
-degree = 2;
-basis_name = "Monomial";
+fun.target_fun = sin( pi * x )^2 + cos( x ) - 1;
+fun.domain = [0, 1];
 
-[u, M, F, basis, d] = ScalarProjection( target_fun, basis_name, degree, domain );
+sol_space = PolynomialSolutionSpace();
+sol_space.variate = x;
+sol_space.domain = [0, 1];
+sol_space.degree = 2;
+sol_space.penalty = 100;
+sol_space.basis_name = "Monomial";
+[u, M, F, basis, d] = ScalarProjection( fun, sol_space );
 ```
 
 ```{matlab}
 %| echo: false
 figure
 hold on
-fplot( target_fun, double( domain ), linewidth=4, DisplayName="$f(x)$" )
-fplot( u, double( domain ),          linewidth=3, DisplayName="$\tilde{f}(x)$" )
+fplot( fun.target_fun, double( fun.domain ), linewidth=4, DisplayName="$f(x)$" )
+fplot( u, double( fun.domain ),              linewidth=3, DisplayName="$\tilde{f}(x)$" )
 legend()
+```
+
+```{matlab}
+%| echo: false
+figure
+hold on
+fplot( sqrt( ( u - fun.target_fun )^2 ), double( fun.domain ), linewidth=4, DisplayName="$f(x)$" )
+```
+
+### Augmented-Lagrange Method
+We begin by applying our change of basis perspective to the boundary conditions; we want to represent $g(0)$ and $g(1)$ in our finite basis:
+
+```{matlab}
+%| output: false
+%| echo: false
+classdef PolynomialSolutionSpace
+    properties
+        basis_name
+        degree
+        variate
+        domain
+    end
+end
+```
+
+```{matlab}
+%| output: false
+function [u, D, F, basis, d, lambda] = ScalarProjection(fun, sol_space)
+    function [D, F] = ApplyGoverningEquation()
+        D = int( basis * transpose(basis), domain );
+        F = int( basis * target_fun,       domain );
+    end
+
+    function [D, F] = ApplyBoundaryConditions(D, F)
+        % Constraint matrix C d = g*
+        C = [transpose(subs(basis, variate, domain(1))); 
+             transpose(subs(basis, variate, domain(2)))];
+
+        g = [subs(target_fun, variate, domain(1)); 
+             subs(target_fun, variate, domain(2))];
+
+        n = length(basis);      % number of trial DOFs
+        m = size(C,1);          % number of constraints (here 2)
+
+        % Build (augmented) KKT system
+        Z = sym( zeros( m, m ) );
+        D = [D, C.'; C, Z];
+        F = [F; g];
+    end
+
+    % Unpack the solution space
+    variate    = sol_space.variate;
+    basis_name = sol_space.basis_name;
+    degree     = sol_space.degree;
+    sol_domain = sol_space.domain;
+
+    % Unpack the function parameters
+    target_fun = fun.target_fun;
+    domain     = fun.domain;
+
+    % Solve
+    basis = PolynomialBasisFunction(basis_name, degree, variate, sol_domain);
+    [D, F] = ApplyGoverningEquation();
+    [D, F] = ApplyBoundaryConditions(D, F);
+    sol = D \ F;
+    n = length( basis );
+    d = sol(1:n);
+    lambda = sol(n+1:end);
+    u = transpose(d) * basis;
+end
+```
+
+```{matlab}
+clear
+x = sym( "x", "real" );
+fun.target_fun = sin( pi * x )^2 + cos( x ) - 1;
+fun.domain = [0, 1];
+
+sol_space = PolynomialSolutionSpace();
+sol_space.variate = x;
+sol_space.domain = [0, 1];
+sol_space.degree = 2;
+sol_space.basis_name = "Monomial";
+[u, M, F, basis, d] = ScalarProjection( fun, sol_space );
+```
+
+```{matlab}
+%| echo: false
+figure
+hold on
+fplot( fun.target_fun, double( fun.domain ), linewidth=4, DisplayName="$f(x)$" )
+fplot( u, double( fun.domain ),              linewidth=3, DisplayName="$\tilde{f}(x)$" )
+legend()
+```
+
+```{matlab}
+%| echo: false
+figure
+hold on
+fplot( sqrt( ( u - fun.target_fun )^2 ), double( fun.domain ), linewidth=4, DisplayName="$f(x)$" )
+```
+
+## Strongly-enforced boundary conditions
+We'll enumerate the methods first, before diving into each.
+
+1. Preselecting a basis that interpolates the boundary condition
+2. Computing a modified basis that interpolates the boundary condition
+
+### Choosing an interpolatory basis
+
+```{matlab}
+%| output: false
+function [u, D, F, basis, d] = ScalarProjection( fun, sol_space )
+
+    function [D, F] = ApplyGoverningEquation()
+        function D = AssembleGramMatrix()
+            D = int( basis * transpose( basis ), domain );
+        end
+
+        function F = AssembleForceVector()
+            F = int( basis * target_fun, domain );
+        end
+        D = AssembleGramMatrix();
+        F = AssembleForceVector();
+    end
+
+    function [D, F] = ApplyBoundaryConditions( D, F )
+        function [D, F] = LeftFunctionValue(D, F)
+            D(1,:) = 0;
+            D(:,1) = 0;
+            D(1,1) = 1;
+            F(1) = subs( target_fun, variate, domain(1) );
+        end
+        function [D, F] = RightFunctionValue(D, F)
+            D(end,:) = 0;
+            D(:,end) = 0;
+            D(end,end) = 1;
+            F(end) = subs( target_fun, variate, domain(2) );
+        end
+        [D, F] = LeftFunctionValue(D, F);
+        [D, F] = RightFunctionValue(D, F);
+    end
+
+    % Unpack the solution space
+    variate = sol_space.variate;
+    basis_name = sol_space.basis_name;
+    degree = sol_space.degree;
+    sol_domain = sol_space.domain;
+    
+    % Unpack the function parameters
+    target_fun = fun.target_fun;
+    domain = fun.domain;
+
+    % Solve
+    basis = PolynomialBasisFunction( basis_name, degree, variate, sol_domain );
+    [D, F] = ApplyGoverningEquation();
+    [D, F] = ApplyBoundaryConditions( D, F );
+    d = D \ F;
+    u = transpose( d ) * basis;
+end
+```
+
+```{matlab}
+clear
+x = sym( "x", "real" );
+fun.target_fun = sin( pi * x )^2 + cos( x ) - 1;
+fun.domain = [0, 1];
+
+sol_space = PolynomialSolutionSpace();
+sol_space.variate = x;
+sol_space.domain = [0, 1];
+sol_space.degree = 2;
+sol_space.basis_name = "Lagrange";
+[u, M, F, basis, d] = ScalarProjection( fun, sol_space )
+```
+
+```{matlab}
+%| echo: false
+figure
+hold on
+fplot( fun.target_fun, double( fun.domain ), linewidth=4, DisplayName="$f(x)$" )
+fplot( u, double( fun.domain ),              linewidth=3, DisplayName="$\tilde{f}(x)$" )
+legend()
+```
+
+```{matlab}
+%| echo: false
+figure
+hold on
+fplot( sqrt( ( u - fun.target_fun )^2 ), double( fun.domain ), linewidth=4, DisplayName="$f(x)$" )
+```
+
+### Computing an interpolatory basis
+
+```{matlab}
+%| output: false
+function [u, D, F, basis, d] = ScalarProjection(fun, sol_space)
+
+    function [D, F] = ApplyGoverningEquation()
+        D = int( basis * transpose(basis), domain );
+        F = int( basis * target_fun,        domain );
+    end
+
+    function [C, gstar] = ApplyBoundaryConditions(D, F)
+        % Constraint matrix C d = g*
+        C = [transpose(subs(basis, variate, domain(1))); 
+             transpose(subs(basis, variate, domain(2)))];
+
+        g = [subs(target_fun, variate, domain(1)); 
+             subs(target_fun, variate, domain(2))];
+    end
+
+    function d0 = ParticularSolution_MinNorm(C, gstar, n)
+        % A convenient particular solution when C has full row rank:
+        %   d0 = C^T (C C^T)^{-1} g*
+        % This satisfies C d0 = g* (exactly in symbolic arithmetic,
+        % up to roundoff in floating arithmetic).
+        d0 = C.' * ((C*C.') \ gstar);
+
+        % Ensure shape n x 1 even if something odd happens
+        if size(d0,2) ~= 1
+            d0 = reshape(d0, [n, 1]);
+        end
+    end
+
+    % -----------------------
+    % Unpack the solution space
+    % -----------------------
+    variate    = sol_space.variate;
+    basis_name = sol_space.basis_name;
+    degree     = sol_space.degree;
+    sol_domain = sol_space.domain;
+
+    % penalty is not used in the nullspace method (strong enforcement)
+    % penalty  = sol_space.penalty;
+
+    % -----------------------
+    % Unpack the function parameters
+    % -----------------------
+    target_fun = fun.target_fun;
+    domain     = fun.domain;
+
+    % -----------------------
+    % Assemble basis + interior projection system
+    % -----------------------
+    basis = PolynomialBasisFunction(basis_name, degree, variate, sol_domain);
+
+    [G, fvec] = ApplyGoverningEquation();
+
+    % -----------------------
+    % Assemble constraints C d = g*
+    % -----------------------
+    [C, gstar] = AssemblePointDirichletConstraints();
+
+    n = length(basis);
+    m = size(C,1);
+
+    % Basic rank check: constraints must be independent
+    if rank(C) < m
+        error('ScalarProjection_Nullspace:ConstraintRank',...
+              'Constraint matrix C does not have full row rank. Constraints are redundant or incompatible with the chosen basis.');
+    end
+
+    % -----------------------
+    % Build nullspace basis Z and a particular solution d0
+    % -----------------------
+    Z  = null(C);                          % n x (n-m), C*Z = 0
+    d0 = ParticularSolution_MinNorm(C, gstar, n);  % n x 1, C*d0 = g*
+
+    % (Optional sanity check; comment out if you want)
+    % residual = simplify(C*d0 - gstar);
+
+    % -----------------------
+    % Reduced (BC-satisfying) solve in coordinates a
+    % -----------------------
+    Dred = transpose(Z) * G * Z;
+    Fred = transpose(Z) * (fvec - G*d0);
+
+    a = Dred \ Fred;                       % (n-m) x 1
+    d = d0 + Z*a;                          % n x 1 (satisfies BCs exactly)
+
+    % Reconstruct function
+    u = transpose(d) * basis;
+end
+```
+
+```{matlab}
+clear
+x = sym( "x", "real" );
+fun.target_fun = sin( pi * x )^2 + cos( x ) - 1;
+fun.domain = [0, 1];
+
+sol_space = PolynomialSolutionSpace();
+sol_space.variate = x;
+sol_space.domain = [0, 1];
+sol_space.degree = 2;
+sol_space.basis_name = "Lagrange";
+[u, M, F, basis, d] = ScalarProjection( fun, sol_space )
+```
+
+```{matlab}
+%| echo: false
+figure
+hold on
+fplot( fun.target_fun, double( fun.domain ), linewidth=4, DisplayName="$f(x)$" )
+fplot( u, double( fun.domain ),              linewidth=3, DisplayName="$\tilde{f}(x)$" )
+legend()
+```
+
+```{matlab}
+%| echo: false
+figure
+hold on
+fplot( sqrt( ( u - fun.target_fun )^2 ), double( fun.domain ), linewidth=4, DisplayName="$f(x)$" )
 ```

@@ -41,17 +41,21 @@ Here
 When we say a *linear PDE* we typically mean the entire boundary value problem is linear: both $\LinearDiffOp{L}$ and $\LinearOp{B}$ are linear operators in $u$.
 If the boundary condition depends nonlinearly on $u$ (for example, $u(0)^3 = g_0$), then the overall problem is nonlinear even if $\LinearDiffOp{L}$ is linear.
 
-The PDE is *linear* when the operator is linear, meaning
+::: {.callout-note .definition icon=false}
+## Linear operator
+
+An operator $\LinearOp{T}$ is *linear* if
 
 ```{=latex}
 \begin{equation}
-  \LinearDiffOp{L}\left(\alpha u + \beta v\right) = \alpha \LinearDiffOp{L}u + \beta \LinearDiffOp{L}v
+  \LinearOp{T}\left(\alpha u + \beta v\right) = \alpha \LinearOp{T}u + \beta \LinearOp{T}v
 \end{equation}
 ```
 
 for constant scalars $\alpha,\beta$ and admissible functions $u,v$.
+:::
 
-::: {.callout-tip icon=false}
+::: {.callout-tip .example icon=false}
 ## Example: A 1D linear operator
 Consider the 1D Poisson equation on $\Omega = (0, 1)$
 
@@ -96,7 +100,7 @@ To see that this operator is linear, take two admissible functions $u,v$ and con
 ```
 :::
 
-::: {.callout-tip icon=false}
+::: {.callout-tip .example icon=false}
 ## Example: A nonlinear boundary operator
 Consider the same Poisson equation, but with a nonlinear boundary condition:
 
@@ -135,7 +139,7 @@ which is not linear in $u$ because
 ```
 :::
 
-::: {.callout-tip icon=false}
+::: {.callout-tip .example icon=false}
 ## Example: A nonlinear PDE operator
 As a contrast, consider the nonlinear 1D boundary value problem
 

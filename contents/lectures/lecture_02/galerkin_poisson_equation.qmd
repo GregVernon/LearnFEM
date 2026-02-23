@@ -416,7 +416,7 @@ We can, therefore, simplify our matrix equation:
 \end{equation}
 ```
 
-:::{.callout-note}
+:::{.callout-note .definition}
 In Matlab we can write anonymous functions to provide us a simple method for accessing the derivative of our basis functions:
 ```{matlab}
 %| eval: false

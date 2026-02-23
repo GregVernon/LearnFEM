@@ -20,7 +20,7 @@ One such example is in integration, where change of variable appears as *integra
 ## Integration by substitution
 Recall the chain rule for differentiation in one dimension:
 
-::: {.callout-note icon=false}
+::: {.callout-note .definition icon=false}
 ## Chain rule
 
 Assume the function $h(x)$ can be written as $$h(x) = f(g(x)),$$ then the chain rule is $$h^{\prime}(x) = f^{\prime}(g(x)) \cdot g^{\prime}(x).$$
@@ -29,7 +29,7 @@ Assume the function $h(x)$ can be written as $$h(x) = f(g(x)),$$ then the chain 
 
 Given the chain rule we can define the substitution formula for integration by 
 
-::: {.callout-note icon=false}
+::: {.callout-note .definition icon=false}
 ## Substitution formula for integration
 Assume that the function, $f(x)$ has the antiderivative $F(x)$, i.e., $$F^{\prime}(x) = f(x).$$
 
@@ -74,7 +74,7 @@ And thus we arrive at the substitution formula for integration:
 
 The importance of the substitution formula for integration is that it allows us to make the following equivalencies:
 
-::: {.callout-note icon=false}
+::: {.callout-note .definition icon=false}
 ## Equivalence of integrals under change of variables
 
 ```{=latex}
@@ -94,7 +94,7 @@ The importance of the substitution formula for integration is that it allows us 
 ## Affine map
 An affine map is any mapping that preserves collinearity and ratios of distances[@weisstein_affine] or, to put another way, is a combination of a linear transformation and a translation.
 
-::: {.callout-note icon=false}
+::: {.callout-note .definition icon=false}
 ## Affine map
 An affine map $\xi: \Real^n \rightarrow \Real^n$ has the form:
 
@@ -164,7 +164,7 @@ In practice, this affine mapping often arises in applications where we have two 
 
 And since we know, trivially, the mapping at both boundaries we can fill-in our two equations and solve for the unknowns.
 
-::: {.callout-tip icon=false}
+::: {.callout-tip .example icon=false}
 ## Example: Computing an affine map
 Consider the two domains:
 
@@ -287,7 +287,7 @@ Note that as our affine map, $\frac{\d{\xi}}{\d{x}}$, is equivalent to a Jacobia
 Note that because our affine map is linear, its derivative will be a constant and thus we can apply the integration rule for constants to pull the Jacobian out of the integral
 
 
-::: {.callout-note icon=false}
+::: {.callout-note .definition icon=false}
 ## Substitution formula for integration with affine map
 If we let $u = \xi(x)$ then we have
 
@@ -344,7 +344,7 @@ display( to_values )
 
 Now let's see what happens when we use the change of variable in an actual function, using the mapping $x(\xi)$:
 
-::: {.callout-tip icon=false}
+::: {.callout-tip .example icon=false}
 ## Example: $f(\xi) \rightarrow g(x(\xi))$
 ```{=latex}
 \begin{align*}
@@ -442,7 +442,7 @@ And comparing against the change of variables approach:
 
 And again on another function, this time using the mapping $\xi(x)$:
 
-::: {.callout-tip icon=false}
+::: {.callout-tip .example icon=false}
 ## Example: $f(\xi) \rightarrow g(\xi(x))$
 First let's choose a function defined over $\xi$ and map it to $x$, using the mapping $\xi(x)$.
 

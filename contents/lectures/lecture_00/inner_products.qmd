@@ -67,7 +67,7 @@ Furthermore, if we simplify the expression comparing the two inner products, $\f
 So how is this useful?
 Let's consider this example:
 
-::: {.callout-note icon=false appearance="simple"}
+::: {.callout-note .example icon=false appearance="simple"}
 ## Example
 Imagine that you have two unknown values.
 You are able to compare them against each other using the inner product, but do not yet actually know the value of either.

@@ -2,3 +2,14 @@
     overflow: visible !important;
     max-height: none !important;
 }
+
+/* Custom callout variants: add `.definition` or `.example` to a callout block. */
+.callout.definition {
+    border-left: 0.35rem solid rgba(59, 130, 246, 1);
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.08), rgba(0, 0, 0, 0));
+}
+
+.callout.example {
+    border-left: 0.35rem solid rgba(34, 197, 94, 1);
+    background: linear-gradient(90deg, rgba(34, 197, 94, 0.08), rgba(0, 0, 0, 0));
+}

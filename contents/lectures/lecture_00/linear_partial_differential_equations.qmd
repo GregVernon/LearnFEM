@@ -38,6 +38,9 @@ Here
 - $\Omega$ is the spatial domain
 - $\partial\Omega$ is the boundary of the domain
 
+When we say a *linear PDE* we typically mean the entire boundary value problem is linear: both $\LinearOp{L}$ and $\LinearOp{B}$ are linear operators in $u$.
+If the boundary condition depends nonlinearly on $u$ (for example, $u(0)^3 = g_0$), then the overall problem is nonlinear even if $\LinearOp{L}$ is linear.
+
 The PDE is *linear* when the operator is linear, meaning
 
 ```{=latex}
@@ -72,7 +75,7 @@ Equivalently, we can define the operator itself as
 
 ```{=latex}
 \begin{equation}
-  \LinearOp{L} \coloneqq -\frac{d^2}{dx^2},
+  \LinearOp{L} \coloneqq -\frac{d^2}{dx^2}.
 \end{equation}
 ```
 
@@ -90,6 +93,45 @@ To see that this operator is linear, take two admissible functions $u,v$ and con
   &=
   \alpha \LinearOp{L}u + \beta \LinearOp{L}v.
 \end{align}
+```
+:::
+
+::: {.callout-tip icon=false}
+## Example: A nonlinear boundary operator
+Consider the same Poisson equation, but with a nonlinear boundary condition:
+
+```{=latex}
+\begin{align}
+  -\frac{d^2 u}{dx^2} &= f(x) \quad \text{for } x \in (0, 1) \\
+  u(0)^3 &= g_0 \\
+  u(1) &= g_1.
+\end{align}
+```
+
+The governing operator $\LinearOp{L} \coloneqq -\frac{d^2}{dx^2}$ is still linear, but the boundary operator can be written as
+
+```{=latex}
+\begin{equation}
+  \LinearOp{B}u \coloneqq
+  \begin{bmatrix}
+    u(0)^3 \\
+    u(1)
+  \end{bmatrix},
+  \qquad
+  g \coloneqq
+  \begin{bmatrix}
+    g_0 \\
+    g_1
+  \end{bmatrix}.
+\end{equation}
+```
+
+which is not linear in $u$ because
+
+```{=latex}
+\begin{equation}
+  (u(0) + v(0))^3 \neq u(0)^3 + v(0)^3.
+\end{equation}
 ```
 :::
 
@@ -118,7 +160,7 @@ In operator notation you can think of this as
 
 ```{=latex}
 \begin{equation}
-  \LinearOp{N} = -\frac{d^2}{dx^2} + (\cdot)^3,
+  \LinearOp{N} \coloneqq -\frac{d^2}{dx^2} + (\cdot)^3.
 \end{equation}
 ```
 

@@ -13,6 +13,126 @@ setappdata(0, "MKernel_plot_format", "svg")
 Many physics problems are described as *differential equations* (DE), which describe how one or more variables change in relation to others.
 When only a single independent variable is used we call it an *ordinary differential equation* (ODE) and when more than one independent variable are used we call it a *partial differential equation* (PDE).
 
-There is another major classifications of PDEs: Linear and Nonlinear.
-In this section we will only concern ourselves with linear PDEs.  
+There is another major classification of PDEs: linear and nonlinear.
+In this section we will only concern ourselves with linear PDEs.
 Whether working with linear or nonlinear PDEs, however, it is useful to reason about them in *operator* form.
+
+## Operator Form
+
+Many PDEs can be written compactly as
+
+```{=latex}
+\begin{align}
+  \LinearOp{L}u &= f \quad \text{in } \Omega \\
+  \LinearOp{B}u &= g \quad \text{on } \partial\Omega
+\end{align}
+```
+
+Here
+
+- $\LinearOp{L}$ is a differential operator (i.e., the governing equation)
+- $\LinearOp{B}$ is a boundary operator
+- $u$ is the unknown field (temperature, displacement, pressure, etc.)
+- $f$ is a known *forcing* term
+- $g$ is a prescribed boundary condition
+- $\Omega$ is the spatial domain
+- $\partial\Omega$ is the boundary of the domain
+
+The PDE is *linear* when the operator is linear, meaning
+
+```{=latex}
+\begin{equation}
+  \LinearOp{L}\left(\alpha u + \beta v\right) = \alpha \LinearOp{L}u + \beta \LinearOp{L}v
+\end{equation}
+```
+
+for constant scalars $\alpha,\beta$ and admissible functions $u,v$.
+
+::: {.callout-tip icon=false}
+## Example: A 1D linear operator
+Consider the 1D Poisson equation on $\Omega = (0, 1)$
+
+```{=latex}
+\begin{align}
+  -\frac{d^2 u}{dx^2} &= f(x) \quad \text{for } x \in (0, 1) \\
+  u(0) &= g_0 \\
+  u(1) &= g_1.
+\end{align}
+```
+
+This fits the operator form with
+
+```{=latex}
+\begin{equation}
+  \LinearOp{L}u \coloneqq -\frac{d^2 u}{dx^2}.
+\end{equation}
+```
+
+Equivalently, we can define the operator itself as
+
+```{=latex}
+\begin{equation}
+  \LinearOp{L} \coloneqq -\frac{d^2}{dx^2},
+\end{equation}
+```
+
+To see that this operator is linear, take two admissible functions $u,v$ and constants $\alpha,\beta$, then
+
+```{=latex}
+\begin{align}
+  \LinearOp{L}(\alpha u + \beta v)
+  &=
+  -\frac{d^2}{dx^2}\left(\alpha u + \beta v\right) \\
+  &=
+  -\left(\alpha \frac{d^2u}{dx^2} + \beta \frac{d^2v}{dx^2}\right) \\
+  &=
+  \alpha\left(-\frac{d^2u}{dx^2}\right) + \beta\left(-\frac{d^2v}{dx^2}\right) \\
+  &=
+  \alpha \LinearOp{L}u + \beta \LinearOp{L}v.
+\end{align}
+```
+:::
+
+::: {.callout-tip icon=false}
+## Example: A nonlinear PDE operator
+As a contrast, consider the nonlinear 1D boundary value problem
+
+```{=latex}
+\begin{align}
+  -\frac{d^2 u}{dx^2} + u^3 &= f(x) \quad \text{for } x \in (0, 1) \\
+  u(0) &= g_0 \\
+  u(1) &= g_1.
+\end{align}
+```
+
+This fits the operator form with
+
+```{=latex}
+\begin{equation}
+  \LinearOp{N}u \coloneqq -\frac{d^2 u}{dx^2} + u^3.
+\end{equation}
+```
+
+Here $u^3$ is a *pointwise* power, i.e., $u^3(x) = (u(x))^3$.
+In operator notation you can think of this as
+
+```{=latex}
+\begin{equation}
+  \LinearOp{N} = -\frac{d^2}{dx^2} + (\cdot)^3,
+\end{equation}
+```
+
+This operator is **not** linear because the cubic term breaks additivity. For example,
+
+```{=latex}
+\begin{align}
+  \LinearOp{N}(u+v)
+  &=
+  -\frac{d^2}{dx^2}(u+v) + (u+v)^3 \\
+  &=
+  \LinearOp{N}u + \LinearOp{N}v + 3u^2v + 3uv^2 \\
+  &\neq
+  \LinearOp{N}u + \LinearOp{N}v.
+\end{align}
+```
+:::

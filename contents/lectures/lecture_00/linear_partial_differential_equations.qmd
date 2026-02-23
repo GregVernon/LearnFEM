@@ -23,14 +23,14 @@ Many PDEs can be written compactly as
 
 ```{=latex}
 \begin{align}
-  \LinearOp{L}u &= f \quad \text{in } \Omega \\
+  \LinearDiffOp{L}u &= f \quad \text{in } \Omega \\
   \LinearOp{B}u &= g \quad \text{on } \partial\Omega
 \end{align}
 ```
 
 Here
 
-- $\LinearOp{L}$ is a differential operator (i.e., the governing equation)
+- $\LinearDiffOp{L}$ is a differential operator (i.e., the governing equation)
 - $\LinearOp{B}$ is a boundary operator
 - $u$ is the unknown field (temperature, displacement, pressure, etc.)
 - $f$ is a known *forcing* term
@@ -38,14 +38,14 @@ Here
 - $\Omega$ is the spatial domain
 - $\partial\Omega$ is the boundary of the domain
 
-When we say a *linear PDE* we typically mean the entire boundary value problem is linear: both $\LinearOp{L}$ and $\LinearOp{B}$ are linear operators in $u$.
-If the boundary condition depends nonlinearly on $u$ (for example, $u(0)^3 = g_0$), then the overall problem is nonlinear even if $\LinearOp{L}$ is linear.
+When we say a *linear PDE* we typically mean the entire boundary value problem is linear: both $\LinearDiffOp{L}$ and $\LinearOp{B}$ are linear operators in $u$.
+If the boundary condition depends nonlinearly on $u$ (for example, $u(0)^3 = g_0$), then the overall problem is nonlinear even if $\LinearDiffOp{L}$ is linear.
 
 The PDE is *linear* when the operator is linear, meaning
 
 ```{=latex}
 \begin{equation}
-  \LinearOp{L}\left(\alpha u + \beta v\right) = \alpha \LinearOp{L}u + \beta \LinearOp{L}v
+  \LinearDiffOp{L}\left(\alpha u + \beta v\right) = \alpha \LinearDiffOp{L}u + \beta \LinearDiffOp{L}v
 \end{equation}
 ```
 
@@ -67,7 +67,7 @@ This fits the operator form with
 
 ```{=latex}
 \begin{equation}
-  \LinearOp{L}u \coloneqq -\frac{d^2 u}{dx^2}.
+  \LinearDiffOp{L}u \coloneqq -\frac{d^2 u}{dx^2}.
 \end{equation}
 ```
 
@@ -75,7 +75,7 @@ Equivalently, we can define the operator itself as
 
 ```{=latex}
 \begin{equation}
-  \LinearOp{L} \coloneqq -\frac{d^2}{dx^2}.
+  \LinearDiffOp{L} \coloneqq -\frac{d^2}{dx^2}.
 \end{equation}
 ```
 
@@ -83,7 +83,7 @@ To see that this operator is linear, take two admissible functions $u,v$ and con
 
 ```{=latex}
 \begin{align}
-  \LinearOp{L}(\alpha u + \beta v)
+  \LinearDiffOp{L}(\alpha u + \beta v)
   &=
   -\frac{d^2}{dx^2}\left(\alpha u + \beta v\right) \\
   &=
@@ -91,7 +91,7 @@ To see that this operator is linear, take two admissible functions $u,v$ and con
   &=
   \alpha\left(-\frac{d^2u}{dx^2}\right) + \beta\left(-\frac{d^2v}{dx^2}\right) \\
   &=
-  \alpha \LinearOp{L}u + \beta \LinearOp{L}v.
+  \alpha \LinearDiffOp{L}u + \beta \LinearDiffOp{L}v.
 \end{align}
 ```
 :::
@@ -108,7 +108,7 @@ Consider the same Poisson equation, but with a nonlinear boundary condition:
 \end{align}
 ```
 
-The governing operator $\LinearOp{L} \coloneqq -\frac{d^2}{dx^2}$ is still linear, but the boundary operator can be written as
+The governing operator $\LinearDiffOp{L} \coloneqq -\frac{d^2}{dx^2}$ is still linear, but the boundary operator can be written as
 
 ```{=latex}
 \begin{equation}

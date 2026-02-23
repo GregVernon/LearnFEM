@@ -101,6 +101,7 @@ format:
               Hilbert: ["\\mathcal{H}^{#1}", 1],
               Continuity: ["\\mathcal{C}^{#1}", 1],
               LinearOp: ["\\mathcal{#1}", 1],
+              LinearDiffOp: ["\\mathcal{#1}", 1],
               Inner: ["\\left\\langle #1, #2 \\right\\rangle", 2],
               Index: ["\\mathrm{#1}", 1],
               ClosedDomainOneDim: ["\\left\[ #1, #2 \\right\]", 2],
@@ -139,6 +140,7 @@ format:
   #       \usepackage{bm}
   #       \newcommand{\Real}{\mathbb{R}}
   #       \newcommand{\LinearOp}[1]{\mathcal{#1}}
+  #       \newcommand{\LinearDiffOp}[1]{\mathcal{#1}}
   #       \newcommand{\Inner}[2]{\left\langle #1, #2 \right\rangle}
   #       \newcommand{\Vector}[1]{\mathbf{\mathit{#1}}}
   #       \newcommand{\Matrix}[1]{\boldsymbol{\mathrm{#1}}}

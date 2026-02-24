@@ -12,7 +12,8 @@ addpath( "../lecture_00/" )
 addpath( "../lecture_01/" )
 addpath( "../lecture_02/" )
 addpath( "../lecture_03/" )
-addpath( "../utils" )
+addpath( "../utils" )
+LearnFEMStartup();
 ```
 
 ## Solving Physics Problems with U-splines and Quadrature

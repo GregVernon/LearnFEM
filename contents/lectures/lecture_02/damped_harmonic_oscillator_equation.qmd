@@ -9,7 +9,8 @@ setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
 addpath( "../lecture_00/" )
 addpath( "../lecture_01/" )
-addpath( "../utils" )
+addpath( "../utils" )
+LearnFEMStartup();
 ```
 
 # The Damped Harmonic Oscillator Equation

@@ -7,7 +7,8 @@ jupyter: mkernel
 clear
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
-addpath( "../utils" )
+addpath( "../utils" )
+LearnFEMStartup();
 ```
 
 # Writing an FEM Code

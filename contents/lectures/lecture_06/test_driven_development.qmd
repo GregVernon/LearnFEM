@@ -5,7 +5,8 @@ jupyter: mkernel
 ```{matlab}
 %| include: false
 clear
-addpath( "../utils" )
+addpath( "../utils" )
+LearnFEMStartup();
 ```
 
 # Software Testing

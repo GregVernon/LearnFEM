@@ -11,7 +11,8 @@ setappdata(0, "MKernel_plot_format", "svg")
 addpath( "../lecture_00/" )
 addpath( "../lecture_01/" )
 addpath( "../lecture_02/" )
-addpath( "../utils" )
+addpath( "../utils" )
+LearnFEMStartup();
 ```
 
 ## Solving Physics Problems with U-splines

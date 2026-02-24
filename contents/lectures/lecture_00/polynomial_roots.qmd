@@ -22,10 +22,11 @@ In short, any square matrix has a characteristic polynomial whose roots are the 
 So what we want to do is to construct a matrix whose characteristic polynomial is the polynomial we want to find the roots of, and then compute the eigenvalues.
 For any characteristic polynomial, there are an infinite number of matrices that share the characteristic polynomial (i.e., matrix similarity), however one approach results in constructing what is called the *companion matrix*.
 
-For a *monic polynomial*, that is, a polynomial of the form
+A *monic polynomial* is a polynomial of the form
 $$
 p(x) = c_0 x^0 + c_1 x^1 + \cdots c_{n-1} x^{n-1} + c_n x^n \quad \mathrm{where} \ c_n = 1,
 $$
+Which can be computed from any given polynomial by simply dividing by the leading coefficient.
 
 ```{matlab}
 %| output: false
@@ -44,7 +45,7 @@ function monic = PolynomialToMonic( polynomial )
 end
 ```
 
-the companion matrix is defined as:
+The companion matrix is then constructed from the monic polynomial as:
 
 $$
 \Matrix{C} =
@@ -74,9 +75,44 @@ function C = CompanionMatrix( polynomial )
 end
 ```
 
-Recall that for a given polynomial we can convert it to a monic polynomial by simply dividing by the leading coefficient.
-Let's work through an example.
+Recall that for any square matrix $\Matrix{A}$, its *characteristic polynomial* is defined as 
+$$
+\rho_{\Matrix{A}}(\lambda) \coloneqq \det(\Matrix{A} - \lambda \Matrix{I}).
+$$
 
+Recalling that $\det(\Matrix{A} - \lambda \Matrix{I}) = (\lambda_1 - \lambda)(\lambda_2 - \lambda)\cdots(\lambda_n - \lambda)$ it's clear that $\lambda_{\Index{i}}$ is an eigenvalue of $\Matrix{A}$ *if and only if* $\rho_{\Matrix{A}}(\lambda_{\Index{i}}) = 0$. 
+In other words, the eigenvalues of a matrix are the roots of its characteristic polynomial.
+
+```{matlab}
+%| output: false
+function [eigvals, ritz] = ComputeEigenvalues( A, tol, maxiter )
+  num_digits = ceil( log10( 1/tol ) );
+  ritz = sym( zeros( size( A, 1 ), maxiter + 1 ) );
+  ritz(:,1) = diag( A );
+  for iter = 1 : maxiter
+    [Q, R] = qr( A );
+    A = vpa( R * Q, num_digits );
+    ritz(:,iter+1) = diag( A );
+    if norm( ritz(:,iter+1) - ritz(:, iter), inf ) <= tol
+      break
+    end
+  end
+  ritz(:, iter+2 : end) = [];
+  eigvals = ritz(:, end);
+end
+```
+
+```{matlab}
+%| output: false
+function eigvals = PolynomialRoots( polynomial )
+  C = CompanionMatrix( polynomial );
+  eigvals = ComputeEigenvalues( C, 1e-16, 1e3 );
+  [~, sidx] = sort( eigvals );
+  eigvals = eigvals( sidx );
+end
+```
+
+::: {.callout-tip .example icon=false}
 Consider the polynomial
 ```{=latex}
 \begin{equation}
@@ -123,25 +159,6 @@ Finally, we compute the eigenvalues of the companion matrix to recover the (appr
 ```
 
 ```{matlab}
-%| output: false
-function [eigvals, ritz] = ComputeEigenvalues( A, tol, maxiter )
-  num_digits = ceil( log10( 1/tol ) );
-  ritz = sym( zeros( size( A, 1 ), maxiter + 1 ) );
-  ritz(:,1) = diag( A );
-  for iter = 1 : maxiter
-    [Q, R] = qr( A );
-    A = vpa( R * Q, num_digits );
-    ritz(:,iter+1) = diag( A );
-    if norm( ritz(:,iter+1) - ritz(:, iter), inf ) <= tol
-      break
-    end
-  end
-  ritz(:, iter+2 : end) = [];
-  eigvals = ritz(:, end);
-end
-```
-
-```{matlab}
 x = sym( "x" );
 polynomial = (1/2)*x^4 + (1/2)*x^3 - 6*x^2 - 2*x^1 + 6*x^0;
 monic_polynomial = PolynomialToMonic( polynomial );
@@ -174,16 +191,7 @@ scatter( eigvals, zeros( size( eigvals ) ), MarkerFaceColor="k", MarkerEdgeColor
 ax = gca;
 ax.XAxisLocation = "origin";
 ```
-
-```{matlab}
-%| output: false
-function eigvals = PolynomialRoots( polynomial )
-  C = CompanionMatrix( polynomial );
-  eigvals = ComputeEigenvalues( C, 1e-16, 1e3 );
-  [~, sidx] = sort( eigvals );
-  eigvals = eigvals( sidx );
-end
-```
+:::
 
 ## A Footnote
 

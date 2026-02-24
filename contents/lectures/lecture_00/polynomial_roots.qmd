@@ -12,7 +12,8 @@ addpath( "../utils" )
 LearnFEMStartup();
 ```
 
-# Finding Polynomial Roots using Linear Algebra
+# Polynomial Roots
+## Computing polynomial roots using linear algebra
 A common problem in mathematics is finding the roots (zeros) of a function.
 As we will see shortly, we will want to find roots of *polynomial* functions to aid us in constructing polynomial basis and quadrature schemes.
 A common approach to finding roots of functions is to use bracketing methods (e.g., bisection method) or iterative methods based on derivatives (e.g., secant method, Newton's method).
@@ -23,6 +24,9 @@ You may recall from your early linear algebra courses the idea of the *character
 In short, any square matrix has a characteristic polynomial whose roots are the *eigenvalues* of the matrix.
 So what we want to do is to construct a matrix whose characteristic polynomial is the polynomial we want to find the roots of, and then compute the eigenvalues.
 For any characteristic polynomial, there are an infinite number of matrices that share the characteristic polynomial (i.e., matrix similarity), however one approach results in constructing what is called the *companion matrix*.
+
+::: {.callout-note .definition icon=false}
+## Monic polynomial
 
 A *monic polynomial* is a polynomial of the form
 $$
@@ -46,8 +50,12 @@ function monic = PolynomialToMonic( polynomial )
   end
 end
 ```
+:::
 
-The companion matrix is then constructed from the monic polynomial as:
+::: {.callout-note .definition icon=false}
+## Companion matrix
+
+The companion matrix is constructed from the monic polynomial as:
 
 $$
 \Matrix{C} =
@@ -76,6 +84,7 @@ function C = CompanionMatrix( polynomial )
   end
 end
 ```
+:::
 
 Recall that for any square matrix $\Matrix{A}$, its *characteristic polynomial* is defined as 
 $$
@@ -115,6 +124,8 @@ end
 ```
 
 ::: {.callout-tip .example icon=false}
+## Example: Polynomial roots via eigenvalues
+
 Consider the polynomial
 ```{=latex}
 \begin{equation}
@@ -195,7 +206,7 @@ ax.XAxisLocation = "origin";
 ```
 :::
 
-## A Footnote
+## On the computation of eigenvalues
 
 Finally, let's take a moment to make a quick observation and comment.
 You may be aware that there are no closed-form equations, using only elementary arithmetic operations and fractional powers, for computing the roots of polynomials greater than degree-4[^1].

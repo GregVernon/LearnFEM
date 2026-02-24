@@ -5,6 +5,7 @@ jupyter: mkernel
 ```{matlab}
 %| include: false
 clear
+addpath( "../utils" )
 ```
 
 # Conitnuous Integration and Continuous Deployment

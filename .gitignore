@@ -5,12 +5,14 @@ mkernel_python_env
 **/.MATLABDriveTag
 *.asv
 *.m
+!contents/lectures/utils/EmitLatexEqn.m
 
 # Renders
 __pycache__/
 _book/
 /env/
 /index_files/
+/contents/lectures/**/*_files/
 /lecture_00/*_files
 /lecture_01/*_files
 /lecture_02/*_files

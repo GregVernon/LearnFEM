@@ -7,6 +7,7 @@ jupyter: mkernel
 clear
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
+addpath( "../utils" )
 ```
 
 # Finding Polynomial Roots using Linear Algebra
@@ -142,11 +143,20 @@ end
 
 ```{matlab}
 x = sym( "x" );
-polynomial = (1/2)*x^4 + (1/2)*x^3 - 6*x^2 - 2*x^1 + 6*x^0
-monic_polynomial = PolynomialToMonic( polynomial )
-C = CompanionMatrix( polynomial )
+polynomial = (1/2)*x^4 + (1/2)*x^3 - 6*x^2 - 2*x^1 + 6*x^0;
+monic_polynomial = PolynomialToMonic( polynomial );
+C = CompanionMatrix( polynomial );
 [eigvals, ritz] = ComputeEigenvalues( C, 1e-12, 1e3 );
-eigvals = vpa( sort( eigvals ), 4 )
+eigvals = vpa( sort( eigvals ), 4 );
+```
+
+```{matlab}
+%| echo: false
+%| output: asis
+EmitLatexEqn( "p(x) = " + string( latex( polynomial ) ) )
+EmitLatexEqn( "\bar{p}(x) = " + string( latex( monic_polynomial ) ) )
+EmitLatexEqn( "\Matrix{C} = " + string( latex( C ) ) )
+EmitLatexEqn( "\lambda( \Matrix{C} ) \approx " + string( latex( transpose( round( eigvals, 5 ) ) ) ) )
 ```
 
 We can plot the polynomial and its roots to visually confirm that this approach has, in fact, found the polynomial's roots.

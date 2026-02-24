@@ -8,6 +8,7 @@ clear
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
 addpath( "../lecture_00/" )
+addpath( "../utils" )
 ```
 
 # Galerkin's Method for Function Approximation

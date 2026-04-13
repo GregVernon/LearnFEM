@@ -1,5 +1,11 @@
 function LearnFEMStartup()
 
+%% Symbolic preferences
+sympref('AbbreviateOutput',false);
+sympref('PolynomialDisplayStyle','descend');
+sympref('MatrixWithSquareBrackets',true);
+sympref('FloatingPointOutput',false);
+
 %% Set all interpreters from tex to latex.
 %#ok<*CLALL>
 list_factory = fieldnames( get( groot, "factory" ) );

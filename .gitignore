@@ -7,6 +7,7 @@ mkernel_python_env
 *.m
 !contents/lectures/utils/EmitLatexEqn.m
 !contents/lectures/utils/LearnFEMStartup.m
+!contents/lectures/utils/PolyLatex.m
 
 # Renders
 __pycache__/

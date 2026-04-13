@@ -5,9 +5,12 @@ jupyter: mkernel
 ```{matlab}
 %| include: false
 clear
+clear functions
+rehash
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
-addpath( "../utils" )
+addpath( "../utils" )
+
 LearnFEMStartup();
 ```
 
@@ -96,7 +99,9 @@ for degree = 0 : 3
     end
     ax = gca;
     ax.YLim = [0, 1];
-    legend( Location="northoutside", Orientation="horizontal" )
+
+    lgd = legend( Location="northoutside", Orientation="horizontal" );
+    lgd.IconColumnWidth = lgd.FontSize;
 end
 ```
 
@@ -125,6 +130,8 @@ for ii = 1 : length( monomial_basis )
 end
 ax1 = gca;
 ax1.XLim = [-1, 1];
+lgd = legend( Location="northoutside", Orientation="horizontal" );
+lgd.IconColumnWidth = lgd.FontSize;
 
 subplot( 2, 1, 2 )
 domain = sym( [-1, 1] );
@@ -214,9 +221,14 @@ for degree = 0 : 3;
     for ii = 1 : length( lagrange_basis )
         fplot( lagrange_basis(ii), double( domain ), LineWidth=2, DisplayName="$L_" + num2str(ii) + "$" )
     end
+    origin_line = yline( 0, Alpha=1 );
+    origin_line.Annotation.LegendInformation.IconDisplayStyle = "off";
+
     ax = gca;
     ax.YLim = [-0.5, 1.5];
-    legend( Location="northoutside", Orientation="horizontal" )
+
+    lgd = legend( Location="northoutside", Orientation="horizontal" );
+    lgd.IconColumnWidth = lgd.FontSize;
 end
 ```
 
@@ -282,6 +294,21 @@ end
 \end{align*}
 ```
 
+<!-- ```{matlab}
+%| echo: false
+%| output: asis
+
+x = sym( "x", "real" );
+domain = sym( [0, 1] );
+
+for degree = 0 : 3;
+    basis = BernsteinBasis( degree, x, domain );
+    %expr = "\Matrix{B}^{" + num2str( degree ) + "}(x) = " + string( latex( expand( basis ) ) );
+    expr = "\Matrix{B}^{" + num2str( degree ) + "}(x) = " + PolyLatex( basis );
+    EmitLatexEqn( expr )
+end
+``` -->
+
 ```{matlab}
 %| echo: false
 x = sym( "x", "real" );
@@ -298,7 +325,9 @@ for degree = 0 : 3;
     end
     ax = gca;
     ax.YLim = [0, 1];
-    legend( Location="northoutside", Orientation="horizontal" )
+
+    lgd = legend( Location="northoutside", Orientation="horizontal" );
+    lgd.IconColumnWidth = lgd.FontSize;
 end
 ```
 
@@ -384,9 +413,14 @@ for degree = 0 : 3;
     for ii = 1 : length( legendre_basis )
         fplot( legendre_basis(ii), double( domain ), LineWidth=2, DisplayName="$P_" + num2str(ii) + "$" )
     end
+    origin_line = yline( 0, Alpha=1 );
+    origin_line.Annotation.LegendInformation.IconDisplayStyle = "off";
+
     ax = gca;
     ax.YLim = [-1, 1];
-    legend( Location="northoutside", Orientation="horizontal" )
+
+    lgd = legend( Location="northoutside", Orientation="horizontal" );
+    lgd.IconColumnWidth = lgd.FontSize;
 end
 ```
 
@@ -470,9 +504,14 @@ for degree = 0 : 3;
     for ii = 1 : length( chebyshev_basis )
         fplot( chebyshev_basis(ii), double( domain ), LineWidth=2, DisplayName="$T_" + num2str(ii) + "$" )
     end
+    origin_line = yline( 0, Alpha=1 );
+    origin_line.Annotation.LegendInformation.IconDisplayStyle = "off";
+
     ax = gca;
     ax.YLim = [-1, 1];
-    legend( Location="northoutside", Orientation="horizontal" )
+
+    lgd = legend( Location="northoutside", Orientation="horizontal" );
+    lgd.IconColumnWidth = lgd.FontSize;
 end
 ```
 
@@ -509,17 +548,22 @@ x = sym( "x", "real" );
 domain = sym( [-1, 1] );
 
 figure
-for degree = 0 : 8;
-    subplot( 3, 3, degree + 1 )
+for degree = 0 : 3;
+    subplot( 2, 2, degree + 1 )
     hold on
     lagrange_legendre_basis = LagrangeLegendreBasis( degree, x, domain );
     % latex( expand( lagrange_legendre_basis ) )
     for ii = 1 : length( lagrange_legendre_basis )
         fplot( lagrange_legendre_basis(ii), double( domain ), LineWidth=2, MeshDensity=(degree + 1)*20, DisplayName="$L_" + num2str(ii) + "$" )
     end
+    origin_line = yline( 0, Alpha=1 );
+    origin_line.Annotation.LegendInformation.IconDisplayStyle = "off";
+
     ax = gca;
     ax.YLim = [-0.5, 1.5];
-    legend( Location="northoutside", Orientation="horizontal" )
+
+    lgd = legend( Location="northoutside", Orientation="horizontal" );
+    lgd.IconColumnWidth = lgd.FontSize;
 end
 ```
 

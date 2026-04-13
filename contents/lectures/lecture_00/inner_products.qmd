@@ -7,7 +7,8 @@ jupyter: mkernel
 clear
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
-addpath( "../utils" )
+addpath( "../utils" )
+
 LearnFEMStartup();
 ```
 
@@ -48,7 +49,7 @@ $$
 $$
 
 This is simply *scalar multiplication* between two numbers, so how does this let us compare two objects?
-Well, we can compare $\Inner{a}{b}$ against $\Inner{b}{b}$ by dividing the former by the latter:
+Well, we can compare $\Inner{a}{b}$ against $\Inner{b}{b}$, assuming $b \neq 0$, by dividing the former by the latter:
 
 $$
 \frac{\Inner{a}{b}}{\Inner{b}{b}}
@@ -57,25 +58,56 @@ $$
 Which gives us the comparisons:
 
 - $\frac{\Inner{a}{b}}{\Inner{b}{b}} = 1$
-  - This tells us that $a$ is equal to $b$, $a = b$
+  - This tells us that $a$ is equal to $b$ 
+  - $a = b$
 - $\frac{\Inner{a}{b}}{\Inner{b}{b}} = -1$
-  - This tells us that $a$ is the additive inverse of $b$, $a = -b$
-- $\frac{\Inner{a}{b}}{\Inner{b}{b}} > 1$
-  - This tells us that the magnitude of $a$ is larger than the magnitude of $b$, $\abs{a} > \abs{b}$.
-- $\frac{\Inner{a}{b}}{\Inner{b}{b}} < 1$
-  - This tells us that the magnitude of $a$ is smaller than the magnitude of $b$, $\abs{a} < \abs{b}$.
+  - This tells us that $a$ is the additive inverse of $b$
+  - $a = -b$
+- $\frac{\Inner{a}{b}}{\Inner{b}{b}} > 0$
+  - This tells us that $a$ and $b$ have the same sign.
+  - $\operatorname{sign}(a) = \operatorname{sign}(b)$
+- $\frac{\Inner{a}{b}}{\Inner{b}{b}} < 0$
+  - This tells us that $a$ and $b$ have opposite signs.
+  - $\operatorname{sign}(a) = -\operatorname{sign}(b)$
+- $\left| \frac{\Inner{a}{b}}{\Inner{b}{b}} \right| > 1$
+  - This tells us the magnitude of $a$ is larger than the magnitude of $b$
+  - $\abs{a} > \abs{b}$.
+- $\left| \frac{\Inner{a}{b}}{\Inner{b}{b}} \right| < 1$
+  - This tells us the magnitude of $a$ is smaller than the magnitude of $b$
+  - $\abs{a} < \abs{b}$.
 
 Furthermore, if we simplify the expression comparing the two inner products, $\frac{\Inner{a}{b}}{\Inner{b}{b}}$, we find $\frac{a \cdot b}{b \cdot b} = \frac{a}{b}$, in plain English: the inner product is providing us a *ratio* between the two numbers.
 So how is this useful?
 Let's consider this example:
 
-::: {.callout-note .example icon=false appearance="simple"}
-## Example
-Imagine that you have two unknown values.
-You are able to compare them against each other using the inner product, but do not yet actually know the value of either.
-You compare the two inner products and find $\frac{\Inner{a}{b}}{\Inner{b}{b}} = -\frac{1}{16}$.
-Now suppose that sometime later you are able to compare $a$ against the number $2.5$ and find $\frac{\Inner{2.5}{a}}{\Inner{2.5}{2.5}} = -1.6$.
-You now *instantly* know that $a = -.25$ and $b = 4$.
+::: {.callout-tip .example icon=false}
+## Example: Comparing two unknown values
+Imagine that you have a cylindrical barrel and you wish to know the volume of the barrel.
+Taking a single strand of twine, you measure the circumference of the barrel and cut the strand to the measurement. 
+You then find that this strand is shorter than the height of the barrel, so you carefully measure that it takes 1.5 lengths of the strand to reach the top of the barrel from the bottom.
+
+Without realizing it, you've evaluated the following inner products:
+
+1. The length of the strand of twine, $L$, to the barrel's circumference, $C$.
+  - $\frac{ \Inner{L}{C} }{ \Inner{C}{C} } = 1$
+2. The barrel's circumference, using the length of the strand of twine as a proxy, to the barrel's height $H$.
+  - $\frac{ \Inner{H}{L} }{ \Inner{L}{L} } \equiv \frac{ \Inner{H}{C} }{ \Inner{C}{C} } = 1.5$
+
+You've related the height and circumference to each other using this single piece of twine, but you do not yet actually know the value of either.
+You then take this piece of twine back to your garage and find your measuring-tape.
+Laying the strand of twine and the measuring-tape next to each other.
+Crucially, since you *are* able to make quantitative measurements with the measuring-tape you find the twine spans $56\frac{2}{3}$ inches on the tape.
+You've performed a third inner product:
+
+3. The length of the strand of twine against a segment, $S$, of the measuring tape.
+  - $\frac{ \Inner{L}{S} }{ \Inner{S}{S} } = \frac{ \Inner{L}{56\frac{2}{3}\mathrm{in}} }{ \Inner{56\frac{2}{3}\mathrm{in}}{56\frac{2}{3}\mathrm{in}} } = 1$
+
+With this one measurement, you now *instantly* know the circumference of the barrel ($56\frac{2}{3} \ \mathrm{in}$) and, by re-evaluating your previous inner product, the height of the barrel ($85 \ \mathrm{in}$).
+And from here you can calculate the volume of the barrel as:
+
+$$
+V = \pi \left(\frac{C}{2\pi}\right)^2 H = 21,720 \ \mathrm{in}^3 = 94 \ \mathrm{gallons}
+$$
 :::
 
 In the above example, the inner product allowed us to compare two objects, and when you can compare two objects *you can measure them*.
@@ -102,7 +134,7 @@ the inner product, which we previously stated is also known as the *dot product*
 ```
 
 And again, we ask the question: *"how does the inner product allow us to compare and/or measure vectors?"*
-As before we can compare the vectors against each other via
+As before we can compare the vectors against each other, assuming $\vec{y} \neq \vec{0}$, via
 
 ```{=latex}
 \begin{equation*}
@@ -114,10 +146,13 @@ Which allows us to understand the relative orientation of the vectors:
 
 - $\frac{\Inner{\vec{x}}{\vec{y}}}{\Inner{\vec{y}}{\vec{y}}} = 0$
   - This tells us that $\vec{x}$ is orthogonal (perpendicular) to $\vec{y}$.
+  - $\vec{x} \perp \vec{y}$
 - $\frac{\Inner{\vec{x}}{\vec{y}}}{\Inner{\vec{y}}{\vec{y}}} > 0$
-  - This tells us that the angle between $\vec{x}$ and $\vec{y}$ is acute ($<90^\circ$).
+  - This tells us that the angle between $\vec{x}$ and $\vec{y}$ is acute.
+  - $\angle(\vec{x}, \vec{y}) < 90^\circ$.
 - $\frac{\Inner{\vec{x}}{\vec{y}}}{\Inner{\vec{y}}{\vec{y}}} < 0$
-  - This tells us that the angle between $\vec{x}$ and $\vec{y}$ is obtuse ($>90^\circ$).
+  - This tells us that the angle between $\vec{x}$ and $\vec{y}$ is obtuse.
+  - $\angle(\vec{x}, \vec{y}) > 90^\circ$.
 
 While the evaluation of
 
@@ -137,40 +172,54 @@ allows us to compare the lengths of the vectors:
   - This tells us that $\vec{x}$ is shorter than $\vec{y}$.
 
 ## The Inner Product of Real Functions
-Given two real functions[^2], $f$ and $g$, the inner product is
+Given two real functions[^2], $f$ and $g$, whose product, $fg$, is integrable on a domain, $\Omega$, the inner product is
 
 ```{=latex}
 \begin{equation*}
-  \Inner{f}{g}_{L^2} \coloneqq \int_{\Omega}{ f g } \ d\Omega
+  \Inner{f}{g}_{\Omega} \coloneqq \int_{\Omega}{ f g } \ d\Omega
 \end{equation*}
 ```
 
 which is also known as the $L^2$ inner product.
-The norm induced by the $L^2$ inner product is the $L^2$-norm
+The norm *induced* by the $L^2$ inner product is the $L^2$-norm
 
 ```{=latex}
 \begin{equation*}
-  \| f \|_{L^2} \coloneqq \sqrt{ \Inner{f}{f} }
+  \| f \|_{L^2(\Omega)} \coloneqq \sqrt{ \Inner{f}{f}_{\Omega} }
 \end{equation*}
 ```
 
+On a fixed domain, $\Omega$, the inner product is a scalar.
+For visualization, however, it is useful to look at an antiderivative of the product, which I'll denote by $A(x)$.
+In MATLAB, this is exactly the simple syntax `A = int( f * g )`.[^3]
+
+```{=latex}
+\begin{equation*}
+  A(x) \coloneqq \int f(x) g(x) \ \d{x}
+\end{equation*}
+```
+
+Strictly speaking, what we mean here is simply that $A'(x) = f(x)g(x)$.
+Recall that for $\Omega = [a,b]$ we recover the inner product by evaluating the antiderivative at the domain boundaries, $\Inner{f}{g}_{[a,b]} = \int_{a}^{b}( f g )\d{x} = A(b) - A(a)$.
+
 Since we'll be dealing with the $L^2$ inner product quite a bit, let's consider some examples
 
-### Example 4.4.1
+::: {.callout-tip .example icon=false}
+## Example: Sine with itself
 
 ```{matlab}
-%| output: false
+%| output: true
 x = sym( "x", "real" );
 f = sin( x );
 g = sin( x );
-L2 = int( f * g );
+A = int( f * g );
 ```
 
 ```{=latex}
 \begin{align*}
   f(x) &= \sin(x) \\
   g(x) &= \sin(x) \\
-  \Inner{f(x)}{g(x)} &= \frac{1}{2} ( x - \sin(x) \cos(x) ) \\
+  A(x) &= \frac{1}{2} ( x - \sin(x) \cos(x) ) \\
 \end{align*}
 ```
 
@@ -181,27 +230,25 @@ domain = sym( [0, 2*pi] );
 figure
 subplot( 2, 1, 1 )
 hold on
-fplot( f, double( domain ), LineWidth=2, DisplayName="$f(x)$" )
-fplot( g, double( domain ), LineWidth=2, DisplayName="$g(x)$" )
+fplot( f, double( domain ), LineWidth=2, LineStyle="-",  DisplayName="$f(x)$" )
+fplot( g, double( domain ), LineWidth=2, LineStyle=":",  DisplayName="$g(x)$" )
 axis padded
 grid on
-legend()
+legend( Location="northeast" )
 
 subplot( 2, 1, 2 )
-fplot( L2, double( domain ), LineWidth=2, DisplayName="$\langle f(x), g(x) \rangle$" )
+hold on
+fplot( A, double( domain ), LineWidth=2, DisplayName="$A(x)$" )
+scatter( domain, subs(A, x, domain ), MarkerFaceColor="flat", DisplayName="$A(\Omega)$" )
 axis padded
 grid on
-legend()
+legend( Location="southeast" )
 ```
-
-Where evaluating the inner product provides us with a function of the domain:
 
 And, for example, the inner product on the domain $[0,2\pi]$ is then
 
 ```{matlab}
 %| output: false
-f = sin( x );
-g = sin( x );
 L2 = int( f * g, domain );
 ```
 
@@ -211,23 +258,24 @@ L2 = int( f * g, domain );
 \end{equation}
 ```
 
+:::
 
-### Example 4.4.2
+
+::: {.callout-tip .example icon=false}
+## Example: Sine against its negative
 
 ```{matlab}
 %| output: false
 f = sin( x )
 g = -1 * sin( x )
-L2 = int( f * g )
+A = int( f * g )
 ```
-
-Where evaluating the inner product provides us with a function of the domain:
 
 ```{=latex}
 \begin{align*}
   f(x) &= \sin(x) \\
   g(x) &= -\sin(x) \\
-  \Inner{f(x)}{g(x)} &= \frac{1}{2} ( \sin(x) \cos(x) + x) \\
+  A(x) &= \frac{1}{2} ( \sin(x) \cos(x) - x) \\
 \end{align*}
 ```
 
@@ -242,13 +290,15 @@ fplot( f, double( domain ), LineWidth=2, DisplayName="$f(x)$" )
 fplot( g, double( domain ), LineWidth=2, DisplayName="$g(x)$" )
 axis padded
 grid on
-legend()
+legend( Location="north" )
 
 subplot( 2, 1, 2 )
-fplot( L2, double( domain ), LineWidth=2, DisplayName="$\langle f(x), g(x) \rangle$" )
+hold on
+fplot( A, double( domain ), LineWidth=2, DisplayName="$A(x)$" )
+scatter( domain, subs(A, x, domain ), MarkerFaceColor="flat", DisplayName="$A(\Omega)$" )
 axis padded
 grid on
-legend()
+legend( Location="northeast" )
 ```
 And, for example, the inner product on the domain $[0,2\pi]$ is then
 
@@ -258,22 +308,23 @@ And, for example, the inner product on the domain $[0,2\pi]$ is then
 \end{equation}
 ```
 
-### Example 4.4.3
+:::
+
+::: {.callout-tip .example icon=false}
+## Example: Sine against cosine
 
 ```{matlab}
 %| output: false
 f = sin( x )
 g = cos( x )
-L2 = int( f * g )
+A = int( f * g )
 ```
-
-Where evaluating the inner product provides us with a function of the domain:
 
 ```{=latex}
 \begin{align*}
   f(x) &= \sin(x) \\
   g(x) &= \cos(x) \\
-  \Inner{f(x)}{g(x)} &= \frac{\sin(x)^2}{2} \\
+  A(x) &= \frac{\sin(x)^2}{2} \\
 \end{align*}
 ```
 
@@ -288,38 +339,41 @@ fplot( f, double( domain ), LineWidth=2, DisplayName="$f(x)$" )
 fplot( g, double( domain ), LineWidth=2, DisplayName="$g(x)$" )
 axis padded
 grid on
-legend()
+legend( Location="north" )
 
 subplot( 2, 1, 2 )
-fplot( L2, double( domain ), LineWidth=2, DisplayName="$\langle f(x), g(x) \rangle$" )
+hold on
+fplot( A, double( domain ), LineWidth=2, DisplayName="$A(x)$" )
+scatter( domain, subs(A, x, domain ), MarkerFaceColor="flat", DisplayName="$A(\Omega)$" )
 axis padded
 grid on
-legend()
+legend( Location="north" )
 ```
 And, for example, the inner product on the domain $[0,2\pi]$ is then
 
 ```{=latex}
 \begin{equation}
-  \Inner{\sin(x)}{\sin(x)}_{[0, 2\pi]} = 0
+  \Inner{\sin(x)}{\cos(x)}_{[0, 2\pi]} = 0
 \end{equation}
 ```
 
-### Example 4.4.4
+:::
+
+::: {.callout-tip .example icon=false}
+## Example: Sine against a higher frequency sine
 
 ```{matlab}
 %| output: false
 f = sin( x )
 g = sin( 2*x )
-L2 = int( f * g )
+A = int( f * g )
 ```
-
-Where evaluating the inner product provides us with a function of the domain:
 
 ```{=latex}
 \begin{align*}
   f(x) &= \sin(x) \\
   g(x) &= \sin(2x) \\
-  \Inner{f(x)}{g(x)} &= \frac{\sin(x) - \sin(x)\cos(2x)}{3} \\
+  A(x) &= \frac{\sin(x) - \sin(x)\cos(2x)}{3} \\
 \end{align*}
 ```
 
@@ -334,13 +388,15 @@ fplot( f, double( domain ), LineWidth=2, DisplayName="$f(x)$" )
 fplot( g, double( domain ), LineWidth=2, DisplayName="$g(x)$" )
 axis padded
 grid on
-legend()
+legend( Location="northeast" )
 
 subplot( 2, 1, 2 )
-fplot( L2, double( domain ), LineWidth=2, DisplayName="$\langle f(x), g(x) \rangle$" )
+hold on
+fplot( A, double( domain ), LineWidth=2, DisplayName="$A(x)$" )
+scatter( domain, subs(A, x, domain ), MarkerFaceColor="flat", DisplayName="$A(\Omega)$" )
 axis padded
 grid on
-legend()
+legend( Location="northeast" )
 ```
 
 And, for example, the inner product on the domain $[0,2\pi]$ is then
@@ -351,4 +407,39 @@ And, for example, the inner product on the domain $[0,2\pi]$ is then
 \end{equation}
 ```
 
+:::
+
+## Formal Definition
+
+Let $V$ be a real vector space.
+An *inner product* on $V$ is a mapping
+
+```{=latex}
+\begin{equation*}
+  \Inner{\cdot}{\cdot} : V \times V \to \Real
+\end{equation*}
+```
+
+such that for all $u, v, w \in V$ and all $\alpha, \beta \in \Real$,
+
+```{=latex}
+\begin{align*}
+  \Inner{\alpha u + \beta v}{w} &= \alpha \Inner{u}{w} + \beta \Inner{v}{w} \\
+  \Inner{u}{v} &= \Inner{v}{u} \\
+  \Inner{v}{v} &\ge 0 \\
+  \Inner{v}{v} &= 0 \iff v = 0
+\end{align*}
+```
+
+These properties are called linearity, symmetry, and positive-definiteness.
+They are exactly what make the real scalar product, the Euclidean dot product, and the $L^2$ inner product legitimate inner products.
+Once an inner product is defined, it automatically induces a norm via
+
+```{=latex}
+\begin{equation*}
+  \| v \| \coloneqq \sqrt{ \Inner{v}{v} }.
+\end{equation*}
+```
+
 [^2]: Functions whose range is in the real numbers
+[^3]: Normally one might use a letter like $F$, but here that would be confusing since the integrand itself is the product $fg$, so instead I've chosen to use $A$ to stand for *anti*derivative.

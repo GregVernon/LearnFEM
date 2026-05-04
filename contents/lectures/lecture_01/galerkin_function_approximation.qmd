@@ -8,14 +8,15 @@ clear
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
 addpath( "../lecture_00/" )
-addpath( "../utils" )
+addpath( "../utils" )
+
 LearnFEMStartup();
 ```
 
 # Galerkin's Method for Function Approximation
 
 Let's suppose that we have some function that we wish to approximate as a polynomial.
-Specifically, we want to find the polynomial function that most closely represents the function over a finite domain, in the $L^2$ sense.
+Specifically, we want to find the polynomial function, of a given degree, that most closely represents the function over a finite domain, in the $L^2$ sense.
 The function we wish to approximate, over the domain $[0,1]$ is
 
 ```{=latex}
@@ -38,7 +39,7 @@ figure
 fplot( target_fun, double( domain ), LineWidth=4, Color="w" )
 ```
 
-And let's further suppose that we wish to approximate this function with a quartic polynomial, let's use the monomial basis
+And let's further suppose that we wish to approximate this function with a quadratic polynomial, let's use the monomial basis
 
 ```{matlab}
 %| echo: false
@@ -80,7 +81,7 @@ Let's consider the right-hand side of the change of basis
     \begin{bmatrix}
         \Inner{\Matrix{T}_1}{\Matrix{F}_1} & \cdots & \Inner{\Matrix{T}_1}{\Matrix{F}_n} \\
         \vdots & \ddots & \vdots \\
-        \Inner{\Matrix{T}_n}{\Matrix{F}_1} & \cdots & \Inner{\Matrix{T}_m}{\Matrix{F}_n}
+        \Inner{\Matrix{T}_m}{\Matrix{F}_1} & \cdots & \Inner{\Matrix{T}_m}{\Matrix{F}_n}
     \end{bmatrix}
     %
     \begin{bmatrix} \Vector{f}_1 \\ \vdots \\ \Vector{f}_n \end{bmatrix} \\
@@ -91,7 +92,7 @@ Let's consider the right-hand side of the change of basis
     \begin{bmatrix}
         \Inner{\Matrix{T}_1}{\Matrix{F}_1} \Vector{f}_1 + \cdots + \Inner{\Matrix{T}_1}{\Matrix{F}_n} \Vector{f}_n \\
         \vdots \\
-        \Inner{\Matrix{T}_m}{\Matrix{F}_n} \Vector{f}_1 + \cdots + \Inner{\Matrix{T}_1}{\Matrix{F}_n} \Vector{f}_n \\
+        \Inner{\Matrix{T}_m}{\Matrix{F}_n} \Vector{f}_1 + \cdots + \Inner{\Matrix{T}_m}{\Matrix{F}_n} \Vector{f}_n \\
     \end{bmatrix}
 \end{align}
 ```
@@ -114,7 +115,7 @@ thus each row-entry of the right-hand side above can be rewritten as
 \end{align}
 ```
 
-and since our target function is "defined" as
+Recognizing that our target function is approximated in our finite-dimensional solution space as a linear combination of the basis functions, we can rewrite the right-hand side as
 
 ```{=latex}
 \begin{equation}
@@ -321,8 +322,8 @@ approx_fun = transpose( d ) * basis;
 %| echo: false
 figure
 hold on
-fplot( target_fun, double( domain ), LineWidth=4, Color="w",     DisplayName="$f(x)$" )
-fplot( approx_fun, double( domain ), LineWidth=3, SeriesIndex=1, DisplayName="$\tilde{f}(x)$" )
+fplot( target_fun, double( domain ), LineWidth=4, Color="w",     DisplayName="$g(x)$" )
+fplot( approx_fun, double( domain ), LineWidth=3, SeriesIndex=1, DisplayName="$\tilde{g}(x)$" )
 ```
 
 Now, that doesn't appear to be a particularly good fit, but let's look at what happens if we use a higher-order polynomial function in our approximation.
@@ -343,8 +344,17 @@ end
 ```
 
 ```{matlab}
+%|output: false
+
 l2_error = ComputeL2Error( target_fun, approx_fun, domain, "exact" );
 l2_error = vpa( l2_error, 4 )
+```
+
+```{matlab}
+%| echo: false
+%| output: asis
+
+EmitLatexEqn( "L^2 \ \mathrm{error} \ = " + latex( vpa( l2_error, 4 ) ) )
 ```
 
 But first, let's collect our work above to write a function that performs the scalar projection:
@@ -432,8 +442,16 @@ legend()
 ```
 
 ```{matlab}
+%| output: false
+
 l2_error = ComputeL2Error( target_fun, u, domain, "exact" );
 l2_error = vpa( l2_error, 4 )
+```
+
+```{matlab}
+%| echo: false
+%| output: asis
+EmitLatexEqn( "L^2 \ \mathrm{error} \ = " + latex( vpa( l2_error, 4 ) ) )
 ```
 
 

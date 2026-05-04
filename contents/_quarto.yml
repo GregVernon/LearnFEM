@@ -111,6 +111,7 @@ format:
               Jacobian: ["\\boldsymbol{\\mathit{J}}"],
               Assembly: ["\\mathop{\\Large \\boldsymbol{\\mathrm{A}}}\\limits_{\\mathrm{e}=1}^{n_{\\mathrm{el}}} \\bigl( #1 \\bigr)", 1],
               ChangeBasisOp: ["\\Matrix{R}_{\\tiny{\\Matrix{#1} \\rightarrow \\Matrix{#2}}}", 2],
+              KroneckerDelta: ["\\delta({\\Index{#1},\\Index{#2}})", 2],
               DiracDelta: ["\\delta\\left( #1 - #2 \\right)", 2],
               DiracDeltaShort: ["\\delta^{#1}_{#2}", 2],
               defequals: ["\\stackrel{\\text{def}}{=}"],

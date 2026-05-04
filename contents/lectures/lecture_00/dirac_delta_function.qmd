@@ -7,23 +7,187 @@ jupyter: mkernel
 clear
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
-addpath( "../utils" )
+addpath( "../utils" )
+
 LearnFEMStartup();
 ```
 
 # Dirac Delta Function
 
-## Definition
+## From Kronecker to Dirac
 The Dirac delta function is a rather curious, yet incredibly important function with broad applicability in mathematics and physics.
+Consider first the Kronecker delta function, which is defined as:
 
+
+::: {.callout-note .definition icon=false}
+## Kronecker Delta Function
+```{=latex}
+\begin{equation}
+    \KroneckerDelta{i}{j} = \cases{
+        1, & if $\Index{i} = \Index{j}$ \\
+        0, & if $\Index{i} \neq \Index{j}$
+    }
+\end{equation}
+```
+:::
+
+The Kronecker delta function has many applications in mathematics, physics, engineering, and computer science.
+For example, it is used to represent the identity matrix, to express orthogonality of functions, and to simplify summations in various contexts.
+
+::: {.callout-tip .example icon=false}
+## Example: Identity Matrix
+The identity matrix $\Matrix{I}$ can be expressed in terms of the Kronecker delta function as follows:
+```{=latex}
+\begin{equation}
+    \Matrix{I}_{ij} = \KroneckerDelta{i}{j}
+\end{equation}
+```
+Let's construct the $3 \times 3$ identity matrix using the Kronecker delta function:
+```{matlab}
+%|output: false
+
+function delta = KroneckerDelta( i, j )
+    if i == j
+        delta = 1;
+    else
+        delta = 0;
+    end
+end
+```
+
+```{matlab}
+n = 3;
+I = sym( "I", [n, n] );
+for i = 1:n
+    for j = 1:n
+        I(i, j) = KroneckerDelta( i, j );
+    end
+end
+```
+
+```{matlab}
+%| echo: false
+%| output: asis
+EmitLatexEqn( "\Matrix{I} = " + string( latex( I ) ) )
+```
+
+:::
+
+:::{.callout-tip .example icon=false}
+## Example: Trace of a Matrix
+The trace of a matrix $\Matrix{A}$, denoted as $\mathrm{tr}(\Matrix{A})$, is the sum of the diagonal elements of the matrix.
+Using the Kronecker delta function, we can express the trace of a matrix as follows:
+```{=latex}
+\begin{equation}
+    \mathrm{tr}(\Matrix{A}) = \sum_{i=1}^{n} \sum_{j=1}^{n} \Matrix{A}_{ij} \KroneckerDelta{i}{j}
+\end{equation}
+```
+
+```{matlab}
+A = sym( "A", [n, n] );
+trace_A = 0;
+for i = 1:n
+    for j = 1:n
+        trace_A = trace_A + A(i, j) * KroneckerDelta( i, j );
+    end
+end
+```
+
+```{matlab}
+%| echo: false
+%| output: asis
+EmitLatexEqn( "\mathrm{tr}(\Matrix{A}) = " + string( latex( trace_A ) ) )
+```
+:::
+
+:::{.callout-tip .example icon=false}
+## Example: Orthogonal basis vectors
+The Kronecker delta function can be used to express the orthogonality of basis vectors in a vector space.
+Consider a set of basis vectors $\{ \Vector{e}_1, \Vector{e }_2, \ldots, \Vector{e}_n \}$ in an $n$-dimensional vector space, such as the standard basis vectors in $\Real^3$:
+
+```{=latex}
+\begin{align}
+    \Vector{e}_1 &= [1, 0, 0]^T \\
+    \Vector{e}_2 &= [0, 1, 0]^T \\
+    \Vector{e}_3 &= [0, 0, 1]^T
+\end{align}
+```
+
+The inner product of any two of these basis vectors $\Vector{e}_i$ and $\Vector{e}_j$ can be expressed using the Kronecker delta function:
+
+```{=latex}
+\begin{equation}
+    \Inner{\Vector{e}_i}{\Vector{e}_j} = \KroneckerDelta{i}{j}
+\end{equation}
+```
+
+```{matlab}
+e1 = [1; 0; 0];
+e2 = [0; 1; 0];
+e3 = [0; 0; 1];
+for i = 1:n
+    for j = 1:n
+        inner_product = KroneckerDelta( i, j );
+    end
+end
+```
+
+```{matlab}
+%| echo: false
+%| output: asis
+e1 = [1; 0; 0];
+e2 = [0; 1; 0];
+e3 = [0; 0; 1];
+for i = 1:n
+    for j = 1:n
+        EmitLatexEqn( "\Inner{\Vector{e}_{" + string( i ) + "}}{\Vector{e}_{" + string( j ) + "}} = " + num2str( KroneckerDelta( i, j ) ) )
+    end
+end
+```
+
+:::
+
+## The Dirac Delta Function
+The Dirac delta function can be thought of as a continuous analogue of the Kronecker delta function.
+What does this mean?
+
+First consider that for the Kronecker delta function, we have two discrete indices $i$ and $j$ that must take on integer values.
+In our matrix trace example, for instance, we have $A_{ij}$ where $i$ and $j$ are integers that index the rows and columns of the matrix $\Matrix{A}$: Entries such as $A_{11}, A_{23}, A_{31}$, etc.
+But what if we wanted to have an index $1.1$ or $-0.5$ or $\pi$?
+
+Secondly, we saw that the Kronecker delta function can be used to express the inner product of two basis vectors indexed with integers $i$ and $j$.
+But what if we wanted to express the inner product of two basis vectors that are indexed by continuous values, such as $\Vector{e}_{1.1}$ and $\Vector{e}_{\pi}$?
+
+Put more concretely, consider wanting to work with an infinite number of basis vectors indexed over a continuous domain, such as $\{ \Vector{e}_x : x \in [0, \pi] \}$:
+
+```{=latex}
+\begin{equation}
+    \Vector{e}_x = \begin{bmatrix}
+        e_{0}(x) \\
+        e_{0 + \epsilon}(x) \\
+        \vdots \\
+        e_{\pi - \epsilon}(x) \\
+        e_{\pi}(x) \\
+    \end{bmatrix}
+\end{equation}
+```
+
+The Dirac delta function is the mathematical tool that provides us with these concepts.
+
+::: {.callout-note .definition icon=false}
+## Dirac Delta Function
+
+The Dirac delta function is defined[^1] as:
 ```{=latex}
 \begin{equation}
     \DiracDelta{x}{a} = w(x) \Inner{a}{x}
 \end{equation}
 ```
 
-where $w(x)$ is a *weight* function[^1].
-The Dirac delta function has the property where, for a smooth function $f(x)$ has the property
+where $w(x)$ is a *weight* function[^2].
+:::
+
+For a smooth function $f(x)$ the Dirac delta function has a property, known as the *sifting property*, that allows us to evaluate the function at a specific point $a$:
 
 ```{=latex}
 \begin{equation}
@@ -39,28 +203,42 @@ We note that this property can be equivalently written in inner product form
 \end{equation}
 ```
 
-Further note that in Matlab that, even though this inner product is integrated over the domain $x\in [-\infty, \infty]$, this inner product can be successfully evaluated using symbolic integration:
+Further note that in Matlab that, even though this inner product is integrated over the domain $x\in [-\infty, \infty]$, this inner product can be successfully evaluated using symbolic integration and the [`dirac`](https://www.mathworks.com/help/symbolic/dirac.html) function:
 
 
 ```{matlab}
+%| output: false
 a = 1;
 x = sym( "x", "real" );
 f = x^2 + sin( x );
 
-int( dirac( x - a ) * f, [-inf, inf] ) 
+int( f * dirac( x - a ), [-inf, inf] )
 ```
 
-However, it is functionally equivalent to using the `subs` function:
+```{matlab}
+%| echo: false
+%| output: asis
+
+EmitLatexEqn( string( latex( ans ) ) )
+```
+
+But recalling the sifting property, we can use the more efficient (and perhaps easier to read) [`subs`](https://www.mathworks.com/help/symbolic/subs.html) function:
 
 ```{matlab}
+%|output: false
 subs( f, x, a )
 ```
 
-Recognize that this `subs` form "reads" differently than the property previously presented, it reads: "$f(x)$ evaluated at $a$."
+```{matlab}
+%| echo: false
+%|output: asis
+EmitLatexEqn( string( latex( ans ) ) )
+```
 
+::: {.callout-tip .example icon=false}
 ## Example: Constant $f(x)$
 
-First we consider the case where $f(x) = 1$ -- i.e., $f(x)$ is a constant.
+First we consider the case where $f(x) = 1$.
 Let us also assume that $a = 1$.
 
 ```{=latex}
@@ -101,9 +279,12 @@ ax.YTick = [0, 1];
 ax.YTickLabel = ["0", "$\infty$"];
 ```
 
+:::
+
+::: {.callout-tip .example icon=false}
 ## Example: Polynomial $f(x)$
 
-Next we consider the case where $f(x) = x^2 + x$ -- i.e., $f(x)$ is a constant.
+Next we consider the case where $f(x) = x^2 + x$.
 Let us also assume that $a = 1$.
 
 ```{=latex}
@@ -144,5 +325,8 @@ ax.YTick = [0, 1];
 ax.YTickLabel = ["0", "$\infty$"];
 ```
 
+:::
 
-[^1]: A strictly positive real-valued function.
+
+[^1]: This is a very loose definition of the Dirac delta function, but it is sufficient for our purposes. See, for example, [this Wikipedia page](https://en.wikipedia.org/wiki/Dirac_delta_function#Definition) for more rigorous definitions of the Dirac delta function.
+[^2]: A strictly positive real-valued function.

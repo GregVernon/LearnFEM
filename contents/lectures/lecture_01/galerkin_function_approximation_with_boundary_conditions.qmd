@@ -8,7 +8,7 @@ clear
 setappdata(0, "MKernel_plot_backend", "inline")
 setappdata(0, "MKernel_plot_format", "svg")
 addpath( "../lecture_00/" )
-addpath( "../utils" )
+addpath( "../utils" )
 LearnFEMStartup();
 ```
 
@@ -39,9 +39,9 @@ We modify the Galerkin statement function from the previous section to include t
 ```
 
 We need to determine how to enforce our boundary conditions.
-The methods we can take broadly fall into one of two categories: 
+The methods we can take broadly fall into one of two categories:
 
-- *Weak-enforcement* 
+- *Weak-enforcement*
     - Boundary conditions are defined as a weak-formulation.
     - Boundary conditions not strictly enforced but may be "arbitrarily close".
 - *Strong-enforcement*
@@ -105,7 +105,7 @@ And thus the boundary condition at $x=0$ can be written as
 
 <!-- ```{=latex}
 \begin{align*}
-    \begin{bmatrix} 
+    \begin{bmatrix}
         \Inner{T_{\Index{i}}}{T_{\Index{j}}}
     \end{bmatrix}
     &=
@@ -113,7 +113,7 @@ And thus the boundary condition at $x=0$ can be written as
         \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{0}}}
     \end{bmatrix} \\
     %%%%%%
-    \begin{bmatrix} 
+    \begin{bmatrix}
         \Inner{T_{\Index{i}}}{g(0)}
     \end{bmatrix}
     &=
@@ -148,7 +148,7 @@ Similarly, the boundary condition at $x=1$ can be written as
 
 <!-- ```{=latex}
 \begin{align*}
-    \begin{bmatrix} 
+    \begin{bmatrix}
         \Inner{T_{\Index{i}}}{T_{\Index{j}}}
     \end{bmatrix}
     &=
@@ -156,7 +156,7 @@ Similarly, the boundary condition at $x=1$ can be written as
         \Inner{ \Inner{ M_{\Index{i}} }{\DiracDelta{x}{1}} }{ \Inner{ M_{\Index{j}} }{\DiracDelta{x}{1}}}
     \end{bmatrix} \\
     %%%%%%
-    \begin{bmatrix} 
+    \begin{bmatrix}
         \Inner{T_{\Index{i}}}{g(1)}
     \end{bmatrix}
     &=
@@ -240,13 +240,13 @@ We can assemble these equations into a single equation:
 
 ```{=latex}
 \begin{equation}
-    \begin{bmatrix} \Inner{M_{\Index{i}}}{M_{\Index{j}}} \end{bmatrix} \Vector{t} 
-    + 
-    \rho \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{0}} } \end{bmatrix} \Vector{t} 
+    \begin{bmatrix} \Inner{M_{\Index{i}}}{M_{\Index{j}}} \end{bmatrix} \Vector{t}
+    +
+    \rho \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{0}} } \end{bmatrix} \Vector{t}
     +
     \rho \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{1}} } \end{bmatrix} \Vector{t}
-    = 
-    \begin{bmatrix} \Inner{M_{\Index{i}}}{g(x)} \end{bmatrix} 
+    =
+    \begin{bmatrix} \Inner{M_{\Index{i}}}{g(x)} \end{bmatrix}
     +
     \rho \begin{bmatrix} \Inner{ \Inner{M_{\Index{i}}}{\DiracDeltaShort{x}{0}} }{g(0)} \end{bmatrix}
     +
@@ -259,16 +259,16 @@ Factoring out the $\Vector{t}$ this simplifies to
 ```{=latex}
 \begin{equation}
     \left(
-        \begin{bmatrix} \Inner{M_{\Index{i}}}{M_{\Index{j}}} \end{bmatrix} 
-        + 
+        \begin{bmatrix} \Inner{M_{\Index{i}}}{M_{\Index{j}}} \end{bmatrix}
+        +
         \rho \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{0}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{0}} } \end{bmatrix}
         +
-        \rho \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{1}} } \end{bmatrix} 
+        \rho \begin{bmatrix} \Inner{ \Inner{ M_{\Index{i}} }{\DiracDeltaShort{x}{1}} }{ \Inner{ M_{\Index{j}} }{\DiracDeltaShort{x}{1}} } \end{bmatrix}
     \right)
     \Vector{t}
-    = 
+    =
     \left(
-        \begin{bmatrix} \Inner{M_{\Index{i}}}{g(x)} \end{bmatrix} 
+        \begin{bmatrix} \Inner{M_{\Index{i}}}{g(x)} \end{bmatrix}
         +
         \rho \begin{bmatrix} \Inner{ \Inner{M_{\Index{i}}}{\DiracDeltaShort{x}{0}} }{g(0)} \end{bmatrix}
         +
@@ -351,7 +351,7 @@ function [u, D, F, basis, d] = ScalarProjection( fun, sol_space )
     degree = sol_space.degree;
     sol_domain = sol_space.domain;
     penalty = sol_space.penalty;
-    
+
     % Unpack the function parameters
     target_fun = fun.target_fun;
     domain = fun.domain;
@@ -422,10 +422,10 @@ function [u, D, F, basis, d, lambda] = ScalarProjection(fun, sol_space)
 
     function [D, F] = ApplyBoundaryConditions(D, F)
         % Constraint matrix C d = g*
-        C = [transpose(subs(basis, variate, domain(1))); 
+        C = [transpose(subs(basis, variate, domain(1)));
              transpose(subs(basis, variate, domain(2)))];
 
-        g = [subs(target_fun, variate, domain(1)); 
+        g = [subs(target_fun, variate, domain(1));
              subs(target_fun, variate, domain(2))];
 
         n = length(basis);      % number of trial DOFs
@@ -535,7 +535,7 @@ function [u, D, F, basis, d] = ScalarProjection( fun, sol_space )
     basis_name = sol_space.basis_name;
     degree = sol_space.degree;
     sol_domain = sol_space.domain;
-    
+
     % Unpack the function parameters
     target_fun = fun.target_fun;
     domain = fun.domain;
@@ -581,35 +581,234 @@ fplot( sqrt( ( u - fun.target_fun )^2 ), double( fun.domain ), linewidth=4, Disp
 
 ### Computing an interpolatory basis
 
+So the plan is:
+
+1. Build one coefficient vector that already satisfies the boundary conditions.
+2. Build a basis for the remaining free directions.
+3. Solve the Galerkin problem using only those free directions.
+
+This is still the change-of-basis story.
+It is just an *affine* change of basis, because nonzero boundary conditions require an offset.
+
+Start with our usual approximation:
+
+```{=latex}
+\begin{equation}
+    u_h(x) = \Vector{d}^{T} \Vector{\phi}(x)
+\end{equation}
+```
+
+where $\Vector{\phi}(x)$ is the original basis and $\Vector{d}$ is the coefficient vector.
+For point Dirichlet boundary conditions, the boundary equations are:
+
+```{=latex}
+\begin{equation}
+    \Matrix{C}\Vector{d} = \Vector{g}^{*}
+\end{equation}
+```
+
+with
+
+```{=latex}
+\begin{equation}
+    \Matrix{C}
+    =
+    \begin{bmatrix}
+        \Vector{\phi}(x_L)^{T} \\
+        \Vector{\phi}(x_R)^{T}
+    \end{bmatrix},
+    \qquad
+    \Vector{g}^{*}
+    =
+    \begin{bmatrix}
+        g(x_L) \\
+        g(x_R)
+    \end{bmatrix}
+\end{equation}
+```
+
+Now we split the coefficient vector into two pieces:
+
+```{=latex}
+\begin{equation}
+    \Vector{d} = \Vector{d}_0 + \Matrix{Z}\Vector{a}
+\end{equation}
+```
+
+The vector $\Vector{d}_0$ is one particular coefficient vector satisfying the boundary conditions:
+
+```{=latex}
+\begin{equation}
+    \Matrix{C}\Vector{d}_0 = \Vector{g}^{*}
+\end{equation}
+```
+
+and the columns of $\Matrix{Z}$ are a basis for the nullspace of $\Matrix{C}$:
+
+```{=latex}
+\begin{equation}
+    \Matrix{C}\Matrix{Z} = \Matrix{0}
+\end{equation}
+```
+
+This means any coefficient vector of the form $\Vector{d}_0 + \Matrix{Z}\Vector{a}$ automatically satisfies the boundary conditions:
+
+```{=latex}
+\begin{equation}
+    \Matrix{C}\Vector{d}
+    =
+    \Matrix{C}\Vector{d}_0 + \Matrix{C}\Matrix{Z}\Vector{a}
+    =
+    \Vector{g}^{*}
+\end{equation}
+```
+
+Now substitute this split back into the approximation:
+
+```{=latex}
+\begin{align}
+    u_h(x)
+    &=
+    \left( \Vector{d}_0 + \Matrix{Z}\Vector{a} \right)^{T} \Vector{\phi}(x) \\
+    &=
+    \Vector{d}_0^{T}\Vector{\phi}(x)
+    +
+    \Vector{a}^{T}\Matrix{Z}^{T}\Vector{\phi}(x)
+\end{align}
+```
+
+So we can define
+
+```{=latex}
+\begin{equation}
+    \Vector{\psi}(x) = \Matrix{Z}^{T}\Vector{\phi}(x)
+\end{equation}
+```
+
+This gives us the basis for the remaining free directions.
+But $u_0(x)$ has its own little basis hiding inside it too.
+With the particular solution we use below,
+
+```{=latex}
+\begin{equation}
+    \Vector{d}_0
+    =
+    \Matrix{C}^{T}
+    \left( \Matrix{C}\Matrix{C}^{T} \right)^{-1}
+    \Vector{g}^{*}
+\end{equation}
+```
+
+we can define a boundary-condition basis
+
+```{=latex}
+\begin{equation}
+    \Vector{\eta}(x)
+    =
+    \left(
+        \Matrix{C}^{T}
+        \left( \Matrix{C}\Matrix{C}^{T} \right)^{-1}
+    \right)^{T}
+    \Vector{\phi}(x)
+\end{equation}
+```
+
+so that
+
+```{=latex}
+\begin{equation}
+    u_0(x)
+    =
+    \Vector{d}_0^{T}\Vector{\phi}(x)
+    =
+    \left(\Vector{g}^{*}\right)^{T}\Vector{\eta}(x)
+\end{equation}
+```
+
+and write the boundary-satisfying approximation as
+
+```{=latex}
+\begin{equation}
+    u_h(x) = u_0(x) + \Vector{a}^{T}\Vector{\psi}(x)
+\end{equation}
+```
+
+In plain English: `basis_bc` builds $u_0$, which handles the prescribed boundary values, and `basis_interior` is the free basis we use for everything else.
+In the code below, we will keep calling the original basis `basis`, the boundary-condition basis `basis_bc`, and the boundary-preserving interior basis `basis_interior`.
+All the Galerkin solve has left to figure out is the smaller coefficient vector $\Vector{a}$.
+
+If the unconstrained Galerkin system is
+
+```{=latex}
+\begin{equation}
+    \Matrix{G}\Vector{d} = \Vector{f}
+\end{equation}
+```
+
+then substituting $\Vector{d} = \Vector{d}_0 + \Matrix{Z}\Vector{a}$ and testing only in the interior directions gives
+
+```{=latex}
+\begin{equation}
+    \Matrix{Z}^{T}\Matrix{G}\Matrix{Z}\Vector{a}
+    =
+    \Matrix{Z}^{T}\left( \Vector{f} - \Matrix{G}\Vector{d}_0 \right)
+\end{equation}
+```
+
+That is the whole move.
+We solve for $\Vector{a}$ in the interior basis, recover $\Vector{d}$ in the original basis, and reconstruct $u_h(x)$.
+
 ```{matlab}
 %| output: false
-function [u, D, F, basis, d] = ScalarProjection(fun, sol_space)
+function [u, Dred, Fred, basis, basis_bc, basis_interior, u0, C, gstar, Z, d0, a, d] = ScalarProjection(fun, sol_space)
 
     function [D, F] = ApplyGoverningEquation()
         D = int( basis * transpose(basis), domain );
         F = int( basis * target_fun,        domain );
     end
 
-    function [C, gstar] = ApplyBoundaryConditions(D, F)
+    function [C, gstar] = AssemblePointDirichletConstraints()
         % Constraint matrix C d = g*
-        C = [transpose(subs(basis, variate, domain(1))); 
+        C = [transpose(subs(basis, variate, domain(1)));
              transpose(subs(basis, variate, domain(2)))];
 
-        g = [subs(target_fun, variate, domain(1)); 
-             subs(target_fun, variate, domain(2))];
+        gstar = [subs(target_fun, variate, domain(1));
+                 subs(target_fun, variate, domain(2))];
     end
 
-    function d0 = ParticularSolution_MinNorm(C, gstar, n)
-        % A convenient particular solution when C has full row rank:
-        %   d0 = C^T (C C^T)^{-1} g*
-        % This satisfies C d0 = g* (exactly in symbolic arithmetic,
-        % up to roundoff in floating arithmetic).
-        d0 = C.' * ((C*C.') \ gstar);
+    function [Dred, Fred] = ChangeToFreeCoordinates(G, fvec, Z, d0)
+        Dred = transpose(Z) * G * Z;
+        Fred = transpose(Z) * (fvec - G * d0);
+    end
+
+    function [a, d] = RecoverConstrainedCoefficients(d0, Z, Dred, Fred)
+        a = Dred \ Fred;
+        d = d0 + Z*a;
+    end
+
+    function basis_bc_coeffs = ComputeBoundaryConditionCoefficientBasis(C)
+        basis_bc_coeffs = C.' * ((C*C.') \ sym( eye( size( C, 1 ) ) ) );
+    end
+
+    function d0 = ComputeBoundaryConditionCoefficients(basis_bc_coeffs, gstar, n)
+        d0 = basis_bc_coeffs * gstar;
 
         % Ensure shape n x 1 even if something odd happens
         if size(d0,2) ~= 1
             d0 = reshape(d0, [n, 1]);
         end
+    end
+
+    function basis_bc = ReconstructBoundaryConditionBasis(basis_bc_coeffs)
+        basis_bc = transpose(basis_bc_coeffs) * basis;
+    end
+
+    function u0 = ReconstructBoundaryConditionPart(gstar, basis_bc)
+        u0 = transpose(gstar) * basis_bc;
+    end
+
+    function basis_interior = ReconstructInteriorBasis(Z)
+        basis_interior = transpose(Z) * basis;
     end
 
     % -----------------------
@@ -619,9 +818,6 @@ function [u, D, F, basis, d] = ScalarProjection(fun, sol_space)
     basis_name = sol_space.basis_name;
     degree     = sol_space.degree;
     sol_domain = sol_space.domain;
-
-    % penalty is not used in the nullspace method (strong enforcement)
-    % penalty  = sol_space.penalty;
 
     % -----------------------
     % Unpack the function parameters
@@ -641,50 +837,145 @@ function [u, D, F, basis, d] = ScalarProjection(fun, sol_space)
     % -----------------------
     [C, gstar] = AssemblePointDirichletConstraints();
 
-    n = length(basis);
-    m = size(C,1);
-
-    % Basic rank check: constraints must be independent
-    if rank(C) < m
-        error('ScalarProjection_Nullspace:ConstraintRank',...
-              'Constraint matrix C does not have full row rank. Constraints are redundant or incompatible with the chosen basis.');
-    end
-
     % -----------------------
     % Build nullspace basis Z and a particular solution d0
     % -----------------------
-    Z  = null(C);                          % n x (n-m), C*Z = 0
-    d0 = ParticularSolution_MinNorm(C, gstar, n);  % n x 1, C*d0 = g*
-
-    % (Optional sanity check; comment out if you want)
-    % residual = simplify(C*d0 - gstar);
+    Z  = null( C );
+    basis_bc_coeffs = ComputeBoundaryConditionCoefficientBasis( C );
+    d0 = ComputeBoundaryConditionCoefficients( basis_bc_coeffs, gstar, length( basis ) );
 
     % -----------------------
     % Reduced (BC-satisfying) solve in coordinates a
     % -----------------------
-    Dred = transpose(Z) * G * Z;
-    Fred = transpose(Z) * (fvec - G*d0);
+    basis_bc = ReconstructBoundaryConditionBasis( basis_bc_coeffs );
+    u0 = ReconstructBoundaryConditionPart( gstar, basis_bc );
+    basis_interior = ReconstructInteriorBasis( Z );
 
-    a = Dred \ Fred;                       % (n-m) x 1
-    d = d0 + Z*a;                          % n x 1 (satisfies BCs exactly)
+    [Dred, Fred] = ChangeToFreeCoordinates( G, fvec, Z, d0 );
+    [a, d] = RecoverConstrainedCoefficients( d0, Z, Dred, Fred );
 
     % Reconstruct function
-    u = transpose(d) * basis;
+    u = u0 + transpose( a ) * basis_interior;
 end
 ```
 
 ```{matlab}
 clear
 x = sym( "x", "real" );
-fun.target_fun = sin( pi * x )^2 + cos( x ) - 1;
+fun.target_fun = cos( pi * x )^2 + cos( x ) - 1;
 fun.domain = [0, 1];
 
 sol_space = PolynomialSolutionSpace();
 sol_space.variate = x;
 sol_space.domain = [0, 1];
-sol_space.degree = 2;
-sol_space.basis_name = "Lagrange";
-[u, M, F, basis, d] = ScalarProjection( fun, sol_space )
+sol_space.degree = 3;
+sol_space.basis_name = "Monomial";
+[u, Dred, Fred, basis, basis_bc, basis_interior, u0, C, gstar, Z, d0, a, d] = ScalarProjection( fun, sol_space );
+
+boundary_condition_residual = simplify( C*d0 - gstar );
+interior_basis_residual = simplify( C*Z );
+basis_bc_boundary_values = simplify( [
+    transpose( subs( basis_bc, x, fun.domain(1) ) );
+    transpose( subs( basis_bc, x, fun.domain(2) ) )
+] );
+basis_interior_boundary_values = simplify( [
+    transpose( subs( basis_interior, x, fun.domain(1) ) );
+    transpose( subs( basis_interior, x, fun.domain(2) ) )
+] );
+```
+
+Here are the small coefficient-space objects that did the work.
+Notice that the boundary-condition basis evaluates like an identity matrix at the constrained points, while the interior basis evaluates to zero there.
+That is the whole reason this split works.
+
+```{matlab}
+C
+gstar
+d0
+boundary_condition_residual
+basis_bc
+basis_bc_boundary_values
+Z
+interior_basis_residual
+basis_interior
+basis_interior_boundary_values
+u0
+Dred
+Fred
+a
+d
+```
+
+The original basis is still the basis we started with.
+The boundary-condition basis, `basis_bc`, builds $u_0(x)$ from the boundary values.
+The interior basis, `basis_interior`, is the basis we are allowed to use after the boundary conditions have already been handled.
+
+```{matlab}
+%| echo: false
+figure
+tiledlayout( 1, 3 )
+
+nexttile()
+hold on
+for ii = 1 : length( basis )
+    fplot( basis(ii), double( fun.domain ), LineWidth=2, DisplayName="$\phi_" + num2str(ii) + "$" )
+end
+xline( double( fun.domain(1) ), "k--", HandleVisibility="off" )
+xline( double( fun.domain(2) ), "k--", HandleVisibility="off" )
+title( "Original basis" )
+legend( Location="best" )
+
+nexttile()
+hold on
+for ii = 1 : length( basis_bc )
+    fplot( basis_bc(ii), double( fun.domain ), LineWidth=2, DisplayName="$\eta_" + num2str(ii) + "$" )
+end
+xline( double( fun.domain(1) ), "k--", HandleVisibility="off" )
+xline( double( fun.domain(2) ), "k--", HandleVisibility="off" )
+title( "Boundary-condition basis" )
+legend( Location="best" )
+
+nexttile()
+hold on
+for ii = 1 : length( basis_interior )
+    fplot( basis_interior(ii), double( fun.domain ), LineWidth=2, DisplayName="$\psi_" + num2str(ii) + "$" )
+end
+xline( double( fun.domain(1) ), "k--", HandleVisibility="off" )
+xline( double( fun.domain(2) ), "k--", HandleVisibility="off" )
+scatter( double( fun.domain ), [0, 0], Marker="o", DisplayName="zero boundary values" )
+title( "Interior basis" )
+legend( Location="best" )
+```
+
+The function $u_0(x)$ carries the prescribed boundary values.
+The first plot below shows how $u_0(x)$ is built from the boundary-condition basis.
+The second plot shows the interior-basis functions filling in the domain without changing those boundary values.
+
+```{matlab}
+%| echo: false
+figure
+tiledlayout( 1, 2 )
+
+nexttile()
+hold on
+for ii = 1 : length( basis_bc )
+    fplot( gstar(ii) * basis_bc(ii), double( fun.domain ), LineWidth=2, DisplayName="$g^*_" + num2str(ii) + "\eta_" + num2str(ii) + "(x)$" )
+end
+fplot( u0, double( fun.domain ), LineWidth=3, DisplayName="$u_0(x)$" )
+scatter( double( fun.domain ), double( gstar ), Marker="o", DisplayName="boundary values" )
+title( "Boundary-condition part" )
+legend( Location="best" )
+
+nexttile()
+hold on
+fplot( u0, double( fun.domain ), LineWidth=3, DisplayName="$u_0(x)$" )
+for ii = 1 : length( basis_interior )
+    fplot( a(ii) * basis_interior(ii), double( fun.domain ), LineWidth=2, DisplayName="$a_" + num2str(ii) + "\psi_" + num2str(ii) + "(x)$" )
+end
+fplot( u, double( fun.domain ), LineWidth=3, DisplayName="$u_h(x)$" )
+scatter( double( fun.domain ), double( subs( fun.target_fun, x, fun.domain ) ), Marker="o", DisplayName="boundary values" )
+title( "Interior correction" )
+legend( Location="northwest" )
 ```
 
 ```{matlab}
@@ -693,6 +984,7 @@ figure
 hold on
 fplot( fun.target_fun, double( fun.domain ), linewidth=4, DisplayName="$f(x)$" )
 fplot( u, double( fun.domain ),              linewidth=3, DisplayName="$\tilde{f}(x)$" )
+scatter( double( fun.domain ), double( subs( fun.target_fun, x, fun.domain ) ), Marker="o", DisplayName="boundary values" )
 legend()
 ```
 
@@ -702,3 +994,11 @@ figure
 hold on
 fplot( sqrt( ( u - fun.target_fun )^2 ), double( fun.domain ), linewidth=4, DisplayName="$f(x)$" )
 ```
+
+What probably doesn't need to be said is that this method is quite complicated - picking a noninterpolatory basis and then computing a new interpolatory basis from it is a lot of work.
+Since interpolatory bases are widely available, there is usually no reason to do this, but we've included it for completeness and to show how the change-of-basis perspective can be used to derive it.
+
+## Summary
+In this chapter we have seen how to enforce boundary conditions in the Galerkin method.
+The weak enforcement methods (penalty and augmented Lagrange) are easy to implement and can be used with any basis, but they require tuning parameters and don't guarantee that the boundary conditions are exactly satisfied.
+The strong enforcement methods guarantee that the boundary conditions are exactly satisfied, but they require the use of specific basis functions, interpolatory basis functions selected either *a priori* or via construction.
